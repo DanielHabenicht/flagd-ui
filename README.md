@@ -54,6 +54,15 @@ Project docs are generated with [Zensical](https://zensical.org/docs/get-started
 
 ### Build docs locally
 
+Generate the UI screenshot used in the docs:
+
+```bash
+npm ci
+npm run e2e:docs-screenshot
+```
+
+Then start a local preview:
+
 ```bash
 uvx zensical serve
 ```
@@ -82,3 +91,28 @@ The Docker Compose setup is available for a local preview (both `flagd-ui` and `
 ```bash
 docker compose up --build
 ```
+
+The `flagd-ui` service runs with your host UID/GID (`${UID:-1000}:${GID:-1000}`) so it can write to the bind-mounted `./flags` directory.
+If your local UID/GID is not `1000`, export them before starting Compose:
+
+```bash
+export UID=$(id -u)
+export GID=$(id -g)
+docker compose up --build
+```
+
+## Automated Docker Releases (GitHub)
+
+The workflow at `.github/workflows/docker-image.yml` publishes Docker images when a tag matching `v*` is pushed.
+
+- It verifies the tagged commit is reachable from `main`.
+- It then builds and pushes the image to GitHub Container Registry:
+	- `ghcr.io/<owner>/<repo>:latest`
+	- `ghcr.io/<owner>/<repo>:<version>`
+	- `ghcr.io/<owner>/<repo>:v<version>`
+	- `ghcr.io/<owner>/<repo>:<major>.<minor>`
+	- `ghcr.io/<owner>/<repo>:<major>`
+
+Where `<version>` is derived from the tag name (for example, `v1.2.3` -> `1.2.3`).
+
+No extra secrets are required for the default setup; the workflow uses the built-in `GITHUB_TOKEN`.

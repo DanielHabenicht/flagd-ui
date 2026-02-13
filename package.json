@@ -7,9 +7,11 @@
     "doc": "docs"
   },
   "scripts": {
+    "postinstall": "playwright install --with-deps",
     "e2e": "playwright test",
     "e2e:headed": "playwright test --headed",
-    "e2e:ui": "playwright test --ui"
+    "e2e:ui": "playwright test --ui",
+    "e2e:docs-screenshot": "playwright test e2e-tests/docs-screenshot.spec.ts --project chromium"
   },
   "repository": {
     "type": "git",

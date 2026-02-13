@@ -31,6 +31,23 @@ jobs:
       - name: Setup uv
         uses: astral-sh/setup-uv@v5
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: ui/package-lock.json
+
+      - name: Install UI dependencies
+        run: npm ci
+        working-directory: ui
+
+      - name: Install UI dependencies
+        run: npm ci
+
+      - name: Generate docs screenshot
+        run: npm run e2e:docs-screenshot
+
       - name: Build docs
         run: uvx zensical build --clean
 
