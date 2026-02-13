@@ -4,14 +4,11 @@ mod handlers;
 mod middleware;
 mod openapi_doc;
 
-use axum::{
-    routing::get,
-    Router,
-};
+use axum::{routing::get, Router};
 use tower_http::{
+    compression::CompressionLayer,
     services::{ServeDir, ServeFile},
     trace::TraceLayer,
-    compression::CompressionLayer,
 };
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 use utoipa::OpenApi;
@@ -19,8 +16,8 @@ use utoipa_swagger_ui::SwaggerUi;
 
 use config::ServerConfig;
 use handlers::{
-    health_check, readiness_check,
-    init_app_state, list_flags, get_flag, create_flag, update_flag, delete_flag,
+    create_flag, delete_flag, get_flag, health_check, init_app_state, list_flags, readiness_check,
+    update_flag,
 };
 use openapi_doc::ApiDoc;
 
@@ -29,8 +26,7 @@ async fn main() {
     // Initialize tracing for structured logging
     tracing_subscriber::registry()
         .with(
-            tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| "info".into()),
+            tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| "info".into()),
         )
         .with(tracing_subscriber::fmt::layer())
         .init();
@@ -46,7 +42,10 @@ async fn main() {
         .await
         .expect("Failed to initialize application state");
 
-    tracing::info!("Schema validation initialized from: {}", config.schema_file_path);
+    tracing::info!(
+        "Schema validation initialized from: {}",
+        config.schema_file_path
+    );
 
     // Build the application router
     let app = create_router(&config, app_state);
@@ -70,7 +69,10 @@ fn create_router(config: &ServerConfig, app_state: handlers::api::AppState) -> R
     let api_routes = Router::new()
         // Flag management endpoints
         .route("/flags", get(list_flags).post(create_flag))
-        .route("/flags/:name", get(get_flag).put(update_flag).delete(delete_flag))
+        .route(
+            "/flags/:name",
+            get(get_flag).put(update_flag).delete(delete_flag),
+        )
         .with_state(app_state);
 
     // Main application router
@@ -87,7 +89,7 @@ fn create_router(config: &ServerConfig, app_state: handlers::api::AppState) -> R
         .nest_service(
             "/",
             ServeDir::new(&config.static_dir)
-                .not_found_service(ServeFile::new(format!("{}/index.html", &config.static_dir)))
+                .not_found_service(ServeFile::new(format!("{}/index.html", &config.static_dir))),
         )
         // Add middleware stack
         .layer(CompressionLayer::new())
