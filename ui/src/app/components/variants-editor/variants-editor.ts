@@ -1,5 +1,10 @@
-import { Component, input, output, OnInit, OnChanges } from '@angular/core';
+import { Component, input, output, OnChanges } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatSelectModule } from '@angular/material/select';
+import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
 import { FlagType } from '../../models/flag.models';
 
 export interface VariantRow {
@@ -10,7 +15,7 @@ export interface VariantRow {
 @Component({
   selector: 'app-variants-editor',
   standalone: true,
-  imports: [FormsModule],
+  imports: [FormsModule, MatFormFieldModule, MatInputModule, MatSelectModule, MatButtonModule, MatIconModule],
   templateUrl: './variants-editor.html',
   styleUrl: './variants-editor.css',
 })

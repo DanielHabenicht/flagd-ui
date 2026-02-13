@@ -2,91 +2,56 @@
 <aside class="side-panel">
   <div class="panel-header">
     <h2>{{ isEditing() ? 'Edit Flag' : 'Create Flag' }}</h2>
-    <button class="btn-close" (click)="onCancel()">&times;</button>
+    <button mat-icon-button (click)="onCancel()">
+      <mat-icon>close</mat-icon>
+    </button>
   </div>
 
   <div class="editor-modes">
-    <button
-      type="button"
-      class="mode-btn"
-      [class.active]="editorMode() === 'easy'"
-      [class.disabled]="!easyModeAvailable() && editorMode() !== 'easy'"
-      [disabled]="!easyModeAvailable() && editorMode() !== 'easy'"
-      [title]="!easyModeAvailable() && editorMode() !== 'easy' ? 'This flag uses features not available in easy mode' : ''"
-      (click)="setMode('easy')"
-    >Easy</button>
-    <button
-      type="button"
-      class="mode-btn"
-      [class.active]="editorMode() === 'advanced'"
-      (click)="setMode('advanced')"
-    >Advanced</button>
-    <button
-      type="button"
-      class="mode-btn"
-      [class.active]="editorMode() === 'json'"
-      (click)="setMode('json')"
-    >JSON</button>
+    <mat-button-toggle-group [value]="editorMode()" (change)="setMode($event.value)">
+      <mat-button-toggle value="easy"
+        [disabled]="!easyModeAvailable() && editorMode() !== 'easy'"
+        [title]="!easyModeAvailable() && editorMode() !== 'easy' ? 'This flag uses features not available in easy mode' : ''"
+      >Easy</mat-button-toggle>
+      <mat-button-toggle value="advanced">Advanced</mat-button-toggle>
+      <mat-button-toggle value="json">JSON</mat-button-toggle>
+    </mat-button-toggle-group>
   </div>
 
   <form [formGroup]="form" (ngSubmit)="onSave()" class="panel-body">
     <!-- Flag Key (shared across all modes) -->
-    <div class="form-field">
-      <label for="flag-key">Flag Key</label>
-      <input
-        id="flag-key"
-        formControlName="key"
-        placeholder="my-feature-flag"
-        class="form-input"
-        [class.input-error]="form.get('key')!.invalid && form.get('key')!.touched"
-      />
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Flag Key</mat-label>
+      <input matInput formControlName="key" placeholder="my-feature-flag" />
       @if (form.get('key')!.invalid && form.get('key')!.touched) {
-        <span class="field-error">
-          Use only letters, numbers, dots, hyphens, and underscores
-        </span>
+        <mat-error>Use only letters, numbers, dots, hyphens, and underscores</mat-error>
       }
       @if (keyAlreadyExists()) {
-        <span class="field-error">A flag with this key already exists in the current file</span>
+        <mat-error>A flag with this key already exists in the current file</mat-error>
       }
-    </div>
+    </mat-form-field>
 
     <!-- ==================== EASY MODE ==================== -->
     @if (editorMode() === 'easy') {
       <div class="easy-mode">
         <div class="form-field">
           <label>Flag Type</label>
-          <div class="easy-type-toggle">
-            <button
-              type="button"
-              class="type-btn"
-              [class.active]="form.get('easyType')!.value === 'boolean'"
-              (click)="form.get('easyType')!.setValue('boolean'); onEasyTypeChange()"
-            >Boolean</button>
-            <button
-              type="button"
-              class="type-btn"
-              [class.active]="form.get('easyType')!.value === 'string'"
-              (click)="form.get('easyType')!.setValue('string'); onEasyTypeChange()"
-            >String</button>
-          </div>
+          <mat-button-toggle-group [value]="form.get('easyType')!.value"
+            (change)="form.get('easyType')!.setValue($event.value); onEasyTypeChange()">
+            <mat-button-toggle value="boolean">Boolean</mat-button-toggle>
+            <mat-button-toggle value="string">String</mat-button-toggle>
+          </mat-button-toggle-group>
         </div>
 
         @if (form.get('easyType')!.value === 'boolean') {
           <div class="easy-toggle-section">
             <div class="easy-toggle-row">
-              <span class="easy-toggle-label">Flag is currently</span>
-              <button
-                type="button"
-                class="toggle-switch"
-                [class.on]="form.get('state')!.value === 'ENABLED'"
-                (click)="onEasyStateToggle()"
-              >
-                <span class="toggle-knob"></span>
-              </button>
-              <span
-                class="easy-state-text"
-                [class.enabled]="form.get('state')!.value === 'ENABLED'"
-              >{{ form.get('state')!.value === 'ENABLED' ? 'ON' : 'OFF' }}</span>
+              <mat-slide-toggle
+                [checked]="form.get('state')!.value === 'ENABLED'"
+                (change)="onEasyStateToggle()"
+                labelPosition="before">
+                Flag is currently {{ form.get('state')!.value === 'ENABLED' ? 'ON' : 'OFF' }}
+              </mat-slide-toggle>
             </div>
             <p class="easy-hint">
                Use the toggle to control whether this flag is enabled.
@@ -97,41 +62,30 @@
         @if (form.get('easyType')!.value === 'string') {
           <div class="easy-string-section">
             <div class="easy-toggle-row">
-              <span class="easy-toggle-label">Enabled</span>
-              <button
-                type="button"
-                class="toggle-switch"
-                [class.on]="form.get('state')!.value === 'ENABLED'"
-                (click)="onEasyStateToggle()"
-              >
-                <span class="toggle-knob"></span>
-              </button>
-              <span
-                class="easy-state-text"
-                [class.enabled]="form.get('state')!.value === 'ENABLED'"
-              >{{ form.get('state')!.value === 'ENABLED' ? 'ON' : 'OFF' }}</span>
+              <mat-slide-toggle
+                [checked]="form.get('state')!.value === 'ENABLED'"
+                (change)="onEasyStateToggle()"
+                labelPosition="before">
+                Enabled {{ form.get('state')!.value === 'ENABLED' ? 'ON' : 'OFF' }}
+              </mat-slide-toggle>
             </div>
 
-            <div class="form-field">
-              <label for="easy-string-val">Value</label>
-              <input
-                id="easy-string-val"
-                formControlName="easyStringValue"
-                placeholder="Enter string value"
-                class="form-input"
-                (input)="onEasyStringValueChange()"
-              />
-            </div>
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Value</mat-label>
+              <input matInput formControlName="easyStringValue"
+                     placeholder="Enter string value"
+                     (input)="onEasyStringValueChange()" />
+            </mat-form-field>
 
-            <div class="form-field">
-              <label for="easy-default">Default Variant</label>
-              <select id="easy-default" formControlName="defaultVariant" class="form-input">
-                <option value="">-- none --</option>
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Default Variant</mat-label>
+              <mat-select formControlName="defaultVariant">
+                <mat-option value="">-- none --</mat-option>
                 @for (name of variantNames(); track name) {
-                  <option [value]="name">{{ name }}</option>
+                  <mat-option [value]="name">{{ name }}</mat-option>
                 }
-              </select>
-            </div>
+              </mat-select>
+            </mat-form-field>
           </div>
         }
       </div>
@@ -141,28 +95,23 @@
     @if (editorMode() === 'advanced') {
       <div class="advanced-mode">
         <div class="form-row">
-          <div class="form-field">
-            <label for="flag-state">State</label>
-            <select id="flag-state" formControlName="state" class="form-input">
-              <option value="ENABLED">Enabled</option>
-              <option value="DISABLED">Disabled</option>
-            </select>
-          </div>
+          <mat-form-field appearance="outline">
+            <mat-label>State</mat-label>
+            <mat-select formControlName="state">
+              <mat-option value="ENABLED">Enabled</mat-option>
+              <mat-option value="DISABLED">Disabled</mat-option>
+            </mat-select>
+          </mat-form-field>
 
-          <div class="form-field">
-            <label for="flag-type">Flag Type</label>
-            <select
-              id="flag-type"
-              formControlName="flagType"
-              class="form-input"
-              (change)="onTypeChange()"
-            >
-              <option value="boolean">Boolean</option>
-              <option value="string">String</option>
-              <option value="number">Number</option>
-              <option value="object">Object</option>
-            </select>
-          </div>
+          <mat-form-field appearance="outline">
+            <mat-label>Flag Type</mat-label>
+            <mat-select formControlName="flagType" (selectionChange)="onTypeChange()">
+              <mat-option value="boolean">Boolean</mat-option>
+              <mat-option value="string">String</mat-option>
+              <mat-option value="number">Number</mat-option>
+              <mat-option value="object">Object</mat-option>
+            </mat-select>
+          </mat-form-field>
         </div>
 
         <app-variants-editor
@@ -171,15 +120,15 @@
           (variantsChange)="onVariantsChange($event)"
         />
 
-        <div class="form-field">
-          <label for="default-variant">Default Variant</label>
-          <select id="default-variant" formControlName="defaultVariant" class="form-input">
-            <option value="">-- none --</option>
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Default Variant</mat-label>
+          <mat-select formControlName="defaultVariant">
+            <mat-option value="">-- none --</mat-option>
             @for (name of variantNames(); track name) {
-              <option [value]="name">{{ name }}</option>
+              <mat-option [value]="name">{{ name }}</mat-option>
             }
-          </select>
-        </div>
+          </mat-select>
+        </mat-form-field>
 
         <app-targeting-editor
           [targeting]="targeting()"
@@ -194,17 +143,19 @@
       <div class="json-mode">
         <div class="json-mode-header">
           <label class="section-label">Flag Definition</label>
-          <button type="button" class="btn" (click)="formatJson()">Format</button>
+          <button mat-stroked-button type="button" (click)="formatJson()">Format</button>
         </div>
-        <textarea
-          class="json-editor-textarea"
-          [ngModel]="rawJson"
-          [ngModelOptions]="{ standalone: true }"
-          (ngModelChange)="onJsonInput($event)"
-          rows="20"
-          spellcheck="false"
-          placeholder='{ "state": "ENABLED", "variants": { ... } }'
-        ></textarea>
+        <mat-form-field appearance="outline" class="full-width">
+          <textarea matInput
+            class="json-editor-textarea"
+            [ngModel]="rawJson"
+            [ngModelOptions]="{ standalone: true }"
+            (ngModelChange)="onJsonInput($event)"
+            rows="20"
+            spellcheck="false"
+            placeholder='{ "state": "ENABLED", "variants": { ... } }'
+          ></textarea>
+        </mat-form-field>
         @if (jsonError) {
           <p class="json-error">{{ jsonError }}</p>
         }
@@ -216,12 +167,8 @@
 
     <!-- ==================== ACTIONS ==================== -->
     <div class="panel-actions">
-      <button type="button" class="btn" (click)="onCancel()">Cancel</button>
-      <button
-        type="submit"
-        class="btn btn-primary"
-        [disabled]="!canSave()"
-      >
+      <button mat-button type="button" (click)="onCancel()">Cancel</button>
+      <button mat-flat-button color="primary" type="submit" [disabled]="!canSave()">
         {{ isEditing() ? 'Save Changes' : 'Create Flag' }}
       </button>
     </div>

@@ -1,5 +1,10 @@
 import { Component, input, output, OnChanges } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { MatButtonToggleModule } from '@angular/material/button-toggle';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatSelectModule } from '@angular/material/select';
+import { MatButtonModule } from '@angular/material/button';
 
 type TargetingMode = 'none' | 'simple' | 'json';
 type Operator = '==' | '!=' | 'in' | 'starts_with' | 'ends_with';
@@ -7,7 +12,14 @@ type Operator = '==' | '!=' | 'in' | 'starts_with' | 'ends_with';
 @Component({
   selector: 'app-targeting-editor',
   standalone: true,
-  imports: [FormsModule],
+  imports: [
+    FormsModule,
+    MatButtonToggleModule,
+    MatFormFieldModule,
+    MatInputModule,
+    MatSelectModule,
+    MatButtonModule,
+  ],
   templateUrl: './targeting-editor.html',
   styleUrl: './targeting-editor.css',
 })

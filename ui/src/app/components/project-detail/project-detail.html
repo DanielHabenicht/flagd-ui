@@ -1,7 +1,9 @@
 <div class="project-detail">
   <div class="detail-header">
     <h2>{{ store.currentProjectName() }}</h2>
-    <button class="btn btn-primary" (click)="openNewFlagEditor()">+ Add Flag</button>
+    <button mat-flat-button color="primary" (click)="openNewFlagEditor()">
+      <mat-icon>add</mat-icon> Add Flag
+    </button>
   </div>
 
   @if (store.error()) {
@@ -11,53 +13,78 @@
   @if (store.loading() && !store.flagEntries().length) {
     <div class="loading">Loading flags...</div>
   } @else if (store.flagEntries().length) {
-    <table class="flags-table">
-      <thead>
-        <tr>
-          <th>Key</th>
-          <th>Type</th>
-          <th>State</th>
-          <th>Variants</th>
-          <th>Default</th>
-          <th>Targeting</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody>
-        @for (flag of store.flagEntries(); track flag.key) {
-          <tr [class.disabled-row]="flag.state === 'DISABLED'">
-            <td class="col-key">{{ flag.key }}</td>
-            <td><span class="type-badge">{{ getFlagType(flag) }}</span></td>
-            <td>
-              <span class="state-badge" [class.enabled]="flag.state === 'ENABLED'">
-                {{ flag.state }}
-              </span>
-            </td>
-            <td class="col-variants">
-              @for (name of getVariantNames(flag); track name) {
-                <span class="variant-chip">{{ name }}</span>
-              }
-            </td>
-            <td class="col-default">{{ flag.defaultVariant ?? '-' }}</td>
-            <td>
-              @if (hasTargeting(flag)) {
-                <span class="targeting-badge">yes</span>
-              } @else {
-                <span class="no-targeting">-</span>
-              }
-            </td>
-            <td class="col-actions">
-              <button class="btn-action" (click)="openEditFlagEditor(flag)" title="Edit">Edit</button>
-              <button class="btn-action btn-action-danger" (click)="confirmDelete(flag)" title="Delete">&times;</button>
-            </td>
-          </tr>
-        }
-      </tbody>
+    <table mat-table [dataSource]="store.flagEntries()" class="flags-table">
+      <ng-container matColumnDef="key">
+        <th mat-header-cell *matHeaderCellDef>Key</th>
+        <td mat-cell *matCellDef="let flag" class="col-key">{{ flag.key }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="type">
+        <th mat-header-cell *matHeaderCellDef>Type</th>
+        <td mat-cell *matCellDef="let flag">
+          <mat-chip-set>
+            <mat-chip class="type-chip">{{ getFlagType(flag) }}</mat-chip>
+          </mat-chip-set>
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="state">
+        <th mat-header-cell *matHeaderCellDef>State</th>
+        <td mat-cell *matCellDef="let flag">
+          <mat-chip class="state-badge" [class.enabled]="flag.state === 'ENABLED'"
+                    [highlighted]="flag.state === 'ENABLED'">
+            {{ flag.state }}
+          </mat-chip>
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="variants">
+        <th mat-header-cell *matHeaderCellDef>Variants</th>
+        <td mat-cell *matCellDef="let flag">
+          <mat-chip-set>
+            @for (name of getVariantNames(flag); track name) {
+              <mat-chip class="variant-chip">{{ name }}</mat-chip>
+            }
+          </mat-chip-set>
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="default">
+        <th mat-header-cell *matHeaderCellDef>Default</th>
+        <td mat-cell *matCellDef="let flag" class="col-default">{{ flag.defaultVariant ?? '-' }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="targeting">
+        <th mat-header-cell *matHeaderCellDef>Targeting</th>
+        <td mat-cell *matCellDef="let flag">
+          @if (hasTargeting(flag)) {
+            <mat-chip class="targeting-chip">yes</mat-chip>
+          } @else {
+            <span class="no-targeting">-</span>
+          }
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="actions">
+        <th mat-header-cell *matHeaderCellDef></th>
+        <td mat-cell *matCellDef="let flag" class="col-actions">
+          <button mat-icon-button (click)="openEditFlagEditor(flag)" title="Edit">
+            <mat-icon>edit</mat-icon>
+          </button>
+          <button mat-icon-button color="warn" (click)="confirmDelete(flag)" title="Delete">
+            <mat-icon>delete</mat-icon>
+          </button>
+        </td>
+      </ng-container>
+
+      <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+      <tr mat-row *matRowDef="let row; columns: displayedColumns;"
+          [class.disabled-row]="row.state === 'DISABLED'"></tr>
     </table>
   } @else {
     <div class="empty-flags">
       <p>No flags in this project yet.</p>
-      <button class="btn btn-primary" (click)="openNewFlagEditor()">Create your first flag</button>
+      <button mat-flat-button color="primary" (click)="openNewFlagEditor()">Create your first flag</button>
     </div>
   }
 </div>

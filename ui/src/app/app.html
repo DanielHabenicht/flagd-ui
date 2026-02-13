@@ -1,11 +1,11 @@
-<div class="app-shell">
-  <aside class="sidebar">
-    <div class="sidebar-header">
+<mat-sidenav-container class="app-shell">
+  <mat-sidenav mode="side" opened class="sidebar">
+    <mat-toolbar>
       <h1>flagd-ui</h1>
-    </div>
+    </mat-toolbar>
     <app-project-list />
-  </aside>
-  <main class="main-content">
+  </mat-sidenav>
+  <mat-sidenav-content class="main-content">
     <router-outlet />
-  </main>
-</div>
+  </mat-sidenav-content>
+</mat-sidenav-container>

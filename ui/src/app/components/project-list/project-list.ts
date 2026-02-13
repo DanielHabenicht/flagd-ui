@@ -1,12 +1,28 @@
 import { Component, inject, OnInit } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
-import { FlagStore } from '../../services/flag-store';
 import { FormsModule } from '@angular/forms';
+import { MatListModule } from '@angular/material/list';
+import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatDividerModule } from '@angular/material/divider';
+import { FlagStore } from '../../services/flag-store';
 
 @Component({
   selector: 'app-project-list',
   standalone: true,
-  imports: [RouterLink, RouterLinkActive, FormsModule],
+  imports: [
+    RouterLink,
+    RouterLinkActive,
+    FormsModule,
+    MatListModule,
+    MatButtonModule,
+    MatIconModule,
+    MatFormFieldModule,
+    MatInputModule,
+    MatDividerModule,
+  ],
   templateUrl: './project-list.html',
   styleUrl: './project-list.css',
 })

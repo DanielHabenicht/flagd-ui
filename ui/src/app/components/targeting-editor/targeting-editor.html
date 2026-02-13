@@ -1,96 +1,72 @@
 <div class="targeting-editor">
   <label class="section-label">Targeting Rules</label>
 
-  <div class="mode-toggle">
-    <button
-      class="mode-btn"
-      [class.active]="mode === 'none'"
-      (click)="setMode('none')"
-    >None</button>
-    <button
-      class="mode-btn"
-      [class.active]="mode === 'simple'"
-      (click)="setMode('simple')"
-    >Simple</button>
-    <button
-      class="mode-btn"
-      [class.active]="mode === 'json'"
-      (click)="setMode('json')"
-    >JSON</button>
-  </div>
+  <mat-button-toggle-group [value]="mode" (change)="setMode($event.value)">
+    <mat-button-toggle value="none">None</mat-button-toggle>
+    <mat-button-toggle value="simple">Simple</mat-button-toggle>
+    <mat-button-toggle value="json">JSON</mat-button-toggle>
+  </mat-button-toggle-group>
 
   @if (mode === 'simple') {
     <div class="simple-rule">
       <div class="rule-row">
         <span class="rule-label">If</span>
-        <input
-          class="rule-input"
-          [(ngModel)]="property"
-          (ngModelChange)="onSimpleFieldChange()"
-          placeholder="context property (e.g. email)"
-        />
-        <select
-          class="rule-select"
-          [(ngModel)]="operator"
-          (ngModelChange)="onSimpleFieldChange()"
-        >
-          <option value="==">equals</option>
-          <option value="!=">not equals</option>
-          <option value="in">in list</option>
-          <option value="starts_with">starts with</option>
-          <option value="ends_with">ends with</option>
-        </select>
-        <input
-          class="rule-input"
-          [(ngModel)]="compValue"
-          (ngModelChange)="onSimpleFieldChange()"
-          [placeholder]="operator === 'in' ? 'val1, val2, val3' : 'value'"
-        />
+        <mat-form-field appearance="outline" class="rule-field">
+          <input matInput [(ngModel)]="property" (ngModelChange)="onSimpleFieldChange()"
+                 placeholder="context property (e.g. email)" />
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="rule-select-field">
+          <mat-select [(ngModel)]="operator" (ngModelChange)="onSimpleFieldChange()">
+            <mat-option value="==">equals</mat-option>
+            <mat-option value="!=">not equals</mat-option>
+            <mat-option value="in">in list</mat-option>
+            <mat-option value="starts_with">starts with</mat-option>
+            <mat-option value="ends_with">ends with</mat-option>
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="rule-field">
+          <input matInput [(ngModel)]="compValue" (ngModelChange)="onSimpleFieldChange()"
+                 [placeholder]="operator === 'in' ? 'val1, val2, val3' : 'value'" />
+        </mat-form-field>
       </div>
       <div class="rule-row">
         <span class="rule-label">then</span>
-        <select
-          class="rule-select"
-          [(ngModel)]="thenVariant"
-          (ngModelChange)="onSimpleFieldChange()"
-        >
-          <option value="">-- select variant --</option>
-          @for (v of variantKeys(); track v) {
-            <option [value]="v">{{ v }}</option>
-          }
-        </select>
+        <mat-form-field appearance="outline" class="rule-select-field">
+          <mat-select [(ngModel)]="thenVariant" (ngModelChange)="onSimpleFieldChange()">
+            <mat-option value="">-- select variant --</mat-option>
+            @for (v of variantKeys(); track v) {
+              <mat-option [value]="v">{{ v }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
         <span class="rule-label">else</span>
-        <select
-          class="rule-select"
-          [(ngModel)]="elseVariant"
-          (ngModelChange)="onSimpleFieldChange()"
-        >
-          <option value="">default</option>
-          @for (v of variantKeys(); track v) {
-            <option [value]="v">{{ v }}</option>
-          }
-        </select>
+        <mat-form-field appearance="outline" class="rule-select-field">
+          <mat-select [(ngModel)]="elseVariant" (ngModelChange)="onSimpleFieldChange()">
+            <mat-option value="">default</mat-option>
+            @for (v of variantKeys(); track v) {
+              <mat-option [value]="v">{{ v }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
       </div>
     </div>
   }
 
   @if (mode === 'json') {
     <div class="json-editor">
-      <textarea
-        class="json-textarea"
-        [ngModel]="rawJson"
-        (ngModelChange)="onJsonChange($event)"
-        rows="8"
-        placeholder='{ "if": [...] }'
-        spellcheck="false"
-      ></textarea>
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Targeting JSON</mat-label>
+        <textarea matInput [ngModel]="rawJson" (ngModelChange)="onJsonChange($event)"
+                  rows="8" placeholder='{ "if": [...] }' spellcheck="false"
+                  class="json-textarea"></textarea>
+      </mat-form-field>
       @if (jsonError) {
         <p class="json-error">{{ jsonError }}</p>
       }
       <div class="template-buttons">
-        <button class="btn-template" (click)="insertTemplate('condition')">Insert Condition</button>
-        <button class="btn-template" (click)="insertTemplate('fractional')">Insert Fractional</button>
-        <button class="btn-template" (click)="clearTargeting()">Clear</button>
+        <button mat-stroked-button (click)="insertTemplate('condition')">Insert Condition</button>
+        <button mat-stroked-button (click)="insertTemplate('fractional')">Insert Fractional</button>
+        <button mat-stroked-button (click)="clearTargeting()">Clear</button>
       </div>
     </div>
   }

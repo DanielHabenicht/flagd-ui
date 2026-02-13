@@ -112,7 +112,7 @@ test('navigates to a project and renders flag data', async ({ page }) => {
 test('creates a project from the sidebar form', async ({ page }) => {
   await page.goto('/');
 
-  await page.locator('.project-list .list-header .btn-icon').click();
+  await page.getByRole('button', { name: 'New project' }).click();
   await page.getByPlaceholder('project-name').fill('new-project.flagd.json');
   await page.getByRole('button', { name: 'Create' }).click();
 

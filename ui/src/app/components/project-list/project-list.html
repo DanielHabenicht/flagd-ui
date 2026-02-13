@@ -1,39 +1,33 @@
 <div class="project-list">
   <div class="list-header">
     <span class="list-title">Projects</span>
-    <button class="btn-icon" (click)="toggleCreateForm()" title="New project">+</button>
+    <button mat-icon-button (click)="toggleCreateForm()" title="New project">
+      <mat-icon>add</mat-icon>
+    </button>
   </div>
 
   @if (showCreateForm) {
     <form class="create-form" (ngSubmit)="createProject()">
-      <input
-        type="text"
-        [(ngModel)]="newProjectName"
-        name="projectName"
-        placeholder="project-name"
-        class="create-input"
-        autofocus
-      />
+      <mat-form-field appearance="outline" class="create-field">
+        <mat-label>Project name</mat-label>
+        <input matInput [(ngModel)]="newProjectName" name="projectName" placeholder="project-name" autofocus />
+      </mat-form-field>
       <div class="create-actions">
-        <button type="submit" class="btn btn-sm btn-primary" [disabled]="!newProjectName.trim()">Create</button>
-        <button type="button" class="btn btn-sm" (click)="toggleCreateForm()">Cancel</button>
+        <button mat-flat-button color="primary" type="submit" [disabled]="!newProjectName.trim()">Create</button>
+        <button mat-button type="button" (click)="toggleCreateForm()">Cancel</button>
       </div>
     </form>
   }
 
-  <nav class="project-nav">
+  <mat-divider></mat-divider>
+
+  <mat-nav-list>
     @for (project of store.projects(); track project) {
-      <a
-        class="project-item"
-        [routerLink]="['/projects', project]"
-        routerLinkActive="active"
-      >
-        <span class="project-name">{{ project }}</span>
-        <button
-          class="btn-delete"
-          (click)="deleteProject($event, project)"
-          title="Delete project"
-        >&times;</button>
+      <a mat-list-item [routerLink]="['/projects', project]" routerLinkActive="active-link">
+        <span matListItemTitle class="project-name">{{ project }}</span>
+        <button mat-icon-button matListItemMeta (click)="deleteProject($event, project)" title="Delete project" class="btn-delete">
+          <mat-icon>close</mat-icon>
+        </button>
       </a>
     } @empty {
       <div class="empty-state">
@@ -44,5 +38,5 @@
         }
       </div>
     }
-  </nav>
+  </mat-nav-list>
 </div>

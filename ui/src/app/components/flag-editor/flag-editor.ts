@@ -1,6 +1,13 @@
 import { Component, input, output, OnInit, computed, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { FormsModule } from '@angular/forms';
+import { MatButtonToggleModule } from '@angular/material/button-toggle';
+import { MatSlideToggleModule } from '@angular/material/slide-toggle';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatSelectModule } from '@angular/material/select';
+import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
 import { FlagDefinition, FlagEntry, FlagState, FlagType, inferFlagType, getDefaultVariants } from '../../models/flag.models';
 import { VariantsEditorComponent, VariantRow } from '../variants-editor/variants-editor';
 import { TargetingEditorComponent } from '../targeting-editor/targeting-editor';
@@ -10,7 +17,19 @@ export type EditorMode = 'easy' | 'advanced' | 'json';
 @Component({
   selector: 'app-flag-editor',
   standalone: true,
-  imports: [ReactiveFormsModule, FormsModule, VariantsEditorComponent, TargetingEditorComponent],
+  imports: [
+    ReactiveFormsModule,
+    FormsModule,
+    VariantsEditorComponent,
+    TargetingEditorComponent,
+    MatButtonToggleModule,
+    MatSlideToggleModule,
+    MatFormFieldModule,
+    MatInputModule,
+    MatSelectModule,
+    MatButtonModule,
+    MatIconModule,
+  ],
   templateUrl: './flag-editor.html',
   styleUrl: './flag-editor.css',
 })

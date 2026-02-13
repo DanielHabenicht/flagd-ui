@@ -1,5 +1,9 @@
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
+import { MatTableModule } from '@angular/material/table';
+import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
+import { MatChipsModule } from '@angular/material/chips';
 import { FlagStore } from '../../services/flag-store';
 import { FlagEditorComponent } from '../flag-editor/flag-editor';
 import { FlagDefinition, FlagEntry, inferFlagType } from '../../models/flag.models';
@@ -7,7 +11,7 @@ import { FlagDefinition, FlagEntry, inferFlagType } from '../../models/flag.mode
 @Component({
   selector: 'app-project-detail',
   standalone: true,
-  imports: [FlagEditorComponent],
+  imports: [FlagEditorComponent, MatTableModule, MatButtonModule, MatIconModule, MatChipsModule],
   templateUrl: './project-detail.html',
   styleUrl: './project-detail.css',
 })
@@ -18,6 +22,7 @@ export class ProjectDetailComponent implements OnInit {
   showEditor = signal(false);
   editingFlag = signal<FlagEntry | null>(null);
   readonly existingFlagKeys = computed(() => this.store.flagEntries().map((f) => f.key));
+  readonly displayedColumns = ['key', 'type', 'state', 'variants', 'default', 'targeting', 'actions'];
 
   getFlagType(flag: FlagEntry): string {
     return inferFlagType(flag.variants);
