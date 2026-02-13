@@ -1,14 +1,13 @@
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { FlagStore } from '../../services/flag-store';
-import { FlagCardComponent } from '../flag-card/flag-card';
 import { FlagEditorComponent } from '../flag-editor/flag-editor';
-import { FlagDefinition, FlagEntry } from '../../models/flag.models';
+import { FlagDefinition, FlagEntry, inferFlagType } from '../../models/flag.models';
 
 @Component({
   selector: 'app-project-detail',
   standalone: true,
-  imports: [FlagCardComponent, FlagEditorComponent],
+  imports: [FlagEditorComponent],
   templateUrl: './project-detail.html',
   styleUrl: './project-detail.css',
 })
@@ -19,6 +18,24 @@ export class ProjectDetailComponent implements OnInit {
   showEditor = signal(false);
   editingFlag = signal<FlagEntry | null>(null);
   readonly existingFlagKeys = computed(() => this.store.flagEntries().map((f) => f.key));
+
+  getFlagType(flag: FlagEntry): string {
+    return inferFlagType(flag.variants);
+  }
+
+  getVariantNames(flag: FlagEntry): string[] {
+    return Object.keys(flag.variants);
+  }
+
+  hasTargeting(flag: FlagEntry): boolean {
+    return !!flag.targeting && Object.keys(flag.targeting).length > 0;
+  }
+
+  confirmDelete(flag: FlagEntry): void {
+    if (confirm(`Delete flag "${flag.key}"?`)) {
+      this.onDeleteFlag(flag.key);
+    }
+  }
 
   ngOnInit(): void {
     this.route.paramMap.subscribe((params) => {

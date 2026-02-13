@@ -10,20 +10,54 @@
 
   @if (store.loading() && !store.flagEntries().length) {
     <div class="loading">Loading flags...</div>
+  } @else if (store.flagEntries().length) {
+    <table class="flags-table">
+      <thead>
+        <tr>
+          <th>Key</th>
+          <th>Type</th>
+          <th>State</th>
+          <th>Variants</th>
+          <th>Default</th>
+          <th>Targeting</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (flag of store.flagEntries(); track flag.key) {
+          <tr [class.disabled-row]="flag.state === 'DISABLED'">
+            <td class="col-key">{{ flag.key }}</td>
+            <td><span class="type-badge">{{ getFlagType(flag) }}</span></td>
+            <td>
+              <span class="state-badge" [class.enabled]="flag.state === 'ENABLED'">
+                {{ flag.state }}
+              </span>
+            </td>
+            <td class="col-variants">
+              @for (name of getVariantNames(flag); track name) {
+                <span class="variant-chip">{{ name }}</span>
+              }
+            </td>
+            <td class="col-default">{{ flag.defaultVariant ?? '-' }}</td>
+            <td>
+              @if (hasTargeting(flag)) {
+                <span class="targeting-badge">yes</span>
+              } @else {
+                <span class="no-targeting">-</span>
+              }
+            </td>
+            <td class="col-actions">
+              <button class="btn-action" (click)="openEditFlagEditor(flag)" title="Edit">Edit</button>
+              <button class="btn-action btn-action-danger" (click)="confirmDelete(flag)" title="Delete">&times;</button>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
   } @else {
-    <div class="flag-grid">
-      @for (flag of store.flagEntries(); track flag.key) {
-        <app-flag-card
-          [flag]="flag"
-          (edit)="openEditFlagEditor(flag)"
-          (delete)="onDeleteFlag(flag.key)"
-        />
-      } @empty {
-        <div class="empty-flags">
-          <p>No flags in this project yet.</p>
-          <button class="btn btn-primary" (click)="openNewFlagEditor()">Create your first flag</button>
-        </div>
-      }
+    <div class="empty-flags">
+      <p>No flags in this project yet.</p>
+      <button class="btn btn-primary" (click)="openNewFlagEditor()">Create your first flag</button>
     </div>
   }
 </div>
