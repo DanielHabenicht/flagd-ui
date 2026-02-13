@@ -130,7 +130,6 @@ cd ui
 npm install          # Install dependencies
 npm start            # Dev server on port 4200 (proxies /api to :3000)
 npm run build        # Production build to ../public
-npx ng build         # Same as above
 npm run generate:api-client  # Regenerate API client from OpenAPI spec
 ```
 

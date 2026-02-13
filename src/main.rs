@@ -7,7 +7,7 @@ mod openapi_doc;
 use axum::{routing::get, Router};
 use tower_http::{
     compression::CompressionLayer,
-    // cors::CorsLayer,
+    cors::CorsLayer,
     services::{ServeDir, ServeFile},
     trace::TraceLayer,
 };
@@ -93,7 +93,7 @@ fn create_router(config: &ServerConfig, app_state: handlers::api::AppState) -> R
                 .not_found_service(ServeFile::new(format!("{}/index.html", &config.static_dir))),
         )
         // Add middleware stack
-        // .layer(CorsLayer::permissive())
+        .layer(CorsLayer::permissive())
         .layer(CompressionLayer::new())
         .layer(TraceLayer::new_for_http())
 }

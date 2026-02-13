@@ -4,5 +4,6 @@ import { ProjectDetailComponent } from './components/project-detail/project-deta
 
 export const routes: Routes = [
   { path: '', component: WelcomeComponent },
-  { path: 'projects/:name', component: ProjectDetailComponent },
+  { path: 'projects/local/:name', component: ProjectDetailComponent },
+  { path: 'projects/remote/:backendId/:name', component: ProjectDetailComponent },
 ];

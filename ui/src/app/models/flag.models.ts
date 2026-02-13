@@ -1,5 +1,25 @@
 export type FlagState = 'ENABLED' | 'DISABLED';
 export type FlagType = 'boolean' | 'string' | 'number' | 'object';
+export type ProjectSource = 'local' | 'remote';
+
+export interface ProjectEntry {
+  name: string;
+  source: ProjectSource;
+  backendUrl?: string;
+}
+
+export interface BackendInstance {
+  id: string;
+  url: string;
+  label: string;
+}
+
+export interface FileGroup {
+  label: string;
+  icon: string;
+  backendId?: string;
+  entries: ProjectEntry[];
+}
 
 export interface FlagDefinition {
   state: FlagState;

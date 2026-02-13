@@ -45,8 +45,14 @@ export class ProjectDetailComponent implements OnInit {
   ngOnInit(): void {
     this.route.paramMap.subscribe((params) => {
       const name = params.get('name');
-      if (name) {
-        this.store.selectProject(name);
+      const backendId = params.get('backendId');
+      if (!name) return;
+
+      const routePath = this.route.snapshot.routeConfig?.path ?? '';
+      if (routePath.startsWith('projects/remote')) {
+        this.store.selectProjectByRoute('remote', name, backendId ?? undefined);
+      } else {
+        this.store.selectProjectByRoute('local', name);
       }
     });
   }
@@ -77,5 +83,9 @@ export class ProjectDetailComponent implements OnInit {
 
   onDeleteFlag(key: string): void {
     this.store.deleteFlag(key);
+  }
+
+  downloadProject(): void {
+    this.store.downloadCurrentProject();
   }
 }

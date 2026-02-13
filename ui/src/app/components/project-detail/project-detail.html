@@ -1,9 +1,14 @@
 <div class="project-detail">
   <div class="detail-header">
     <h2>{{ store.currentProjectName() }}</h2>
-    <button mat-flat-button color="primary" (click)="openNewFlagEditor()">
-      <mat-icon>add</mat-icon> Add Flag
-    </button>
+    <div class="header-actions">
+      <button mat-icon-button (click)="downloadProject()" title="Download JSON">
+        <mat-icon>download</mat-icon>
+      </button>
+      <button mat-flat-button color="primary" (click)="openNewFlagEditor()">
+        <mat-icon>add</mat-icon> Add Flag
+      </button>
+    </div>
   </div>
 
   @if (store.error()) {
@@ -81,7 +86,7 @@
     </table>
   } @else {
     <div class="empty-flags">
-      <p>No flags in this project yet.</p>
+      <p>No flags in this file yet.</p>
       <button mat-flat-button color="primary" (click)="openNewFlagEditor()">Create your first flag</button>
     </div>
   }

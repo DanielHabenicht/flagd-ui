@@ -1,0 +1,50 @@
+.tab-content {
+  padding: 16px 0;
+}
+
+.tab-description {
+  color: var(--color-text-secondary);
+  font-size: 0.85rem;
+  margin: 0 0 16px;
+}
+
+.tab-description code {
+  font-family: var(--font-mono);
+  background: var(--color-surface);
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-size: 0.8rem;
+}
+
+.full-width {
+  width: 100%;
+}
+
+.tab-actions {
+  margin-top: 8px;
+}
+
+.error-message {
+  color: var(--color-danger);
+  font-size: 0.85rem;
+  margin: 8px 0;
+}
+
+.discovered {
+  margin: 12px 0;
+  font-size: 0.85rem;
+}
+
+.discovered-label {
+  font-weight: 500;
+}
+
+.discovered ul {
+  margin: 4px 0 0 0;
+  padding-left: 20px;
+}
+
+.discovered li {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+}

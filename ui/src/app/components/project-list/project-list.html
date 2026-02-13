@@ -1,42 +1,46 @@
-<div class="project-list">
+<div class="project-list"
+     (dragover)="onDragOver($event)"
+     (dragleave)="onDragLeave($event)"
+     (drop)="onDrop($event)"
+     [class.drag-active]="dragOver">
   <div class="list-header">
-    <span class="list-title">Projects</span>
-    <button mat-icon-button (click)="toggleCreateForm()" title="New project">
+    <span class="list-title">Flag Files</span>
+    <button mat-icon-button (click)="openNewProjectDialog()" title="Add flag file">
       <mat-icon>add</mat-icon>
     </button>
   </div>
 
-  @if (showCreateForm) {
-    <form class="create-form" (ngSubmit)="createProject()">
-      <mat-form-field appearance="outline" class="create-field">
-        <mat-label>Project name</mat-label>
-        <input matInput [(ngModel)]="newProjectName" name="projectName" placeholder="project-name" autofocus />
-      </mat-form-field>
-      <div class="create-actions">
-        <button mat-flat-button color="primary" type="submit" [disabled]="!newProjectName.trim()">Create</button>
-        <button mat-button type="button" (click)="toggleCreateForm()">Cancel</button>
-      </div>
-    </form>
-  }
-
   <mat-divider></mat-divider>
 
-  <mat-nav-list>
-    @for (project of store.projects(); track project) {
-      <a mat-list-item [routerLink]="['/projects', project]" routerLinkActive="active-link">
-        <span matListItemTitle class="project-name">{{ project }}</span>
-        <button mat-icon-button matListItemMeta (click)="deleteProject($event, project)" title="Delete project" class="btn-delete">
-          <mat-icon>close</mat-icon>
-        </button>
-      </a>
-    } @empty {
-      <div class="empty-state">
-        @if (store.loading()) {
-          <span>Loading...</span>
-        } @else {
-          <span>No projects yet</span>
-        }
+  @if (store.fileGroups().length) {
+    @for (group of store.fileGroups(); track group.label) {
+      <div class="group-header">
+        <mat-icon class="group-icon">{{ group.icon }}</mat-icon>
+        <span class="group-label">{{ group.label }}</span>
       </div>
+      <mat-nav-list class="group-list">
+        @for (entry of group.entries; track entry.name + entry.backendUrl) {
+          <a mat-list-item [routerLink]="getProjectRoute(entry)" routerLinkActive="active-link">
+            <span matListItemTitle class="project-name">{{ entry.name }}</span>
+            <button mat-icon-button matListItemMeta (click)="deleteProject($event, entry)" title="Delete" class="btn-delete">
+              <mat-icon>close</mat-icon>
+            </button>
+          </a>
+        }
+      </mat-nav-list>
     }
-  </mat-nav-list>
+  } @else {
+    <div class="empty-state">
+      @if (store.loading()) {
+        <span>Loading...</span>
+      } @else {
+        <span>No flag files yet</span>
+      }
+    </div>
+  }
+
+  <div class="drop-hint">
+    <mat-icon class="drop-hint-icon">upload_file</mat-icon>
+    <span>Drop <code>.flagd.json</code> files here</span>
+  </div>
 </div>
