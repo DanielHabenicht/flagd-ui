@@ -9,7 +9,7 @@
     "build": "ng build",
     "generate:api-client": "mkdir -p ./src/app/api-client && cp ./.openapi-generator-ignore ./src/app/api-client/.openapi-generator-ignore && docker run --rm --user \"$(id -u):$(id -g)\" -v \"$PWD:/local\" openapitools/openapi-generator-cli:v7.19.0 generate -i /local/openapi.json -g typescript-angular -o /local/src/app/api-client",
     "watch": "ng build --watch --configuration development",
-    "test": "ng test",
+    "test": "ng test"
   },
   "prettier": {
     "printWidth": 100,
