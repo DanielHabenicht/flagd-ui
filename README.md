@@ -50,8 +50,15 @@ Building the backend generates `public/openapi.json` locally from the current AP
 
 ## Docker
 
-A Docker Compose setup is available:
+A unified multi-stage Docker build is available and compiles both backend and frontend into one image:
 
 ```bash
-docker-compose up
+docker build -t flagd-ui .
+docker run --rm -p 3000:3000 flagd-ui
+```
+
+The Docker Compose setup is available for a local preview (both `flagd-ui` and `flagd`):
+
+```bash
+docker compose up --build
 ```

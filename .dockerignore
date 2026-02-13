@@ -1,0 +1,10 @@
+.git
+.github
+target
+ui/node_modules
+ui/.angular
+ui/dist
+ui/coverage
+ui/test-results
+ui/playwright-report
+**/*.log

@@ -1,8 +1,20 @@
 services:
+  flagd-ui:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: flagd-ui:local
+    ports:
+      - '3000:3000'
+    volumes:
+      - ./flags:/app/flags
+
   flagd:
     image: ghcr.io/open-feature/flagd:latest
     volumes:
       - ./flags:/flags
-    command: ['start', '--uri', 'file:./flags/demo.flagd.json']
+    command: [ 'start', '--uri', 'file:./flags/demo.flagd.json' ]
     ports:
       - '8013:8013'
+    depends_on:
+      - flagd-ui
