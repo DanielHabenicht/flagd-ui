@@ -29,7 +29,9 @@ impl jsonschema::Retrieve for LocalSchemaRetriever {
             self.base_dir.join(rel)
         } else if uri.scheme().as_str() == "file" {
             PathBuf::from(uri.path().as_str())
-        } else if uri.scheme().as_str() == "https" && uri.path().as_str().ends_with("targeting.json") {
+        } else if uri.scheme().as_str() == "https"
+            && uri.path().as_str().ends_with("targeting.json")
+        {
             self.base_dir.join("targeting.json")
         } else {
             return Err(format!("Unsupported schema URI: {uri_str}").into());
@@ -157,17 +159,20 @@ pub async fn list_flags(State(state): State<AppState>) -> AppResult<impl IntoRes
 
     // Create directory if it doesn't exist
     if !flags_dir.exists() {
-        fs::create_dir_all(&flags_dir)
-            .map_err(|e| AppError::InternalServerError(format!("Failed to create flags directory: {}", e)))?;
+        fs::create_dir_all(&flags_dir).map_err(|e| {
+            AppError::InternalServerError(format!("Failed to create flags directory: {}", e))
+        })?;
     }
 
-    let entries = fs::read_dir(&flags_dir)
-        .map_err(|e| AppError::InternalServerError(format!("Failed to read flags directory: {}", e)))?;
+    let entries = fs::read_dir(&flags_dir).map_err(|e| {
+        AppError::InternalServerError(format!("Failed to read flags directory: {}", e))
+    })?;
 
     let mut files = Vec::new();
     for entry in entries {
-        let entry = entry
-            .map_err(|e| AppError::InternalServerError(format!("Failed to read directory entry: {}", e)))?;
+        let entry = entry.map_err(|e| {
+            AppError::InternalServerError(format!("Failed to read directory entry: {}", e))
+        })?;
         let path = entry.path();
 
         if path.is_file() {
@@ -256,8 +261,9 @@ pub async fn create_flag(
 
     // Create the directory if it doesn't exist
     if let Some(parent) = file_path.parent() {
-        fs::create_dir_all(parent)
-            .map_err(|e| AppError::InternalServerError(format!("Failed to create directory: {}", e)))?;
+        fs::create_dir_all(parent).map_err(|e| {
+            AppError::InternalServerError(format!("Failed to create directory: {}", e))
+        })?;
     }
 
     // Create the complete document with schema URL (uses the official flagd schema URL)
