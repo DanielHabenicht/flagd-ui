@@ -17,3 +17,6 @@ flags/*
 !flags/demo.flagd.json
 
 ui/openapi.json
+
+# Zensical build output
+site/

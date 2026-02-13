@@ -48,6 +48,26 @@ cargo build --release
 
 Building the backend generates `public/openapi.json` locally from the current API annotations.
 
+## Documentation (GitHub Pages)
+
+Project docs are generated with [Zensical](https://zensical.org/docs/get-started/).
+
+### Build docs locally
+
+```bash
+uvx zensical serve
+```
+
+Open `http://localhost:8000` to preview docs.
+
+To build static output:
+
+```bash
+uvx zensical build --clean
+```
+
+Generated static files are written to `site/`.
+
 ## Docker
 
 A unified multi-stage Docker build is available and compiles both backend and frontend into one image:

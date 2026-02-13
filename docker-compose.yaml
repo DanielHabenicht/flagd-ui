@@ -5,7 +5,8 @@ services:
       dockerfile: Dockerfile
     image: flagd-ui:local
     ports:
-      - '3000:3000'
+      # Attention: This exposes the UI to the network, which is unsecure! 
+      - '0.0.0.0:3000:3000'
     volumes:
       - ./flags:/app/flags
 
