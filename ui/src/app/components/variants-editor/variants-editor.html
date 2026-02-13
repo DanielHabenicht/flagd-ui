@@ -1,0 +1,63 @@
+<div class="variants-editor">
+  <label class="section-label">Variants</label>
+
+  @for (row of rows; track $index) {
+    <div class="variant-row">
+      <input
+        class="variant-name"
+        [value]="row.name"
+        (input)="onNameChange($index, $any($event.target).value)"
+        placeholder="variant name"
+      />
+
+      @switch (flagType()) {
+        @case ('boolean') {
+          <select
+            class="variant-value"
+            [value]="'' + row.value"
+            (change)="onBooleanChange($index, $any($event.target).value)"
+          >
+            <option value="true">true</option>
+            <option value="false">false</option>
+          </select>
+        }
+        @case ('string') {
+          <input
+            class="variant-value"
+            type="text"
+            [value]="row.value"
+            (input)="onStringChange($index, $any($event.target).value)"
+            placeholder="string value"
+          />
+        }
+        @case ('number') {
+          <input
+            class="variant-value"
+            type="number"
+            [value]="row.value"
+            (input)="onNumberChange($index, $any($event.target).value)"
+            placeholder="0"
+          />
+        }
+        @case ('object') {
+          <textarea
+            class="variant-value variant-object"
+            [value]="getObjectString(row.value)"
+            (input)="onObjectChange($index, $any($event.target).value)"
+            placeholder='{ "key": "value" }'
+            rows="3"
+          ></textarea>
+        }
+      }
+
+      <button
+        class="btn-remove"
+        (click)="removeVariant($index)"
+        title="Remove variant"
+        [disabled]="rows.length <= 1"
+      >&times;</button>
+    </div>
+  }
+
+  <button class="btn-add" (click)="addVariant()">+ Add Variant</button>
+</div>

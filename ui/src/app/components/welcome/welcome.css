@@ -1,0 +1,26 @@
+.welcome {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  text-align: center;
+  color: var(--color-text-secondary);
+}
+
+.welcome-icon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+}
+
+.welcome h2 {
+  margin: 0 0 0.5rem;
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+.welcome p {
+  max-width: 400px;
+  margin: 0;
+  line-height: 1.6;
+}

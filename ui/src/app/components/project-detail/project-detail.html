@@ -1,0 +1,38 @@
+<div class="project-detail">
+  <div class="detail-header">
+    <h2>{{ store.currentProjectName() }}</h2>
+    <button class="btn btn-primary" (click)="openNewFlagEditor()">+ Add Flag</button>
+  </div>
+
+  @if (store.error()) {
+    <div class="error-banner">{{ store.error() }}</div>
+  }
+
+  @if (store.loading() && !store.flagEntries().length) {
+    <div class="loading">Loading flags...</div>
+  } @else {
+    <div class="flag-grid">
+      @for (flag of store.flagEntries(); track flag.key) {
+        <app-flag-card
+          [flag]="flag"
+          (edit)="openEditFlagEditor(flag)"
+          (delete)="onDeleteFlag(flag.key)"
+        />
+      } @empty {
+        <div class="empty-flags">
+          <p>No flags in this project yet.</p>
+          <button class="btn btn-primary" (click)="openNewFlagEditor()">Create your first flag</button>
+        </div>
+      }
+    </div>
+  }
+</div>
+
+@if (showEditor()) {
+  <app-flag-editor
+    [flag]="editingFlag()"
+    [existingKeys]="existingFlagKeys()"
+    (save)="onSaveFlag($event)"
+    (cancel)="closeEditor()"
+  />
+}

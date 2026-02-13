@@ -1,0 +1,97 @@
+<div class="targeting-editor">
+  <label class="section-label">Targeting Rules</label>
+
+  <div class="mode-toggle">
+    <button
+      class="mode-btn"
+      [class.active]="mode === 'none'"
+      (click)="setMode('none')"
+    >None</button>
+    <button
+      class="mode-btn"
+      [class.active]="mode === 'simple'"
+      (click)="setMode('simple')"
+    >Simple</button>
+    <button
+      class="mode-btn"
+      [class.active]="mode === 'json'"
+      (click)="setMode('json')"
+    >JSON</button>
+  </div>
+
+  @if (mode === 'simple') {
+    <div class="simple-rule">
+      <div class="rule-row">
+        <span class="rule-label">If</span>
+        <input
+          class="rule-input"
+          [(ngModel)]="property"
+          (ngModelChange)="onSimpleFieldChange()"
+          placeholder="context property (e.g. email)"
+        />
+        <select
+          class="rule-select"
+          [(ngModel)]="operator"
+          (ngModelChange)="onSimpleFieldChange()"
+        >
+          <option value="==">equals</option>
+          <option value="!=">not equals</option>
+          <option value="in">in list</option>
+          <option value="starts_with">starts with</option>
+          <option value="ends_with">ends with</option>
+        </select>
+        <input
+          class="rule-input"
+          [(ngModel)]="compValue"
+          (ngModelChange)="onSimpleFieldChange()"
+          [placeholder]="operator === 'in' ? 'val1, val2, val3' : 'value'"
+        />
+      </div>
+      <div class="rule-row">
+        <span class="rule-label">then</span>
+        <select
+          class="rule-select"
+          [(ngModel)]="thenVariant"
+          (ngModelChange)="onSimpleFieldChange()"
+        >
+          <option value="">-- select variant --</option>
+          @for (v of variantKeys(); track v) {
+            <option [value]="v">{{ v }}</option>
+          }
+        </select>
+        <span class="rule-label">else</span>
+        <select
+          class="rule-select"
+          [(ngModel)]="elseVariant"
+          (ngModelChange)="onSimpleFieldChange()"
+        >
+          <option value="">default</option>
+          @for (v of variantKeys(); track v) {
+            <option [value]="v">{{ v }}</option>
+          }
+        </select>
+      </div>
+    </div>
+  }
+
+  @if (mode === 'json') {
+    <div class="json-editor">
+      <textarea
+        class="json-textarea"
+        [ngModel]="rawJson"
+        (ngModelChange)="onJsonChange($event)"
+        rows="8"
+        placeholder='{ "if": [...] }'
+        spellcheck="false"
+      ></textarea>
+      @if (jsonError) {
+        <p class="json-error">{{ jsonError }}</p>
+      }
+      <div class="template-buttons">
+        <button class="btn-template" (click)="insertTemplate('condition')">Insert Condition</button>
+        <button class="btn-template" (click)="insertTemplate('fractional')">Insert Fractional</button>
+        <button class="btn-template" (click)="clearTargeting()">Clear</button>
+      </div>
+    </div>
+  }
+</div>

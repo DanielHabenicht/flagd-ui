@@ -1,0 +1,84 @@
+<div class="modal-overlay" (click)="onOverlayClick($event)">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2>{{ isEditing() ? 'Edit Flag' : 'Create Flag' }}</h2>
+      <button class="btn-close" (click)="onCancel()">&times;</button>
+    </div>
+
+    <form [formGroup]="form" (ngSubmit)="onSave()" class="modal-body">
+      <div class="form-field">
+        <label for="flag-key">Flag Key</label>
+        <input
+          id="flag-key"
+          formControlName="key"
+          placeholder="my-feature-flag"
+          class="form-input"
+          [class.input-error]="form.get('key')!.invalid && form.get('key')!.touched"
+        />
+        @if (form.get('key')!.invalid && form.get('key')!.touched) {
+          <span class="field-error">
+            Use only letters, numbers, dots, hyphens, and underscores
+          </span>
+        }
+      </div>
+
+      <div class="form-row">
+        <div class="form-field">
+          <label for="flag-state">State</label>
+          <select id="flag-state" formControlName="state" class="form-input">
+            <option value="ENABLED">Enabled</option>
+            <option value="DISABLED">Disabled</option>
+          </select>
+        </div>
+
+        <div class="form-field">
+          <label for="flag-type">Flag Type</label>
+          <select
+            id="flag-type"
+            formControlName="flagType"
+            class="form-input"
+            (change)="onTypeChange()"
+          >
+            <option value="boolean">Boolean</option>
+            <option value="string">String</option>
+            <option value="number">Number</option>
+            <option value="object">Object</option>
+          </select>
+        </div>
+      </div>
+
+      <app-variants-editor
+        [flagType]="form.get('flagType')!.value"
+        [variants]="variants()"
+        (variantsChange)="onVariantsChange($event)"
+      />
+
+      <div class="form-field">
+        <label for="default-variant">Default Variant</label>
+        <select id="default-variant" formControlName="defaultVariant" class="form-input">
+          <option value="">-- none --</option>
+          @for (name of variantNames(); track name) {
+            <option [value]="name">{{ name }}</option>
+          }
+        </select>
+      </div>
+
+      <app-targeting-editor
+        [targeting]="targeting()"
+        [variantKeys]="variantNames()"
+        (targetingChange)="onTargetingChange($event)"
+      />
+
+      <div class="modal-actions">
+        <button type="button" class="btn" (click)="onCancel()">Cancel</button>
+        <button
+          type="submit"
+          class="btn btn-primary"
+          [disabled]="form.invalid || variantNames().length === 0"
+        >
+          {{ isEditing() ? 'Save Changes' : 'Create Flag' }}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>

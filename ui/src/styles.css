@@ -1,1 +1,60 @@
-/* You can add global styles to this file, and also import other style files */
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+:root {
+    --color-bg: #ffffff;
+    --color-surface: #f8f9fa;
+    --color-surface-hover: #e9ecef;
+    --color-border: #dee2e6;
+    --color-text: #212529;
+    --color-text-secondary: #6c757d;
+    --color-primary: #4263eb;
+    --color-primary-hover: #364fc7;
+    --color-primary-light: #dbe4ff;
+    --color-danger: #e03131;
+    --color-danger-hover: #c92a2a;
+    --color-success: #2f9e44;
+    --color-success-light: #d3f9d8;
+    --color-warning: #f08c00;
+    --color-enabled: #2f9e44;
+    --color-disabled: #adb5bd;
+    --radius-sm: 4px;
+    --radius-md: 8px;
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1);
+    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.15);
+    --font-mono: 'Menlo', 'Monaco', 'Courier New', monospace;
+}
+
+body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    color: var(--color-text);
+    background: var(--color-bg);
+    line-height: 1.5;
+    font-size: 14px;
+}
+
+button {
+    cursor: pointer;
+    font-family: inherit;
+    font-size: inherit;
+}
+
+input,
+select,
+textarea {
+    font-family: inherit;
+    font-size: inherit;
+}
+
+a {
+    color: var(--color-primary);
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}

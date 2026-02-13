@@ -1,0 +1,48 @@
+<div class="project-list">
+  <div class="list-header">
+    <span class="list-title">Projects</span>
+    <button class="btn-icon" (click)="toggleCreateForm()" title="New project">+</button>
+  </div>
+
+  @if (showCreateForm) {
+    <form class="create-form" (ngSubmit)="createProject()">
+      <input
+        type="text"
+        [(ngModel)]="newProjectName"
+        name="projectName"
+        placeholder="project-name"
+        class="create-input"
+        autofocus
+      />
+      <div class="create-actions">
+        <button type="submit" class="btn btn-sm btn-primary" [disabled]="!newProjectName.trim()">Create</button>
+        <button type="button" class="btn btn-sm" (click)="toggleCreateForm()">Cancel</button>
+      </div>
+    </form>
+  }
+
+  <nav class="project-nav">
+    @for (project of store.projects(); track project) {
+      <a
+        class="project-item"
+        [routerLink]="['/projects', project]"
+        routerLinkActive="active"
+      >
+        <span class="project-name">{{ project }}</span>
+        <button
+          class="btn-delete"
+          (click)="deleteProject($event, project)"
+          title="Delete project"
+        >&times;</button>
+      </a>
+    } @empty {
+      <div class="empty-state">
+        @if (store.loading()) {
+          <span>Loading...</span>
+        } @else {
+          <span>No projects yet</span>
+        }
+      </div>
+    }
+  </nav>
+</div>
