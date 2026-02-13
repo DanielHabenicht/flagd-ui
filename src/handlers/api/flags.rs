@@ -196,7 +196,7 @@ pub async fn list_flags(State(state): State<AppState>) -> AppResult<impl IntoRes
         ("name" = String, Path, description = "Name of the flag definition file")
     ),
     responses(
-        (status = 200, description = "Flag definition file content", body = FlagDefinitionResponse),
+        (status = 200, description = "Flag definition file content", body = Object),
         (status = 404, description = "Flag definition not found"),
         (status = 400, description = "Invalid filename"),
         (status = 500, description = "Internal server error")
@@ -222,10 +222,7 @@ pub async fn get_flag(
     let json: serde_json::Value = serde_json::from_str(&content)
         .map_err(|e| AppError::InternalServerError(format!("Failed to parse JSON: {}", e)))?;
 
-    Ok(Json(FlagDefinitionResponse {
-        name,
-        content: json,
-    }))
+    Ok(Json(json))
 }
 
 /// Create a new flag definition file
