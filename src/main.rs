@@ -2,6 +2,7 @@ mod config;
 mod error;
 mod handlers;
 mod middleware;
+mod openapi_doc;
 
 use axum::{
     routing::get,
@@ -18,41 +19,10 @@ use utoipa_swagger_ui::SwaggerUi;
 
 use config::ServerConfig;
 use handlers::{
-    health_check, readiness_check, example_endpoint,
+    health_check, readiness_check,
     init_app_state, list_flags, get_flag, create_flag, update_flag, delete_flag,
 };
-
-/// OpenAPI documentation
-#[derive(OpenApi)]
-#[openapi(
-    paths(
-        handlers::api::flags::list_flags,
-        handlers::api::flags::get_flag,
-        handlers::api::flags::create_flag,
-        handlers::api::flags::update_flag,
-        handlers::api::flags::delete_flag,
-    ),
-    components(
-        schemas(
-            handlers::api::CreateFlagRequest,
-            handlers::api::UpdateFlagRequest,
-            handlers::api::FlagDefinitionResponse,
-            handlers::api::ListFlagsResponse,
-        )
-    ),
-    tags(
-        (name = "flags", description = "Feature Flag Definition Management API")
-    ),
-    info(
-        title = "Flagd UI API",
-        version = "0.1.0",
-        description = "API for managing feature flag definition files compatible with flagd",
-        license(
-            name = "MIT"
-        )
-    )
-)]
-struct ApiDoc;
+use openapi_doc::ApiDoc;
 
 #[tokio::main]
 async fn main() {
@@ -98,7 +68,6 @@ async fn main() {
 fn create_router(config: &ServerConfig, app_state: handlers::api::AppState) -> Router {
     // API routes - prefix all with /api
     let api_routes = Router::new()
-        .route("/example", get(example_endpoint))
         // Flag management endpoints
         .route("/flags", get(list_flags).post(create_flag))
         .route("/flags/:name", get(get_flag).put(update_flag).delete(delete_flag))

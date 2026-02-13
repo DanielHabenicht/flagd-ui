@@ -38,11 +38,15 @@ flagd-ui/
 cargo run
 ```
 
+Running the backend normally does not regenerate `public/openapi.json`.
+
 ### Building
 
 ```bash
 cargo build --release
 ```
+
+Building the backend generates `public/openapi.json` locally from the current API annotations.
 
 ## Docker
 
