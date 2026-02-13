@@ -9,7 +9,7 @@ use axum::{
     Router,
 };
 use tower_http::{
-    services::ServeDir,
+    services::{ServeDir, ServeFile},
     trace::TraceLayer,
     compression::CompressionLayer,
 };
@@ -87,7 +87,7 @@ fn create_router(config: &ServerConfig, app_state: handlers::api::AppState) -> R
         .nest_service(
             "/",
             ServeDir::new(&config.static_dir)
-                .not_found_service(ServeDir::new(&config.static_dir).append_index_html_on_directories(true))
+                .not_found_service(ServeFile::new(format!("{}/index.html", &config.static_dir)))
         )
         // Add middleware stack
         .layer(CompressionLayer::new())

@@ -35,6 +35,10 @@
   width: 100%;
 }
 
+.mat-mdc-row {
+  cursor: pointer;
+}
+
 .col-key {
   font-family: var(--font-mono);
   font-weight: 500;

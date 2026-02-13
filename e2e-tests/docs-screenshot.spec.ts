@@ -58,7 +58,7 @@ test('captures docs screenshot while editing a flag', async ({ page }) => {
   await page.getByRole('link', { name: 'demo.flagd.json' }).click();
   await expect(page.getByRole('heading', { name: 'demo.flagd.json' })).toBeVisible();
 
-  await page.getByRole('button', { name: 'Edit' }).first().click();
+  await page.getByRole('cell', { name: 'checkout-enabled' }).click();
   await expect(page.getByRole('heading', { name: 'Edit Flag' })).toBeVisible();
 
   await page.getByLabel('Flag Key').fill('checkout-enabled-v2');
