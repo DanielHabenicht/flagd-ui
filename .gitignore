@@ -12,3 +12,6 @@ Cargo.lock
 
 public/*
 !public/.gitkeep
+
+flags/*
+!flags/demo.flagd.json
