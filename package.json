@@ -1,0 +1,30 @@
+{
+  "name": "flagd-ui",
+  "version": "1.0.0",
+  "description": "A web UI for managing feature flags in [OpenFeature](https://github.com/open-feature) [flagd](https://flagd.dev/) service, built with Rust and Axum.",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "e2e": "playwright test",
+    "e2e:headed": "playwright test --headed",
+    "e2e:ui": "playwright test --ui"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/DanielHabenicht/flagd-ui.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/DanielHabenicht/flagd-ui/issues"
+  },
+  "homepage": "https://github.com/DanielHabenicht/flagd-ui#readme",
+  "devDependencies": {
+    "@playwright/test": "^1.58.2",
+    "@types/node": "^25.2.3"
+  }
+}
