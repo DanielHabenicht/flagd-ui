@@ -1,0 +1,5 @@
+README.md
+git_push.sh
+.gitignore
+.openapi-generator-ignore
+.openapi-generator/**

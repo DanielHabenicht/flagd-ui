@@ -26,7 +26,8 @@ use utoipa::OpenApi;
         version = "0.1.0",
         description = "API for managing feature flag definition files compatible with flagd",
         license(
-            name = "MIT"
+            name = "MIT",
+            identifier = "MIT",
         )
     )
 )]
