@@ -4,6 +4,7 @@ services:
       context: .
       dockerfile: Dockerfile
     image: flagd-ui:local
+    user: "${UID:-1000}:${GID:-1000}"
     ports:
       # Attention: This exposes the UI to the network, which is unsecure! 
       - '0.0.0.0:3000:3000'
