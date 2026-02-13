@@ -1,0 +1,24 @@
+# Build artifacts
+target/
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Dependencies
+Cargo.lock
+
+# IDE/Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Temporary files
+tmpclaude-*
+*.tmp
+*.log
+
+# Git
+.git/
