@@ -18,5 +18,6 @@
       "extensions": ["GitHub.copilot", "GitHub.copilot-chat", "GitHub.copilot-labs"],
       "settings": {}
     }
-  }
+  },
+  "forwardPorts": [3000]
 }
