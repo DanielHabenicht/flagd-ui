@@ -37,6 +37,9 @@ yarn-error.log
 /libpeerconnection.log
 testem.log
 /typings
+/playwright-report
+/test-results
+/blob-report
 __screenshots__/
 /src/app/api-client/
 

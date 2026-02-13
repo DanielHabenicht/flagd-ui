@@ -9,7 +9,10 @@
     "build": "ng build",
     "generate:api-client": "mkdir -p ./src/app/api-client && cp ./.openapi-generator-ignore ./src/app/api-client/.openapi-generator-ignore && docker run --rm --user \"$(id -u):$(id -g)\" -v \"$PWD:/local\" openapitools/openapi-generator-cli:v7.19.0 generate -i /local/openapi.json -g typescript-angular -o /local/src/app/api-client",
     "watch": "ng build --watch --configuration development",
-    "test": "ng test"
+    "test": "ng test",
+    "e2e": "playwright test",
+    "e2e:headed": "playwright test --headed",
+    "e2e:ui": "playwright test --ui"
   },
   "prettier": {
     "printWidth": 100,
@@ -39,6 +42,7 @@
     "@angular/build": "^21.1.4",
     "@angular/cli": "^21.1.4",
     "@angular/compiler-cli": "^21.1.0",
+    "@playwright/test": "^1.58.2",
     "jsdom": "^27.1.0",
     "typescript": "~5.9.2",
     "vitest": "^4.0.8"
