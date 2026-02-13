@@ -1,27 +1,40 @@
-.modal-overlay {
+/* Backdrop */
+
+.panel-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.4);
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  padding: 40px 20px;
-  z-index: 1000;
-  overflow-y: auto;
+  background: rgba(0, 0, 0, 0.2);
+  z-index: 999;
 }
 
-.modal-content {
+/* Side panel */
+
+.side-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 480px;
+  max-width: calc(100vw - 260px);
   background: var(--color-bg);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-md);
-  width: 100%;
-  max-width: 640px;
-  max-height: calc(100vh - 80px);
+  border-left: 1px solid var(--color-border);
+  box-shadow: -4px 0 16px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
   display: flex;
   flex-direction: column;
+  animation: slide-in 0.15s ease-out;
 }
 
-.modal-header {
+@keyframes slide-in {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.panel-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -30,7 +43,7 @@
   flex-shrink: 0;
 }
 
-.modal-header h2 {
+.panel-header h2 {
   margin: 0;
   font-size: 1.15rem;
   font-weight: 600;
@@ -54,13 +67,16 @@
   color: var(--color-text);
 }
 
-.modal-body {
+.panel-body {
   padding: 20px;
   display: flex;
   flex-direction: column;
   gap: 16px;
   overflow-y: auto;
+  flex: 1;
 }
+
+/* Form elements */
 
 .form-field {
   display: flex;
@@ -108,12 +124,15 @@ select.form-input {
   background: var(--color-bg);
 }
 
-.modal-actions {
+/* Actions */
+
+.panel-actions {
   display: flex;
   justify-content: flex-end;
   gap: 8px;
-  padding-top: 8px;
+  padding-top: 12px;
   border-top: 1px solid var(--color-border);
+  flex-shrink: 0;
 }
 
 .btn {

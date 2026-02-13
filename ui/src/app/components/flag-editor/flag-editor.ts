@@ -104,10 +104,4 @@ export class FlagEditorComponent implements OnInit {
   onCancel(): void {
     this.cancel.emit();
   }
-
-  onOverlayClick(event: MouseEvent): void {
-    if ((event.target as HTMLElement).classList.contains('modal-overlay')) {
-      this.onCancel();
-    }
-  }
 }
