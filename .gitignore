@@ -9,3 +9,6 @@ Cargo.lock
 # Environment files
 .env
 .env.local
+
+public/*
+!public/.gitkeep

@@ -13,9 +13,46 @@ use tower_http::{
     compression::CompressionLayer,
 };
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
+use utoipa::OpenApi;
+use utoipa_swagger_ui::SwaggerUi;
 
 use config::ServerConfig;
-use handlers::{health_check, readiness_check, example_endpoint};
+use handlers::{
+    health_check, readiness_check, example_endpoint,
+    init_app_state, list_flags, get_flag, create_flag, update_flag, delete_flag,
+};
+
+/// OpenAPI documentation
+#[derive(OpenApi)]
+#[openapi(
+    paths(
+        handlers::api::flags::list_flags,
+        handlers::api::flags::get_flag,
+        handlers::api::flags::create_flag,
+        handlers::api::flags::update_flag,
+        handlers::api::flags::delete_flag,
+    ),
+    components(
+        schemas(
+            handlers::api::CreateFlagRequest,
+            handlers::api::UpdateFlagRequest,
+            handlers::api::FlagDefinitionResponse,
+            handlers::api::ListFlagsResponse,
+        )
+    ),
+    tags(
+        (name = "flags", description = "Feature Flag Definition Management API")
+    ),
+    info(
+        title = "Flagd UI API",
+        version = "0.1.0",
+        description = "API for managing feature flag definition files compatible with flagd",
+        license(
+            name = "MIT"
+        )
+    )
+)]
+struct ApiDoc;
 
 #[tokio::main]
 async fn main() {
@@ -34,8 +71,15 @@ async fn main() {
 
     tracing::info!("Starting server with config: {:?}", config);
 
+    // Initialize application state with schema validation
+    let app_state = init_app_state(config.clone())
+        .await
+        .expect("Failed to initialize application state");
+
+    tracing::info!("Schema validation initialized from: {}", config.schema_file_path);
+
     // Build the application router
-    let app = create_router(&config);
+    let app = create_router(&config, app_state);
 
     // Create TCP listener
     let listener = tokio::net::TcpListener::bind(&addr)
@@ -51,10 +95,14 @@ async fn main() {
 }
 
 /// Create the Axum router with all routes and middleware
-fn create_router(config: &ServerConfig) -> Router {
+fn create_router(config: &ServerConfig, app_state: handlers::api::AppState) -> Router {
     // API routes - prefix all with /api
     let api_routes = Router::new()
-        .route("/example", get(example_endpoint));
+        .route("/example", get(example_endpoint))
+        // Flag management endpoints
+        .route("/flags", get(list_flags).post(create_flag))
+        .route("/flags/:name", get(get_flag).put(update_flag).delete(delete_flag))
+        .with_state(app_state);
 
     // Main application router
     Router::new()
@@ -63,6 +111,8 @@ fn create_router(config: &ServerConfig) -> Router {
         .route("/ready", get(readiness_check))
         // Mount API routes under /api prefix
         .nest("/api", api_routes)
+        // Swagger UI for interactive API documentation
+        .merge(SwaggerUi::new("/swagger-ui").url("/api/openapi.json", ApiDoc::openapi()))
         // Serve static files from the public directory
         // This will also fallback to index.html for SPA routing
         .nest_service(
