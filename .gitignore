@@ -1,2 +1,11 @@
 # Claude Code temporary files
 tmpclaude-*-cwd
+
+# Rust build artifacts
+/target
+Cargo.lock
+*.pdb
+
+# Environment files
+.env
+.env.local
