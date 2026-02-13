@@ -7,7 +7,7 @@ mod openapi_doc;
 use axum::{routing::get, Router};
 use tower_http::{
     compression::CompressionLayer,
-    cors::CorsLayer,
+    // cors::CorsLayer,
     services::{ServeDir, ServeFile},
     trace::TraceLayer,
 };
