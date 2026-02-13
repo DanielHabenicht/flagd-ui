@@ -5,7 +5,32 @@
     <button class="btn-close" (click)="onCancel()">&times;</button>
   </div>
 
+  <div class="editor-modes">
+    <button
+      type="button"
+      class="mode-btn"
+      [class.active]="editorMode() === 'easy'"
+      [class.disabled]="!easyModeAvailable() && editorMode() !== 'easy'"
+      [disabled]="!easyModeAvailable() && editorMode() !== 'easy'"
+      [title]="!easyModeAvailable() && editorMode() !== 'easy' ? 'This flag uses features not available in easy mode' : ''"
+      (click)="setMode('easy')"
+    >Easy</button>
+    <button
+      type="button"
+      class="mode-btn"
+      [class.active]="editorMode() === 'advanced'"
+      (click)="setMode('advanced')"
+    >Advanced</button>
+    <button
+      type="button"
+      class="mode-btn"
+      [class.active]="editorMode() === 'json'"
+      (click)="setMode('json')"
+    >JSON</button>
+  </div>
+
   <form [formGroup]="form" (ngSubmit)="onSave()" class="panel-body">
+    <!-- Flag Key (shared across all modes) -->
     <div class="form-field">
       <label for="flag-key">Flag Key</label>
       <input
@@ -20,61 +45,182 @@
           Use only letters, numbers, dots, hyphens, and underscores
         </span>
       }
+      @if (keyAlreadyExists()) {
+        <span class="field-error">A flag with this key already exists in the current file</span>
+      }
     </div>
 
-    <div class="form-row">
-      <div class="form-field">
-        <label for="flag-state">State</label>
-        <select id="flag-state" formControlName="state" class="form-input">
-          <option value="ENABLED">Enabled</option>
-          <option value="DISABLED">Disabled</option>
-        </select>
-      </div>
+    <!-- ==================== EASY MODE ==================== -->
+    @if (editorMode() === 'easy') {
+      <div class="easy-mode">
+        <div class="form-field">
+          <label>Flag Type</label>
+          <div class="easy-type-toggle">
+            <button
+              type="button"
+              class="type-btn"
+              [class.active]="form.get('easyType')!.value === 'boolean'"
+              (click)="form.get('easyType')!.setValue('boolean'); onEasyTypeChange()"
+            >Boolean</button>
+            <button
+              type="button"
+              class="type-btn"
+              [class.active]="form.get('easyType')!.value === 'string'"
+              (click)="form.get('easyType')!.setValue('string'); onEasyTypeChange()"
+            >String</button>
+          </div>
+        </div>
 
-      <div class="form-field">
-        <label for="flag-type">Flag Type</label>
-        <select
-          id="flag-type"
-          formControlName="flagType"
-          class="form-input"
-          (change)="onTypeChange()"
-        >
-          <option value="boolean">Boolean</option>
-          <option value="string">String</option>
-          <option value="number">Number</option>
-          <option value="object">Object</option>
-        </select>
-      </div>
-    </div>
-
-    <app-variants-editor
-      [flagType]="form.get('flagType')!.value"
-      [variants]="variants()"
-      (variantsChange)="onVariantsChange($event)"
-    />
-
-    <div class="form-field">
-      <label for="default-variant">Default Variant</label>
-      <select id="default-variant" formControlName="defaultVariant" class="form-input">
-        <option value="">-- none --</option>
-        @for (name of variantNames(); track name) {
-          <option [value]="name">{{ name }}</option>
+        @if (form.get('easyType')!.value === 'boolean') {
+          <div class="easy-toggle-section">
+            <div class="easy-toggle-row">
+              <span class="easy-toggle-label">Flag is currently</span>
+              <button
+                type="button"
+                class="toggle-switch"
+                [class.on]="form.get('state')!.value === 'ENABLED'"
+                (click)="onEasyStateToggle()"
+              >
+                <span class="toggle-knob"></span>
+              </button>
+              <span
+                class="easy-state-text"
+                [class.enabled]="form.get('state')!.value === 'ENABLED'"
+              >{{ form.get('state')!.value === 'ENABLED' ? 'ON' : 'OFF' }}</span>
+            </div>
+            <p class="easy-hint">
+               Use the toggle to control whether this flag is enabled.
+            </p>
+          </div>
         }
-      </select>
-    </div>
 
-    <app-targeting-editor
-      [targeting]="targeting()"
-      [variantKeys]="variantNames()"
-      (targetingChange)="onTargetingChange($event)"
-    />
+        @if (form.get('easyType')!.value === 'string') {
+          <div class="easy-string-section">
+            <div class="easy-toggle-row">
+              <span class="easy-toggle-label">Enabled</span>
+              <button
+                type="button"
+                class="toggle-switch"
+                [class.on]="form.get('state')!.value === 'ENABLED'"
+                (click)="onEasyStateToggle()"
+              >
+                <span class="toggle-knob"></span>
+              </button>
+              <span
+                class="easy-state-text"
+                [class.enabled]="form.get('state')!.value === 'ENABLED'"
+              >{{ form.get('state')!.value === 'ENABLED' ? 'ON' : 'OFF' }}</span>
+            </div>
 
+            <div class="form-field">
+              <label for="easy-string-val">Value</label>
+              <input
+                id="easy-string-val"
+                formControlName="easyStringValue"
+                placeholder="Enter string value"
+                class="form-input"
+                (input)="onEasyStringValueChange()"
+              />
+            </div>
+
+            <div class="form-field">
+              <label for="easy-default">Default Variant</label>
+              <select id="easy-default" formControlName="defaultVariant" class="form-input">
+                <option value="">-- none --</option>
+                @for (name of variantNames(); track name) {
+                  <option [value]="name">{{ name }}</option>
+                }
+              </select>
+            </div>
+          </div>
+        }
+      </div>
+    }
+
+    <!-- ==================== ADVANCED MODE ==================== -->
+    @if (editorMode() === 'advanced') {
+      <div class="advanced-mode">
+        <div class="form-row">
+          <div class="form-field">
+            <label for="flag-state">State</label>
+            <select id="flag-state" formControlName="state" class="form-input">
+              <option value="ENABLED">Enabled</option>
+              <option value="DISABLED">Disabled</option>
+            </select>
+          </div>
+
+          <div class="form-field">
+            <label for="flag-type">Flag Type</label>
+            <select
+              id="flag-type"
+              formControlName="flagType"
+              class="form-input"
+              (change)="onTypeChange()"
+            >
+              <option value="boolean">Boolean</option>
+              <option value="string">String</option>
+              <option value="number">Number</option>
+              <option value="object">Object</option>
+            </select>
+          </div>
+        </div>
+
+        <app-variants-editor
+          [flagType]="form.get('flagType')!.value"
+          [variants]="variants()"
+          (variantsChange)="onVariantsChange($event)"
+        />
+
+        <div class="form-field">
+          <label for="default-variant">Default Variant</label>
+          <select id="default-variant" formControlName="defaultVariant" class="form-input">
+            <option value="">-- none --</option>
+            @for (name of variantNames(); track name) {
+              <option [value]="name">{{ name }}</option>
+            }
+          </select>
+        </div>
+
+        <app-targeting-editor
+          [targeting]="targeting()"
+          [variantKeys]="variantNames()"
+          (targetingChange)="onTargetingChange($event)"
+        />
+      </div>
+    }
+
+    <!-- ==================== JSON MODE ==================== -->
+    @if (editorMode() === 'json') {
+      <div class="json-mode">
+        <div class="json-mode-header">
+          <label class="section-label">Flag Definition</label>
+          <button type="button" class="btn" (click)="formatJson()">Format</button>
+        </div>
+        <textarea
+          class="json-editor-textarea"
+          [ngModel]="rawJson"
+          [ngModelOptions]="{ standalone: true }"
+          (ngModelChange)="onJsonInput($event)"
+          rows="20"
+          spellcheck="false"
+          placeholder='{ "state": "ENABLED", "variants": { ... } }'
+        ></textarea>
+        @if (jsonError) {
+          <p class="json-error">{{ jsonError }}</p>
+        }
+        <p class="json-hint">
+          Edit the full flag definition as JSON. Required fields: <code>state</code>, <code>variants</code>.
+        </p>
+      </div>
+    }
+
+    <!-- ==================== ACTIONS ==================== -->
     <div class="panel-actions">
       <button type="button" class="btn" (click)="onCancel()">Cancel</button>
       <button
         type="submit"
         class="btn btn-primary"
-        [disabled]="form.invalid || variantNames().length === 0"
+        [disabled]="!canSave()"
       >
         {{ isEditing() ? 'Save Changes' : 'Create Flag' }}
       </button>
