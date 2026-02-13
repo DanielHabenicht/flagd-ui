@@ -20,5 +20,6 @@
       "settings": {}
     }
   },
+  "postCreateCommand": "cargo check && cd ui && npm install && npm run build",
   "forwardPorts": [3000]
 }
