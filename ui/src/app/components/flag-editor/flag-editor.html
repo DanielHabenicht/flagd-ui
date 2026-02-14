@@ -34,8 +34,8 @@
 
   <form [formGroup]="form" (ngSubmit)="onSave()" class="panel-body" [class.inline-body]="inline()">
     <div class="panel-content">
-      <!-- Flag Key + State (shared across all modes) -->
-      <div class="key-state-row">
+      <!-- Flag Key (shared across all modes) -->
+      <div class="key-row">
         <mat-form-field appearance="outline" class="full-width">
           <mat-label>Flag Key</mat-label>
           <input matInput formControlName="key" placeholder="my-feature-flag" />
@@ -58,17 +58,6 @@
             <mat-error>A flag with this key already exists in the current file</mat-error>
           }
         </mat-form-field>
-
-        <div class="state-toggle-field">
-          <label>State</label>
-          <mat-slide-toggle
-            [checked]="form.get('state')!.value === 'ENABLED'"
-            (change)="onStateToggle()"
-            labelPosition="before"
-          >
-            {{ form.get('state')!.value === 'ENABLED' ? 'Enabled' : 'Disabled' }}
-          </mat-slide-toggle>
-        </div>
       </div>
 
       <!-- ==================== EASY MODE ==================== -->

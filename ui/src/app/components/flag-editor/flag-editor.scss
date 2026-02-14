@@ -109,24 +109,8 @@
   width: 100%;
 }
 
-.key-state-row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 12px;
-  align-items: start;
-}
-
-.state-toggle-field {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  min-width: 170px;
-}
-
-.state-toggle-field label {
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--color-text);
+.key-row {
+  display: block;
 }
 
 .form-field {
@@ -368,11 +352,7 @@
 }
 
 @media (max-width: 720px) {
-  .key-state-row {
-    grid-template-columns: 1fr;
-  }
-
-  .state-toggle-field {
-    min-width: 0;
+  .key-row {
+    display: block;
   }
 }

@@ -118,6 +118,16 @@
   color: var(--color-text-secondary);
 }
 
+.table-controls {
+  display: flex;
+  width: 100%;
+  margin-bottom: 12px;
+}
+
+.search-field {
+  width: 100%;
+}
+
 .flags-table {
   width: 100%;
 }
@@ -142,6 +152,14 @@
   font-family: var(--font-mono);
   font-weight: 500;
   white-space: nowrap;
+}
+
+.col-state {
+  width: 96px;
+}
+
+.col-state .mat-mdc-slide-toggle {
+  display: inline-flex;
 }
 
 .col-default {
@@ -169,6 +187,11 @@
 
 .empty-flags p {
   margin: 0 0 16px;
+}
+
+.empty-search {
+  padding: 16px 0;
+  color: var(--color-text-secondary);
 }
 
 @media (max-width: 1280px) {

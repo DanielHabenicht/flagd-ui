@@ -4,6 +4,10 @@ import { MatTableModule } from '@angular/material/table';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatChipsModule } from '@angular/material/chips';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatSortModule, Sort } from '@angular/material/sort';
+import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { FlagStore } from '../../services/flag-store';
 import { FlagEditorComponent } from '../flag-editor/flag-editor';
 import { FlagDefinition, FlagEntry, inferFlagType } from '../../models/flag.models';
@@ -19,6 +23,10 @@ import { PlaygroundDrawerComponent } from '../playground-drawer/playground-drawe
     MatButtonModule,
     MatIconModule,
     MatChipsModule,
+    MatFormFieldModule,
+    MatInputModule,
+    MatSortModule,
+    MatSlideToggleModule,
   ],
   templateUrl: './flags-file-detail.html',
   styleUrl: './flags-file-detail.scss',
@@ -39,15 +47,36 @@ export class FlagsFileDetailComponent implements OnInit {
   readonly selectedFlagKey = computed(() => this.editingFlag()?.key ?? null);
   readonly existingFlagKeys = computed(() => this.store.flagEntries().map((f) => f.key));
   readonly showInlineEditor = computed(() => this.showEditor() && this.isWideLayout());
+  readonly searchQuery = signal('');
+  readonly sortColumn = signal<'key' | 'type' | 'state' | 'default' | 'targeting'>('key');
+  readonly sortDirection = signal<'asc' | 'desc'>('asc');
   readonly displayedColumns = [
+    'state',
     'key',
     'type',
-    'state',
-    'variants',
     'default',
     'targeting',
     'actions',
-  ];
+  ] as const;
+  readonly visibleFlagEntries = computed(() => {
+    const query = this.searchQuery().trim().toLowerCase();
+    const entries = this.store.flagEntries();
+    const filteredEntries = query
+      ? entries.filter((flag) => this.getSearchText(flag).includes(query))
+      : entries;
+
+    const direction = this.sortDirection() === 'asc' ? 1 : -1;
+    const sorted = [...filteredEntries].sort((left, right) => {
+      const leftValue = this.getSortValue(left, this.sortColumn());
+      const rightValue = this.getSortValue(right, this.sortColumn());
+
+      if (leftValue < rightValue) return -1 * direction;
+      if (leftValue > rightValue) return 1 * direction;
+      return left.key.localeCompare(right.key) * direction;
+    });
+
+    return sorted;
+  });
 
   private readonly syncSelectedFlagFromRoute = effect(() => {
     const selectedFlagKey = this.routeSelectedFlagKey();
@@ -68,8 +97,50 @@ export class FlagsFileDetailComponent implements OnInit {
     return Object.keys(flag.variants);
   }
 
+  getDefaultValue(flag: FlagEntry): unknown {
+    const defaultVariant = flag.defaultVariant;
+    if (!defaultVariant) return null;
+    if (!Object.prototype.hasOwnProperty.call(flag.variants, defaultVariant)) return null;
+    return flag.variants[defaultVariant];
+  }
+
+  getDefaultValueDisplay(flag: FlagEntry): string {
+    return this.stringifyValue(this.getDefaultValue(flag));
+  }
+
   hasTargeting(flag: FlagEntry): boolean {
     return !!flag.targeting && Object.keys(flag.targeting).length > 0;
+  }
+
+  onSearchInput(event: Event): void {
+    const value = (event.target as HTMLInputElement | null)?.value ?? '';
+    this.searchQuery.set(value);
+  }
+
+  clearSearch(): void {
+    this.searchQuery.set('');
+  }
+
+  onSortChange(sort: Sort): void {
+    if (!sort.active || !sort.direction) return;
+    this.sortColumn.set(sort.active as 'key' | 'type' | 'state' | 'default' | 'targeting');
+    this.sortDirection.set(sort.direction);
+  }
+
+  onFlagStateToggle(flag: FlagEntry, checked: boolean): void {
+    const updatedFlag: FlagDefinition = {
+      state: checked ? 'ENABLED' : 'DISABLED',
+      variants: flag.variants,
+      defaultVariant: flag.defaultVariant,
+      targeting: flag.targeting,
+      metadata: flag.metadata,
+    };
+
+    this.store.saveFlag(flag.key, updatedFlag);
+
+    if (this.editingFlag()?.key === flag.key) {
+      this.editingFlag.set({ key: flag.key, ...updatedFlag });
+    }
   }
 
   confirmDelete(flag: FlagEntry): void {
@@ -191,5 +262,44 @@ export class FlagsFileDetailComponent implements OnInit {
     }
 
     this.router.navigate(['/flags-files', 'local', name, 'edit', targetFlagKey]);
+  }
+
+  private getSearchText(flag: FlagEntry): string {
+    return [
+      flag.key,
+      inferFlagType(flag.variants),
+      flag.state,
+      this.getDefaultValueDisplay(flag),
+      Object.keys(flag.variants).join(' '),
+      Object.values(flag.variants)
+        .map((value) => this.stringifyValue(value))
+        .join(' '),
+      this.hasTargeting(flag) ? 'yes' : 'no',
+      this.hasTargeting(flag) ? JSON.stringify(flag.targeting) : '',
+    ]
+      .join(' ')
+      .toLowerCase();
+  }
+
+  private getSortValue(flag: FlagEntry, column: 'key' | 'type' | 'state' | 'default' | 'targeting'): string {
+    switch (column) {
+      case 'key':
+        return flag.key.toLowerCase();
+      case 'type':
+        return inferFlagType(flag.variants);
+      case 'state':
+        return flag.state;
+      case 'default':
+        return this.getDefaultValueDisplay(flag).toLowerCase();
+      case 'targeting':
+        return this.hasTargeting(flag) ? 'yes' : 'no';
+    }
+  }
+
+  private stringifyValue(value: unknown): string {
+    if (value === null || value === undefined) return '-';
+    if (typeof value === 'string') return value;
+    if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+    return JSON.stringify(value);
   }
 }

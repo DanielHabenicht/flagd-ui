@@ -400,16 +400,6 @@ export class FlagEditorComponent implements OnInit, OnChanges {
     }
   }
 
-  onStateToggle(): void {
-    const current = this.form.get('state')!.value as FlagState;
-    const nextState: FlagState = current === 'ENABLED' ? 'DISABLED' : 'ENABLED';
-    this.form.get('state')!.setValue(nextState);
-
-    if (this.editorMode() === 'json') {
-      this.syncJsonState(nextState);
-    }
-  }
-
   onEasyStringValueChange(): void {
     const onValue = this.form.get('easyStringOnValue')!.value ?? '';
     const offValue = this.form.get('easyStringOffValue')!.value ?? '';
