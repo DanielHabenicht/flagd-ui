@@ -1,3 +1,5 @@
+[Open the Live demo](demo/)
+
 # flagd-ui
 
 `flagd-ui` is a web UI for managing feature flags in OpenFeature `flagd`.

@@ -169,7 +169,7 @@ export class FlagStoreState {
     if (existing) return;
 
     const instance: BackendInstance = {
-      id: crypto.randomUUID().slice(0, 8),
+      id: this.getBackendIdFromUrl(normalized, state.backends),
       url: normalized,
       label: action.label || this.inferBackendLabel(normalized),
     };
@@ -706,6 +706,38 @@ export class FlagStoreState {
       return new URL(url).host;
     } catch {
       return url;
+    }
+  }
+
+  private getBackendIdFromUrl(url: string, existingBackends: BackendInstance[]): string {
+    const baseId = this.getBackendDomain(url);
+    const usedIds = new Set(existingBackends.map((backend) => backend.id));
+    if (!usedIds.has(baseId)) {
+      return baseId;
+    }
+
+    let suffix = 2;
+    while (usedIds.has(`${baseId}-${suffix}`)) {
+      suffix += 1;
+    }
+
+    return `${baseId}-${suffix}`;
+  }
+
+  private getBackendDomain(url: string): string {
+    if (!url) {
+      return 'local';
+    }
+
+    try {
+      return new URL(url).hostname || 'local';
+    } catch {
+      const sanitized = url
+        .toLowerCase()
+        .replace(/^https?:\/\//, '')
+        .replace(/\/.*$/, '')
+        .replace(/[^a-z0-9.-]/g, '-');
+      return sanitized || 'local';
     }
   }
 }
