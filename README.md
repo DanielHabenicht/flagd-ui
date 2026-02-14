@@ -6,24 +6,49 @@ A web UI for managing feature flags in [OpenFeature](https://github.com/open-fea
 
 This project provides a user-friendly web interface for the OpenFeature flagd service - a simple, self-contained feature flag evaluation engine. flagd is designed to be vendor-neutral and follows the OpenFeature specification.
 
+## Features
+
+- **Multiple Storage Backends**: Store flags in local filesystem or Azure Blob Storage
+- **CLI Configuration**: Configure storage via command-line arguments
+- **Protocol-based Routing**: Automatically selects storage backend based on URI protocol
+- **RESTful API**: Full CRUD operations for feature flag management
+- **Schema Validation**: Validates flags against flagd JSON schema
+- **OpenAPI Documentation**: Interactive API documentation with Swagger UI
+
 ## Tech Stack
 
 - **Backend**: Rust with Axum web framework
 - **Runtime**: Tokio async runtime
+- **Storage**: Local filesystem or Azure Blob Storage
 - **Frontend**: Static files served from `public/`
 
 ## Project Structure
 
 ```
 flagd-ui/
-├── src/           # Rust source code
-│   ├── config.rs  # Configuration
-│   ├── error.rs   # Error handling
-│   └── handlers/  # HTTP request handlers
-├── public/        # Static web assets
-├── flags/         # Feature flag definitions
-└── Cargo.toml     # Rust dependencies
+├── src/              # Rust source code
+│   ├── config.rs     # Configuration & CLI arguments
+│   ├── error.rs      # Error handling
+│   ├── storage/      # Storage backend implementations
+│   │   ├── mod.rs    # Storage abstraction trait
+│   │   ├── local.rs  # Local filesystem backend
+│   │   └── azure.rs  # Azure Blob Storage backend
+│   └── handlers/     # HTTP request handlers
+├── public/           # Static web assets
+├── flags/            # Default feature flag definitions directory
+├── docs/             # Documentation
+│   └── azure-storage.md  # Azure Blob Storage documentation
+└── Cargo.toml        # Rust dependencies
 ```
+
+## Storage Backends
+
+flagd-ui supports multiple storage backends for feature flag files:
+
+- **Local Filesystem** (default): Stores flags in a local directory
+- **Azure Blob Storage**: Stores flags in Azure Blob Storage containers
+
+See [docs/azure-storage.md](docs/azure-storage.md) for detailed information on storage backends.
 
 ## Development
 
@@ -35,7 +60,18 @@ flagd-ui/
 ### Running Locally
 
 ```bash
+# Run with default local storage (./flags directory)
 cargo run
+
+# Run with custom local storage directory
+cargo run -- --storage-uri ./my-flags
+
+# Run with Azure Blob Storage
+export AZURE_STORAGE_ACCOUNT_KEY="your-key"
+cargo run -- --storage-uri https://myaccount.blob.core.windows.net/feature-flags
+
+# View all CLI options
+cargo run -- --help
 ```
 
 Running the backend normally does not regenerate `public/openapi.json`.
