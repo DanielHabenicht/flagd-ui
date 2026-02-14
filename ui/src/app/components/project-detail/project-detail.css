@@ -1,5 +1,26 @@
+.project-detail-layout {
+  display: block;
+}
+
+.project-detail-layout.with-inline-editor {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(320px, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+
+.project-detail-layout.with-inline-editor .project-detail {
+  max-width: none;
+}
+
 .project-detail {
+  min-width: 0;
   max-width: 960px;
+}
+
+.inline-editor {
+  position: sticky;
+  top: 24px;
 }
 
 .detail-header {
@@ -86,4 +107,16 @@
 
 .empty-flags p {
   margin: 0 0 16px;
+}
+
+@media (max-width: 1280px) {
+  .project-detail {
+    max-width: none;
+  }
+}
+
+@media (max-width: 1200px) {
+  .project-detail-layout.with-inline-editor {
+    grid-template-columns: minmax(0, 1.7fr) minmax(300px, 1fr);
+  }
 }

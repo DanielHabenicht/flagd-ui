@@ -1,4 +1,4 @@
-import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, HostListener, inject, OnInit, signal } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { MatTableModule } from '@angular/material/table';
 import { MatButtonModule } from '@angular/material/button';
@@ -20,24 +20,29 @@ export class ProjectDetailComponent implements OnInit {
   readonly store = inject(FlagStore);
   private readonly backendRegistry = inject(BackendRegistry);
   private readonly route = inject(ActivatedRoute);
+  private readonly inlineEditorMinWidth = 1280;
+  private readonly initialWideLayout = typeof window !== 'undefined' && window.innerWidth > this.inlineEditorMinWidth;
 
-  showEditor = signal(false);
+  showEditor = signal(this.initialWideLayout);
   editingFlag = signal<FlagEntry | null>(null);
+  isWideLayout = signal(this.initialWideLayout);
   readonly existingFlagKeys = computed(() => this.store.flagEntries().map((f) => f.key));
+  readonly showInlineEditor = computed(() => this.showEditor() && this.isWideLayout());
+  readonly showSidePanelEditor = computed(() => this.showEditor() && !this.isWideLayout());
   readonly displayedColumns = ['key', 'type', 'state', 'variants', 'default', 'targeting', 'actions'];
   readonly sourceBreadcrumb = computed(() => {
     const project = this.store.currentProject();
     if (!project) return null;
 
     if (project.source === 'local') {
-      return 'Source › Local Files';
+      return 'Local Files';
     }
 
     const backend = this.backendRegistry
       .getBackends()
       .find((entry) => entry.url === project.backendUrl);
     const backendLabel = backend?.label ?? project.backendUrl ?? 'Unknown Backend';
-    return `Source › ${backendLabel}`;
+    return `${backendLabel}`;
   });
 
   getFlagType(flag: FlagEntry): string {
@@ -73,6 +78,15 @@ export class ProjectDetailComponent implements OnInit {
     });
   }
 
+  @HostListener('window:resize')
+  onWindowResize(): void {
+    const isWide = window.innerWidth > this.inlineEditorMinWidth;
+    this.isWideLayout.set(isWide);
+    if (isWide) {
+      this.showEditor.set(true);
+    }
+  }
+
   openNewFlagEditor(): void {
     this.editingFlag.set(null);
     this.showEditor.set(true);
@@ -84,7 +98,7 @@ export class ProjectDetailComponent implements OnInit {
   }
 
   closeEditor(): void {
-    this.showEditor.set(false);
+    this.showEditor.set(this.isWideLayout());
     this.editingFlag.set(null);
   }
 

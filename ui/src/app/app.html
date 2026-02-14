@@ -7,13 +7,30 @@
     (dragleave)="onDragLeave($event)"
     (drop)="onDrop($event)"
     [class.drag-active]="dragOver">
-  <mat-sidenav mode="side" opened class="sidebar">
+  <mat-sidenav
+    [mode]="isCompactLayout() ? 'over' : 'side'"
+    [opened]="isCompactLayout() ? navOpen() : true"
+    (openedChange)="onNavigationStateChange($event)"
+    class="sidebar">
     <mat-toolbar>
       <h1><a routerLink="/" class="home-link">flagd-ui</a></h1>
     </mat-toolbar>
     <app-project-list />
   </mat-sidenav>
   <mat-sidenav-content class="main-content">
+    @if (isCompactLayout()) {
+      <div class="page-header-nav">
+        <button
+          mat-icon-button
+          class="nav-toggle-button"
+          type="button"
+          (click)="toggleNavigation()"
+          title="Toggle navigation"
+          aria-label="Toggle navigation">
+          <mat-icon>menu</mat-icon>
+        </button>
+      </div>
+    }
     <router-outlet />
   </mat-sidenav-content>
 </mat-sidenav-container>

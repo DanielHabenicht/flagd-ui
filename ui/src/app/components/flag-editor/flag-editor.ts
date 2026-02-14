@@ -1,4 +1,4 @@
-import { Component, input, output, OnInit, computed, signal } from '@angular/core';
+import { Component, input, output, OnChanges, OnInit, computed, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { FormsModule } from '@angular/forms';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
@@ -33,7 +33,8 @@ export type EditorMode = 'easy' | 'advanced' | 'json';
   templateUrl: './flag-editor.html',
   styleUrl: './flag-editor.css',
 })
-export class FlagEditorComponent implements OnInit {
+export class FlagEditorComponent implements OnInit, OnChanges {
+  readonly inline = input(false);
   readonly flag = input<FlagEntry | null>(null);
   readonly existingKeys = input<string[]>([]);
   readonly save = output<{ key: string; flag: FlagDefinition; originalKey?: string }>();
@@ -111,20 +112,57 @@ export class FlagEditorComponent implements OnInit {
       ),
     });
 
-    // Determine initial editor mode
+    this.applyFlagToForm(f);
+  }
+
+  ngOnChanges(): void {
+    if (!this.form) return;
+    this.applyFlagToForm(this.flag());
+  }
+
+  private applyFlagToForm(f: FlagEntry | null): void {
+    const nextType: FlagType = f ? inferFlagType(f.variants) : 'boolean';
+    const nextVariants: VariantRow[] = f
+      ? Object.entries(f.variants).map(([name, value]) => ({ name, value }))
+      : getDefaultVariants(nextType);
+
+    this.variants.set(nextVariants);
+    this.targeting.set(f?.targeting);
+    this.metadata.set(f?.metadata);
+
+    this.form.patchValue(
+      {
+        key: f?.key ?? '',
+        state: f?.state ?? 'ENABLED',
+        flagType: nextType,
+        defaultVariant: f?.defaultVariant ?? '',
+        easyType: nextType === 'boolean' || nextType === 'string' ? nextType : 'boolean',
+        easyStringValue:
+          nextType === 'string' && nextVariants.length > 0
+            ? String(nextVariants[0]?.value ?? '')
+            : '',
+      },
+      { emitEvent: false },
+    );
+
+    // Determine editor mode
     if (f) {
-      const isSimpleType = initialType === 'boolean' || initialType === 'string';
+      const isSimpleType = nextType === 'boolean' || nextType === 'string';
       const hasTargeting = f.targeting && Object.keys(f.targeting).length > 0;
-      const isSimpleVariants = this.isSimpleFlagStructure(initialType, initialVariants);
+      const isSimpleVariants = this.isSimpleFlagStructure(nextType, nextVariants);
 
       if (isSimpleType && !hasTargeting && isSimpleVariants) {
         this.editorMode.set('easy');
       } else {
         this.editorMode.set('advanced');
       }
+    } else {
+      this.editorMode.set('easy');
     }
 
-    // Initialize JSON representation
+    this.form.markAsPristine();
+    this.form.markAsUntouched();
+    this.jsonError = null;
     this.syncToJson();
   }
 

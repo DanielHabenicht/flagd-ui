@@ -1,21 +1,24 @@
-<div class="panel-backdrop" (click)="onCancel()"></div>
-<aside class="side-panel">
+@if (!inline()) {
+  <div class="panel-backdrop" (click)="onCancel()"></div>
+}
+<aside class="side-panel" [class.inline-panel]="inline()">
   <div class="panel-header">
     <h2>{{ isEditing() ? 'Edit Flag' : 'Create Flag' }}</h2>
-    <button mat-icon-button (click)="onCancel()">
-      <mat-icon>close</mat-icon>
-    </button>
-  </div>
-
-  <div class="editor-modes">
-    <mat-button-toggle-group [value]="editorMode()" (change)="setMode($event.value)">
-      <mat-button-toggle value="easy"
-        [disabled]="!easyModeAvailable() && editorMode() !== 'easy'"
-        [title]="!easyModeAvailable() && editorMode() !== 'easy' ? 'This flag uses features not available in easy mode' : ''"
-      >Easy</mat-button-toggle>
-      <mat-button-toggle value="advanced">Advanced</mat-button-toggle>
-      <mat-button-toggle value="json">JSON</mat-button-toggle>
-    </mat-button-toggle-group>
+    <div class="panel-header-actions">
+      <mat-button-toggle-group [value]="editorMode()" (change)="setMode($event.value)">
+        <mat-button-toggle value="easy"
+          [disabled]="!easyModeAvailable() && editorMode() !== 'easy'"
+          [title]="!easyModeAvailable() && editorMode() !== 'easy' ? 'This flag uses features not available in easy mode' : ''"
+        >Easy</mat-button-toggle>
+        <mat-button-toggle value="advanced">Advanced</mat-button-toggle>
+        <mat-button-toggle value="json">JSON</mat-button-toggle>
+      </mat-button-toggle-group>
+      @if (!inline()) {
+        <button mat-icon-button (click)="onCancel()">
+          <mat-icon>close</mat-icon>
+        </button>
+      }
+    </div>
   </div>
 
   <form [formGroup]="form" (ngSubmit)="onSave()" class="panel-body">

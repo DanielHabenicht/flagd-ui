@@ -48,6 +48,16 @@ h1 {
     padding: 24px 32px;
 }
 
+.page-header-nav {
+    display: flex;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.nav-toggle-button {
+    margin-left: -8px;
+}
+
 .app-shell.drag-active {
     outline: 3px dashed var(--color-primary);
     outline-offset: -3px;
