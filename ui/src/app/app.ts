@@ -28,7 +28,7 @@ type ThemeMode = 'auto' | 'dark' | 'light';
     MatIconModule,
   ],
   templateUrl: './app.html',
-  styleUrl: './app.css',
+  styleUrl: './app.scss',
 })
 export class App implements OnDestroy {
   private readonly store = inject(FlagStore);

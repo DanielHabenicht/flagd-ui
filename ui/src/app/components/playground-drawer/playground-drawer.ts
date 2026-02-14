@@ -53,7 +53,7 @@ const MAX_DRAWER_HEIGHT = 760;
     MatSelectModule,
   ],
   templateUrl: './playground-drawer.html',
-  styleUrl: './playground-drawer.css',
+  styleUrl: './playground-drawer.scss',
 })
 export class PlaygroundDrawerComponent implements OnInit, OnDestroy {
   readonly flags = input<FlagEntry[]>([]);

@@ -17,7 +17,7 @@ export interface VariantRow {
   standalone: true,
   imports: [FormsModule, MatFormFieldModule, MatInputModule, MatSelectModule, MatButtonModule, MatIconModule],
   templateUrl: './variants-editor.html',
-  styleUrl: './variants-editor.css',
+  styleUrl: './variants-editor.scss',
 })
 export class VariantsEditorComponent implements OnChanges {
   readonly flagType = input.required<FlagType>();

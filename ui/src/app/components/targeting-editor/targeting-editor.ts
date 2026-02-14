@@ -21,7 +21,7 @@ type Operator = '==' | '!=' | 'in' | 'starts_with' | 'ends_with';
     MatButtonModule,
   ],
   templateUrl: './targeting-editor.html',
-  styleUrl: './targeting-editor.css',
+  styleUrl: './targeting-editor.scss',
 })
 export class TargetingEditorComponent implements OnChanges {
   readonly targeting = input<Record<string, unknown> | undefined>();

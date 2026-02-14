@@ -7,6 +7,6 @@ import { MatIconModule } from '@angular/material/icon';
   standalone: true,
   imports: [MatCardModule, MatIconModule],
   templateUrl: './welcome.html',
-  styleUrl: './welcome.css',
+  styleUrl: './welcome.scss',
 })
 export class WelcomeComponent {}

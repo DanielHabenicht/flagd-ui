@@ -31,7 +31,7 @@ export interface PlaygroundServerDialogResult {
     MatSelectModule,
   ],
   templateUrl: './playground-server-dialog.html',
-  styleUrl: './playground-server-dialog.css',
+  styleUrl: './playground-server-dialog.scss',
 })
 export class PlaygroundServerDialogComponent {
   private readonly dialogRef = inject(MatDialogRef<PlaygroundServerDialogComponent>);

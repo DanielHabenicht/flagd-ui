@@ -27,7 +27,7 @@ import { FlagFileContent } from '../../models/flag.models';
     MatProgressBarModule,
   ],
   templateUrl: './new-project-dialog.html',
-  styleUrl: './new-project-dialog.css',
+  styleUrl: './new-project-dialog.scss',
 })
 export class NewProjectDialogComponent {
   private readonly dialogRef = inject(MatDialogRef<NewProjectDialogComponent>);

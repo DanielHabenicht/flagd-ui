@@ -22,7 +22,7 @@ import { NewProjectDialogComponent } from '../new-project-dialog/new-project-dia
     MatDividerModule,
   ],
   templateUrl: './project-list.html',
-  styleUrl: './project-list.css',
+  styleUrl: './project-list.scss',
 })
 export class ProjectListComponent implements OnInit {
   readonly store = inject(FlagStore);

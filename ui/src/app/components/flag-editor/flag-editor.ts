@@ -37,7 +37,7 @@ export type EditorMode = 'easy' | 'advanced' | 'json';
     MatTimepickerModule,
   ],
   templateUrl: './flag-editor.html',
-  styleUrl: './flag-editor.css',
+  styleUrl: './flag-editor.scss',
 })
 export class FlagEditorComponent implements OnInit, OnChanges {
   private static readonly TIMESTAMP_CONTEXT_VAR = '$flagd.timestamp';

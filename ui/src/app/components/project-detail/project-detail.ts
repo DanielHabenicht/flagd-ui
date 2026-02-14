@@ -22,7 +22,7 @@ import { PlaygroundDrawerComponent } from '../playground-drawer/playground-drawe
     MatChipsModule,
   ],
   templateUrl: './project-detail.html',
-  styleUrl: './project-detail.css',
+  styleUrl: './project-detail.scss',
 })
 export class ProjectDetailComponent implements OnInit {
   readonly store = inject(FlagStore);
