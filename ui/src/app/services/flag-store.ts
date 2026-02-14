@@ -12,6 +12,9 @@ import {
   FileGroup,
   MetadataMap,
   ProjectEntry,
+  Environment,
+  Evaluator,
+  extractEnvironments,
 } from '../models/flag.models';
 
 @Injectable({ providedIn: 'root' })
@@ -24,6 +27,7 @@ export class FlagStore {
   readonly projects = signal<ProjectEntry[]>([]);
   readonly currentProject = signal<ProjectEntry | null>(null);
   readonly currentFlags = signal<Record<string, FlagDefinition> | null>(null);
+  readonly currentEvaluators = signal<Record<string, Evaluator> | undefined>(undefined);
   readonly currentMetadata = signal<MetadataMap | undefined>(undefined);
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
@@ -31,6 +35,11 @@ export class FlagStore {
   readonly hasDefaultBackend = signal(false);
 
   readonly currentProjectName = computed(() => this.currentProject()?.name ?? null);
+
+  readonly currentEnvironments = computed<Environment[]>(() => {
+    const evaluators = this.currentEvaluators();
+    return extractEnvironments(evaluators);
+  });
 
   readonly flagEntries = computed<FlagEntry[]>(() => {
     const flags = this.currentFlags();
@@ -137,18 +146,21 @@ export class FlagStore {
     if (entry.source === 'local') {
       const content = this.localStore.getProject(entry.name);
       this.currentFlags.set(content?.flags ?? {});
+      this.currentEvaluators.set(content?.$evaluators);
       this.currentMetadata.set(content?.metadata);
       this.loading.set(false);
     } else {
       this.remoteApi.getProject(entry.backendUrl!, entry.name).subscribe({
         next: (res) => {
           this.currentFlags.set(res.flags ?? {});
+          this.currentEvaluators.set(res.$evaluators);
           this.currentMetadata.set(res.metadata);
           this.loading.set(false);
         },
         error: (err) => {
           this.error.set(`Failed to load project "${entry.name}"`);
           this.currentFlags.set(null);
+          this.currentEvaluators.set(undefined);
           this.currentMetadata.set(undefined);
           this.loading.set(false);
           console.error('Failed to load project', err);
@@ -422,10 +434,52 @@ export class FlagStore {
       flags,
     };
 
+    // Preserve evaluators
+    const evaluators = this.currentEvaluators();
+    if (evaluators && Object.keys(evaluators).length > 0) {
+      content.$evaluators = evaluators;
+    }
+
     if (metadata && Object.keys(metadata).length > 0) {
       content.metadata = metadata;
     }
 
     return content;
+  }
+
+  /** Update evaluators for the current project */
+  updateEvaluators(evaluators: Record<string, Evaluator> | undefined): void {
+    const project = this.currentProject();
+    if (!project) return;
+
+    this.currentEvaluators.set(evaluators);
+    
+    // Save the updated content
+    const flags = this.currentFlags() ?? {};
+    const metadata = this.currentMetadata();
+    const content = this.buildProjectContent(flags, metadata);
+
+    this.loading.set(true);
+    this.error.set(null);
+
+    if (project.source === 'local') {
+      try {
+        this.localStore.updateProjectContent(project.name, content);
+      } catch (err: any) {
+        this.error.set('Failed to update environments');
+      }
+      this.loading.set(false);
+    } else {
+      this.remoteApi.updateProject(project.backendUrl!, project.name, content).subscribe({
+        next: () => {
+          this.loading.set(false);
+        },
+        error: (err) => {
+          this.error.set('Failed to update environments');
+          this.loading.set(false);
+          console.error('Failed to update environments', err);
+        },
+      });
+    }
   }
 }

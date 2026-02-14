@@ -16,6 +16,18 @@
           "
           >Easy</mat-button-toggle
         >
+        @if (hasEnvironments()) {
+          <mat-button-toggle
+            value="environments"
+            [disabled]="!environmentModeAvailable() && editorMode() !== 'environments'"
+            [title]="
+              !environmentModeAvailable() && editorMode() !== 'environments'
+                ? 'Environment mode requires environments to be configured'
+                : ''
+            "
+            >Environments</mat-button-toggle
+          >
+        }
         <mat-button-toggle value="advanced">Advanced</mat-button-toggle>
         <mat-button-toggle value="json">JSON</mat-button-toggle>
       </mat-button-toggle-group>
@@ -155,6 +167,84 @@
             </mat-form-field>
           </div>
         }
+
+        <app-metadata-editor [metadata]="metadata()" (metadataChange)="onMetadataChange($event)" />
+      </div>
+    }
+
+    <!-- ==================== ENVIRONMENT MODE ==================== -->
+    @if (editorMode() === 'environments') {
+      <div class="environment-mode">
+        <div class="form-field">
+          <label>Flag Type</label>
+          <mat-button-toggle-group
+            [value]="form.get('flagType')!.value"
+            (change)="form.get('flagType')!.setValue($event.value); onEnvironmentTypeChange()"
+          >
+            <mat-button-toggle value="boolean">Boolean</mat-button-toggle>
+            <mat-button-toggle value="string">String</mat-button-toggle>
+            <mat-button-toggle value="number">Number</mat-button-toggle>
+            <mat-button-toggle value="object">Object</mat-button-toggle>
+          </mat-button-toggle-group>
+        </div>
+
+        <div class="environment-values-section">
+          <h3>Environment Values</h3>
+          <p class="hint-text">Configure the value for each environment</p>
+
+          @for (env of environments(); track env.name) {
+            <div class="environment-value-item">
+              <label class="environment-label">{{ env.displayName }}</label>
+
+              @if (form.get('flagType')!.value === 'boolean') {
+                <mat-slide-toggle
+                  [checked]="environmentStates()[env.name.toLowerCase()] === true"
+                  (change)="onEnvironmentValueChange(env.name.toLowerCase(), $event.checked)"
+                >
+                  {{ environmentStates()[env.name.toLowerCase()] === true ? 'ON' : 'OFF' }}
+                </mat-slide-toggle>
+              }
+
+              @if (form.get('flagType')!.value === 'string') {
+                <mat-form-field appearance="outline" class="full-width">
+                  <mat-label>String Value</mat-label>
+                  <input
+                    matInput
+                    [value]="environmentStates()[env.name.toLowerCase()] || ''"
+                    (input)="onEnvironmentValueChange(env.name.toLowerCase(), $any($event.target).value)"
+                    placeholder="Enter value"
+                  />
+                </mat-form-field>
+              }
+
+              @if (form.get('flagType')!.value === 'number') {
+                <mat-form-field appearance="outline" class="full-width">
+                  <mat-label>Number Value</mat-label>
+                  <input
+                    matInput
+                    type="number"
+                    [value]="environmentStates()[env.name.toLowerCase()] || 0"
+                    (input)="onEnvironmentValueChange(env.name.toLowerCase(), +$any($event.target).value)"
+                    placeholder="Enter number"
+                  />
+                </mat-form-field>
+              }
+
+              @if (form.get('flagType')!.value === 'object') {
+                <mat-form-field appearance="outline" class="full-width">
+                  <mat-label>JSON Object</mat-label>
+                  <textarea
+                    matInput
+                    [value]="environmentStates()[env.name.toLowerCase()] ? JSON.stringify(environmentStates()[env.name.toLowerCase()], null, 2) : '{}'"
+                    (input)="onEnvironmentValueChange(env.name.toLowerCase(), JSON.parse($any($event.target).value || '{}'))"
+                    rows="4"
+                    placeholder="{}"
+                  ></textarea>
+                </mat-form-field>
+              }
+            </div>
+          }
+        </div>
 
         <app-metadata-editor [metadata]="metadata()" (metadataChange)="onMetadataChange($event)" />
       </div>

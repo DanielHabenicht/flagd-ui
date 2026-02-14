@@ -10,6 +10,9 @@
             <h2>{{ store.currentProjectName() }}</h2>
           </div>
           <div class="header-actions">
+            <button mat-icon-button (click)="openEnvironmentManager()" title="Manage Environments">
+              <mat-icon>layers</mat-icon>
+            </button>
             <button mat-icon-button (click)="downloadProject()" title="Download JSON">
               <mat-icon>download</mat-icon>
             </button>
