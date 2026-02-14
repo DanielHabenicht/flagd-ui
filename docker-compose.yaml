@@ -22,3 +22,27 @@ services:
       - '8014:8014'
     # depends_on:
     #   - flagd-ui
+
+  azurite:
+    image: local-azurite:latest
+    build:
+      context: services/azurite
+    ports:
+      - 10000:10000
+      - 10001:10001
+      - 10002:10002
+    volumes:
+      - ./services/azurite/azurite-store:/data
+      - ./services/azurite/azurite-logs:/logs
+
+  auth:
+    image: local-keycloak:latest
+    build: ./services/authentication
+    environment:
+      - KEYCLOAK_ADMIN=admin
+      - KEYCLOAK_ADMIN_PASSWORD=admin
+    ports:
+      - 8080:8080
+    command:
+      - start-dev
+      - --import-realm

@@ -1,0 +1,32 @@
+### Docker based: In order to use you have to setup your hosts file with the line "127.0.0.1 auth"
+POST http://auth:8080/realms/flagd-ui/protocol/openid-connect/token
+Content-Type: application/x-www-form-urlencoded
+
+client_id=flagd-ui&grant_type=password&client_secret=b1a44ee2-1699-4da8-8e83-874a983e33e7&scope=openid%20flagd-ui&username=user&password=password
+
+
+### Localhost - Normal user
+POST http://localhost:8080/realms/flagd-ui/protocol/openid-connect/token
+Content-Type: application/x-www-form-urlencoded
+
+client_id=flagd-ui&grant_type=password&client_secret=b1a44ee2-1699-4da8-8e83-874a983e33e7&scope=openid%20flagd-ui&username=user&password=password
+
+
+### Localhost - Admin user
+POST http://localhost:8080/realms/flagd-ui/protocol/openid-connect/token
+Content-Type: application/x-www-form-urlencoded
+
+client_id=flagd-ui&grant_type=password&client_secret=b1a44ee2-1699-4da8-8e83-874a983e33e7&scope=openid%20flagd-ui&username=admin&password=password
+
+
+### Localhost - Health
+GET http://localhost:50505/health
+Content-Type: application/x-www-form-urlencoded
+X-Api-Key: 859ced0c-d39d-414e-92b7-8afeb8db5b3f
+
+
+
+### Mock
+GET http://localhost:8088/response/application-json
+Content-Type: application/x-www-form-urlencoded
+X-Api-Key: 859ced0c-d39d-414e-92b7-8afeb8db5b3f
