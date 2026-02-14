@@ -723,19 +723,19 @@ export class FlagEditorComponent implements OnInit, OnChanges {
     const endDate = this.form.get('easyEndDate')?.value ?? null;
     const endTime = this.form.get('easyEndTime')?.value ?? null;
 
-    const start = this.toTimestampString(this.combineDateAndTime(startDate, startTime)) ?? '';
-    const end = this.toTimestampString(this.combineDateAndTime(endDate, endTime)) ?? '';
+    const start = this.toUnixEpochSeconds(this.combineDateAndTime(startDate, startTime));
+    const end = this.toUnixEpochSeconds(this.combineDateAndTime(endDate, endTime));
 
-    if (!start && !end) return undefined;
+    if (start === null && end === null) return undefined;
 
     const varRef = { var: FlagEditorComponent.TIMESTAMP_CONTEXT_VAR };
     const conditions: Record<string, unknown>[] = [];
 
-    if (start) {
+    if (start !== null) {
       conditions.push({ '>=': [varRef, start] });
     }
 
-    if (end) {
+    if (end !== null) {
       conditions.push({ '<=': [varRef, end] });
     }
 
@@ -752,7 +752,7 @@ export class FlagEditorComponent implements OnInit, OnChanges {
 
   private parseEasyTimeTargeting(
     targeting: Record<string, unknown> | undefined,
-  ): { start: string; end: string } | null {
+  ): { start?: number; end?: number } | null {
     if (!targeting || Object.keys(targeting).length === 0) return null;
 
     const ifClause = targeting['if'];
@@ -764,47 +764,47 @@ export class FlagEditorComponent implements OnInit, OnChanges {
     if (!bounds) return null;
 
     return {
-      start: bounds.start ?? '',
-      end: bounds.end ?? '',
+      start: bounds.start,
+      end: bounds.end,
     };
   }
 
-  private extractTimestampBounds(value: unknown): { start?: string; end?: string } | null {
+  private extractTimestampBounds(value: unknown): { start?: number; end?: number } | null {
     if (!value || typeof value !== 'object') return null;
     const condition = value as Record<string, unknown>;
 
     if ('>=' in condition) {
-      const start = this.readTimestampComparison(condition['>='], '>=');
-      return start ? { start } : null;
+      const start = this.readTimestampComparison(condition['>=']);
+      return start !== null ? { start } : null;
     }
 
     if ('<=' in condition) {
-      const end = this.readTimestampComparison(condition['<='], '<=');
-      return end ? { end } : null;
+      const end = this.readTimestampComparison(condition['<=']);
+      return end !== null ? { end } : null;
     }
 
     if ('and' in condition) {
       const subConditions = condition['and'];
       if (!Array.isArray(subConditions) || subConditions.length === 0) return null;
 
-      let start: string | undefined;
-      let end: string | undefined;
+      let start: number | undefined;
+      let end: number | undefined;
 
       for (const subCondition of subConditions) {
         const parsed = this.extractTimestampBounds(subCondition);
         if (!parsed) return null;
-        if (parsed.start) start = parsed.start;
-        if (parsed.end) end = parsed.end;
+        if (parsed.start !== undefined) start = parsed.start;
+        if (parsed.end !== undefined) end = parsed.end;
       }
 
-      if (!start && !end) return null;
+      if (start === undefined && end === undefined) return null;
       return { start, end };
     }
 
     return null;
   }
 
-  private readTimestampComparison(value: unknown, operator: '>=' | '<='): string | null {
+  private readTimestampComparison(value: unknown): number | null {
     if (!Array.isArray(value) || value.length < 2) return null;
 
     const variableRef = value[0];
@@ -814,24 +814,33 @@ export class FlagEditorComponent implements OnInit, OnChanges {
     if (varName !== FlagEditorComponent.TIMESTAMP_CONTEXT_VAR) return null;
 
     const comparedValue = value[1];
-    if (typeof comparedValue !== 'string') return null;
+    if (typeof comparedValue === 'number' && Number.isFinite(comparedValue)) {
+      return comparedValue;
+    }
 
-    const trimmedValue = comparedValue.trim();
-    if (!trimmedValue) return null;
-
-    if (operator === '>=') return trimmedValue;
-    return trimmedValue;
+    return null;
   }
 
-  private parseTimestampDate(value: string | undefined): Date | null {
-    if (!value) return null;
-    const parsed = new Date(value);
-    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  private parseTimestampDate(value: unknown): Date | null {
+    if (value === null || value === undefined) return null;
+
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      const timestampMs = value > 1_000_000_000_000 ? value : value * 1000;
+      const parsedFromNumber = new Date(timestampMs);
+      return Number.isNaN(parsedFromNumber.getTime()) ? null : parsedFromNumber;
+    }
+
+    return null;
   }
 
   private toTimestampString(value: unknown): string | null {
     if (!(value instanceof Date) || Number.isNaN(value.getTime())) return null;
     return value.toISOString();
+  }
+
+  private toUnixEpochSeconds(value: unknown): number | null {
+    if (!(value instanceof Date) || Number.isNaN(value.getTime())) return null;
+    return Math.floor(value.getTime() / 1000);
   }
 
   private combineDateAndTime(dateValue: unknown, timeValue: unknown): Date | null {
