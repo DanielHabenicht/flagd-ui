@@ -40,6 +40,8 @@
     "@openfeature/flagd-web-provider": "^0.7.4",
     "@openfeature/ofrep-web-provider": "^0.3.5",
     "@openfeature/web-sdk": "^1.7.2",
+    "@types/json-logic-js": "^2.0.8",
+    "json-logic-js": "^2.0.5",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0"
   },

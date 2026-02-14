@@ -159,5 +159,9 @@
     }
   </div>
 
-  <app-playground-drawer [flags]="store.flagEntries()" [selectedFlagKey]="selectedFlagKey()" />
+  <app-playground-drawer
+    [flags]="store.flagEntries()"
+    [evaluators]="store.currentEvaluators()"
+    [selectedFlagKey]="selectedFlagKey()"
+  />
 </div>
