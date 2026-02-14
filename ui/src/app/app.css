@@ -1,3 +1,8 @@
+:host {
+    display: block;
+    height: 100%;
+}
+
 .app-shell {
     height: 100vh;
 }
@@ -45,7 +50,23 @@ h1 {
 }
 
 .main-content {
-    padding: 24px 32px;
+    padding: 24px 0px 0px 0px;
+    height: 100%;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+}
+
+.main-content>router-outlet+* {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.main-content> :last-child {
+    flex: 1 1 auto;
+    min-height: 0;
 }
 
 .page-header-nav {

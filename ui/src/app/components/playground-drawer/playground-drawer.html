@@ -1,41 +1,46 @@
-<button
-  mat-fab
-  color="primary"
-  class="playground-toggle"
-  type="button"
-  (click)="toggleDrawer()"
-  [attr.aria-expanded]="open()"
-  aria-label="Toggle playground drawer"
->
-  <mat-icon>{{ open() ? 'keyboard_arrow_down' : 'science' }}</mat-icon>
-</button>
-
 <section class="playground-drawer" [class.open]="open()" [class.animate]="animate()" (click)="onDrawerClick()">
   <div class="drawer-header">
     <div class="drawer-header-left">
       <h3>Playground</h3>
-      <p>Evaluate a flag with OpenFeature against a flagd server.</p>
+      @if (open()) {
+        <p>Evaluate a flag with OpenFeature against a flagd server.</p>
+      }
     </div>
-    <div class="server-header-controls">
-      <mat-form-field appearance="outline" class="server-header-select" subscriptSizing="dynamic">
-        <mat-label>Server</mat-label>
-        <mat-select [value]="activeServerId()" (selectionChange)="onServerSelectionChange($event.value)">
-            <mat-select-trigger>
-              @if (activeServer()) {
-                <span class="server-provider-tag">{{ activeServer()!.provider }}</span>
-                {{ activeServer()!.url }}
+    <div class="drawer-header-right">
+      @if (open()) {
+        <div class="server-header-controls">
+          <mat-form-field appearance="outline" class="server-header-select" subscriptSizing="dynamic">
+            <mat-label>Server</mat-label>
+            <mat-select [value]="activeServerId()" (selectionChange)="onServerSelectionChange($event.value)">
+                <mat-select-trigger>
+                  @if (activeServer()) {
+                    <span class="server-provider-tag">{{ activeServer()!.provider }}</span>
+                    {{ activeServer()!.url }}
+                  }
+                </mat-select-trigger>
+              @for (server of servers(); track server.id) {
+                  <mat-option [value]="server.id">
+                    <span class="server-provider-tag">{{ server.provider }}</span>
+                    {{ server.url }}
+                  </mat-option>
               }
-            </mat-select-trigger>
-          @for (server of servers(); track server.id) {
-              <mat-option [value]="server.id">
-                <span class="server-provider-tag">{{ server.provider }}</span>
-                {{ server.url }}
-              </mat-option>
-          }
-        </mat-select>
-      </mat-form-field>
+            </mat-select>
+          </mat-form-field>
 
-      <button mat-stroked-button type="button" (click)="openServerManager()">Manage servers</button>
+          <button mat-stroked-button type="button" (click)="openServerManager()">Manage servers</button>
+        </div>
+      }
+
+      <button
+        mat-icon-button
+        type="button"
+        class="drawer-toggle"
+        (click)="toggleDrawer(); $event.stopPropagation()"
+        [attr.aria-expanded]="open()"
+        aria-label="Toggle playground drawer"
+      >
+        <mat-icon>{{ open() ? 'keyboard_arrow_down' : 'science' }}</mat-icon>
+      </button>
     </div>
   </div>
 

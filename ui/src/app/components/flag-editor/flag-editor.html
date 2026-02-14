@@ -110,14 +110,6 @@
           </p>
         </div>
 
-        @if (form.get('easyType')!.value === 'boolean') {
-          <div class="easy-toggle-section">
-            <p class="easy-hint">
-               Use the state switch next to Flag Key to control whether this flag is enabled.
-            </p>
-          </div>
-        }
-
         @if (form.get('easyType')!.value === 'string') {
           <div class="easy-string-section">
             <mat-form-field appearance="outline" class="full-width">

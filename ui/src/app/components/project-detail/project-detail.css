@@ -1,3 +1,24 @@
+:host {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.project-page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  min-height: 0;
+}
+
+.project-workspace {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  padding-bottom: 12px;
+}
+
 .project-detail-layout {
   display: block;
 }
@@ -16,12 +37,12 @@
 .project-detail {
   min-width: 0;
   max-width: 960px;
-  padding-bottom: 96px;
 }
 
 .inline-editor {
   position: sticky;
   top: 24px;
+  min-width: 0;
 }
 
 .detail-header {

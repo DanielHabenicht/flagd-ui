@@ -1,23 +1,45 @@
 {
   "$schema": "https://flagd.dev/schema/v0/flags.json",
   "flags": {
-    "show-welcome-banner": {
-      "state": "ENABLED",
-      "variants": {
-        "on": true,
-        "off": false
-      },
-      "defaultVariant": "off"
-    },
     "background-color": {
+      "defaultVariant": "red",
       "state": "ENABLED",
       "variants": {
-        "red": "#FF0000",
         "blue": "#0000FF",
         "green": "#00FF00",
+        "red": "#FF0000",
         "yellow": "#FFFF00"
+      }
+    },
+    "show-welcome-banner": {
+      "defaultVariant": "off",
+      "state": "ENABLED",
+      "variants": {
+        "off": false,
+        "on": true
+      }
+    },
+    "test": {
+      "defaultVariant": "on",
+      "state": "ENABLED",
+      "targeting": {
+        "if": [
+          {
+            ">=": [
+              {
+                "var": "$flagd.timestamp"
+              },
+              "2026-02-11T23:30:00.000Z"
+            ]
+          },
+          "off",
+          "on"
+        ]
       },
-      "defaultVariant": "red"
+      "variants": {
+        "off": false,
+        "on": true
+      }
     }
   }
 }
