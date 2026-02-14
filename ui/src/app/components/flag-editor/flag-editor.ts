@@ -49,6 +49,7 @@ export class FlagEditorComponent implements OnInit, OnChanges {
   // JSON editor state
   rawJson = '';
   jsonError: string | null = null;
+  private initialEditorSnapshot = '';
 
   readonly isEditing = computed(() => this.flag() !== null);
 
@@ -64,21 +65,25 @@ export class FlagEditorComponent implements OnInit, OnChanges {
     return this.isSimpleFlagStructure(flagType, variants);
   });
 
-  readonly keyAlreadyExists = computed(() => {
+  keyAlreadyExists(): boolean {
     if (!this.form) return false;
     const key = String(this.form.get('key')?.value ?? '').trim();
     if (!key) return false;
     if (this.flag()?.key === key) return false;
     return this.existingKeys().includes(key);
-  });
-  readonly canSave = computed(() => {
+  }
+
+  canSave(): boolean {
     if (!this.form) return false;
     if (this.form.invalid || this.keyAlreadyExists()) return false;
+    if (!this.hasChanges()) return false;
+
     if (this.editorMode() === 'json') {
-      return !this.jsonError && this.rawJson.trim().length > 0;
+      return this.isJsonSaveValid();
     }
+
     return this.variantNames().length > 0;
-  });
+  }
 
   ngOnInit(): void {
     const f = this.flag();
@@ -164,6 +169,7 @@ export class FlagEditorComponent implements OnInit, OnChanges {
     this.form.markAsUntouched();
     this.jsonError = null;
     this.syncToJson();
+    this.initialEditorSnapshot = this.buildEditorSnapshot();
   }
 
   setMode(mode: EditorMode): void {
@@ -528,6 +534,49 @@ export class FlagEditorComponent implements OnInit, OnChanges {
       });
     } catch {
       this.jsonError = 'Invalid JSON';
+    }
+  }
+
+  private hasChanges(): boolean {
+    if (!this.form) return false;
+    return this.buildEditorSnapshot() !== this.initialEditorSnapshot;
+  }
+
+  private buildEditorSnapshot(): string {
+    const key = String(this.form?.get('key')?.value ?? '').trim();
+    const state = this.form?.get('state')?.value ?? 'ENABLED';
+    const flagType = this.form?.get('flagType')?.value ?? 'boolean';
+    const defaultVariant = this.form?.get('defaultVariant')?.value ?? '';
+    const easyType = this.form?.get('easyType')?.value ?? 'boolean';
+    const easyStringValue = this.form?.get('easyStringValue')?.value ?? '';
+
+    return JSON.stringify({
+      key,
+      state,
+      flagType,
+      defaultVariant,
+      easyType,
+      easyStringValue,
+      editorMode: this.editorMode(),
+      variants: this.variants(),
+      targeting: this.targeting() ?? null,
+      metadata: this.metadata() ?? null,
+      rawJson: this.rawJson.trim(),
+    });
+  }
+
+  private isJsonSaveValid(): boolean {
+    const raw = this.rawJson.trim();
+    if (!raw) return false;
+
+    try {
+      const parsed = JSON.parse(raw);
+      if (typeof parsed !== 'object' || parsed === null) return false;
+      if (!parsed.state) return false;
+      if (!parsed.variants || typeof parsed.variants !== 'object') return false;
+      return Object.keys(parsed.variants).length > 0;
+    } catch {
+      return false;
     }
   }
 }

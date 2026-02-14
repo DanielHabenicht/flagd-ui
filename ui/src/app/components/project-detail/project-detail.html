@@ -87,8 +87,8 @@
 
         <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
         <tr mat-row *matRowDef="let row; columns: displayedColumns;"
-            [class.disabled-row]="row.state === 'DISABLED'"
-            (click)="openEditFlagEditor(row)"></tr>
+          [class.selected-row]="row.key === selectedFlagKey()"
+          (click)="openEditFlagEditor(row)"></tr>
       </table>
     } @else {
       <div class="empty-flags">

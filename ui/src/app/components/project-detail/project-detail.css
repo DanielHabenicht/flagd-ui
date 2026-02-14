@@ -72,6 +72,18 @@
   cursor: pointer;
 }
 
+.mat-mdc-row.selected-row {
+  background: var(--color-surface);
+}
+
+.mat-mdc-row.selected-row .mat-mdc-cell {
+  background: var(--color-surface);
+}
+
+.mat-mdc-row.selected-row .mat-mdc-cell:first-child {
+  box-shadow: inset 3px 0 0 var(--color-primary);
+}
+
 .col-key {
   font-family: var(--font-mono);
   font-weight: 500;
@@ -87,10 +99,6 @@
 .col-actions {
   white-space: nowrap;
   text-align: right;
-}
-
-.disabled-row {
-  opacity: 0.55;
 }
 
 .no-targeting {
