@@ -1,5 +1,14 @@
 import { JsonPipe } from '@angular/common';
-import { Component, computed, effect, inject, input, OnDestroy, OnInit, signal } from '@angular/core';
+import {
+  Component,
+  computed,
+  effect,
+  inject,
+  input,
+  OnDestroy,
+  OnInit,
+  signal,
+} from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
@@ -76,8 +85,8 @@ export class PlaygroundDrawerComponent implements OnInit, OnDestroy {
   readonly evaluationError = signal<string | null>(null);
   readonly contextError = signal<string | null>(null);
 
-  readonly activeServer = computed(() =>
-    this.servers().find((server) => server.id === this.activeServerId()) ?? null,
+  readonly activeServer = computed(
+    () => this.servers().find((server) => server.id === this.activeServerId()) ?? null,
   );
 
   readonly selectedFlag = computed(() => {
@@ -171,7 +180,8 @@ export class PlaygroundDrawerComponent implements OnInit, OnDestroy {
 
       if (
         !nextActive ||
-        (this.connectedServerId && !result.servers.some((server) => server.id === this.connectedServerId))
+        (this.connectedServerId &&
+          !result.servers.some((server) => server.id === this.connectedServerId))
       ) {
         this.connectedServerId = null;
       }
@@ -267,7 +277,10 @@ export class PlaygroundDrawerComponent implements OnInit, OnDestroy {
     }
   }
 
-  private async ensureProvider(server: PlaygroundServer, context: EvaluationContext): Promise<void> {
+  private async ensureProvider(
+    server: PlaygroundServer,
+    context: EvaluationContext,
+  ): Promise<void> {
     if (this.connectedServerId !== server.id) {
       let provider: Provider;
 
@@ -310,7 +323,10 @@ export class PlaygroundDrawerComponent implements OnInit, OnDestroy {
     }
   }
 
-  private resolveDefaultValue(flag: FlagEntry, flagType: ReturnType<typeof inferFlagType>): unknown {
+  private resolveDefaultValue(
+    flag: FlagEntry,
+    flagType: ReturnType<typeof inferFlagType>,
+  ): unknown {
     const fromDefaultVariant = flag.defaultVariant ? flag.variants[flag.defaultVariant] : undefined;
     if (fromDefaultVariant !== undefined) return fromDefaultVariant;
 
@@ -352,7 +368,8 @@ export class PlaygroundDrawerComponent implements OnInit, OnDestroy {
   }
 
   private clampDrawerHeight(height: number): number {
-    const viewportMax = typeof window !== 'undefined' ? Math.floor(window.innerHeight * 0.85) : MAX_DRAWER_HEIGHT;
+    const viewportMax =
+      typeof window !== 'undefined' ? Math.floor(window.innerHeight * 0.85) : MAX_DRAWER_HEIGHT;
     const maxHeight = Math.min(viewportMax, MAX_DRAWER_HEIGHT);
     return Math.max(MIN_DRAWER_HEIGHT, Math.min(height, maxHeight));
   }
@@ -391,7 +408,9 @@ export class PlaygroundDrawerComponent implements OnInit, OnDestroy {
     try {
       parsed = new URL(rawUrl);
     } catch {
-      throw new Error('Server URL is invalid. Use a full URL such as https://localhost:8013/flagd-api');
+      throw new Error(
+        'Server URL is invalid. Use a full URL such as https://localhost:8013/flagd-api',
+      );
     }
 
     if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {

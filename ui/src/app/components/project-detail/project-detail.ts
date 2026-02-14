@@ -32,7 +32,8 @@ export class ProjectDetailComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly inlineEditorMinWidth = 1280;
-  private readonly initialWideLayout = typeof window !== 'undefined' && window.innerWidth > this.inlineEditorMinWidth;
+  private readonly initialWideLayout =
+    typeof window !== 'undefined' && window.innerWidth > this.inlineEditorMinWidth;
   private readonly routeFlagKey = signal<string | null>(null);
 
   showEditor = signal(this.initialWideLayout);
@@ -42,7 +43,15 @@ export class ProjectDetailComponent implements OnInit {
   readonly existingFlagKeys = computed(() => this.store.flagEntries().map((f) => f.key));
   readonly showInlineEditor = computed(() => this.showEditor() && this.isWideLayout());
   readonly showSidePanelEditor = computed(() => this.showEditor() && !this.isWideLayout());
-  readonly displayedColumns = ['key', 'type', 'state', 'variants', 'default', 'targeting', 'actions'];
+  readonly displayedColumns = [
+    'key',
+    'type',
+    'state',
+    'variants',
+    'default',
+    'targeting',
+    'actions',
+  ];
   readonly sourceBreadcrumb = computed(() => {
     const project = this.store.currentProject();
     if (!project) return null;
@@ -58,9 +67,13 @@ export class ProjectDetailComponent implements OnInit {
     return `${backendLabel}`;
   });
   readonly projectMetadataDirty = computed(
-    () => this.metadataSnapshot(this.projectMetadataDraft()) !== this.metadataSnapshot(this.store.currentMetadata()),
+    () =>
+      this.metadataSnapshot(this.projectMetadataDraft()) !==
+      this.metadataSnapshot(this.store.currentMetadata()),
   );
-  readonly metadataSaveDisabled = computed(() => this.store.loading() || !this.projectMetadataDirty());
+  readonly metadataSaveDisabled = computed(
+    () => this.store.loading() || !this.projectMetadataDirty(),
+  );
 
   readonly projectMetadataDraft = signal<MetadataMap | undefined>(undefined);
 

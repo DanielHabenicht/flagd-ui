@@ -50,9 +50,7 @@ export class ProjectListComponent implements OnInit {
     if (project.source === 'local') {
       return ['/projects', 'local', project.name];
     }
-    const backend = this.backendRegistry
-      .getBackends()
-      .find((b) => b.url === project.backendUrl);
+    const backend = this.backendRegistry.getBackends().find((b) => b.url === project.backendUrl);
     return ['/projects', 'remote', backend?.id ?? '', project.name];
   }
 

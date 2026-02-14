@@ -46,9 +46,7 @@ export class FlagStore {
 
     // Group remote files first
     for (const backend of backends) {
-      const entries = all.filter(
-        (p) => p.source === 'remote' && p.backendUrl === backend.url,
-      );
+      const entries = all.filter((p) => p.source === 'remote' && p.backendUrl === backend.url);
       if (entries.length > 0) {
         groups.push({
           label: backend.label,
@@ -190,9 +188,7 @@ export class FlagStore {
     this.remoteApi.createProject(backendUrl, name, { flags: {} }).subscribe({
       next: () => {
         this.loadProjects();
-        const backend = this.backendRegistry
-          .getBackends()
-          .find((b) => b.url === backendUrl);
+        const backend = this.backendRegistry.getBackends().find((b) => b.url === backendUrl);
         if (backend) {
           this.router.navigate(['/projects', 'remote', backend.id, name]);
         }
@@ -210,8 +206,7 @@ export class FlagStore {
     this.error.set(null);
 
     const isCurrent =
-      this.currentProject()?.name === entry.name &&
-      this.currentProject()?.source === entry.source;
+      this.currentProject()?.name === entry.name && this.currentProject()?.source === entry.source;
 
     if (entry.source === 'local') {
       this.localStore.deleteProject(entry.name);
@@ -264,20 +259,18 @@ export class FlagStore {
       }
       this.loading.set(false);
     } else {
-      this.remoteApi
-        .updateProject(project.backendUrl!, project.name, content)
-        .subscribe({
-          next: () => {
-            this.currentFlags.set(updated);
-            this.currentMetadata.set(metadata);
-            this.loading.set(false);
-          },
-          error: (err) => {
-            this.error.set(`Failed to save flag "${key}"`);
-            this.loading.set(false);
-            console.error('Failed to save flag', err);
-          },
-        });
+      this.remoteApi.updateProject(project.backendUrl!, project.name, content).subscribe({
+        next: () => {
+          this.currentFlags.set(updated);
+          this.currentMetadata.set(metadata);
+          this.loading.set(false);
+        },
+        error: (err) => {
+          this.error.set(`Failed to save flag "${key}"`);
+          this.loading.set(false);
+          console.error('Failed to save flag', err);
+        },
+      });
     }
   }
 
@@ -306,20 +299,18 @@ export class FlagStore {
       }
       this.loading.set(false);
     } else {
-      this.remoteApi
-        .updateProject(project.backendUrl!, project.name, content)
-        .subscribe({
-          next: () => {
-            this.currentFlags.set(updated);
-            this.currentMetadata.set(metadata);
-            this.loading.set(false);
-          },
-          error: (err) => {
-            this.error.set(`Failed to delete flag "${key}"`);
-            this.loading.set(false);
-            console.error('Failed to delete flag', err);
-          },
-        });
+      this.remoteApi.updateProject(project.backendUrl!, project.name, content).subscribe({
+        next: () => {
+          this.currentFlags.set(updated);
+          this.currentMetadata.set(metadata);
+          this.loading.set(false);
+        },
+        error: (err) => {
+          this.error.set(`Failed to delete flag "${key}"`);
+          this.loading.set(false);
+          console.error('Failed to delete flag', err);
+        },
+      });
     }
   }
 
@@ -347,20 +338,18 @@ export class FlagStore {
       }
       this.loading.set(false);
     } else {
-      this.remoteApi
-        .updateProject(project.backendUrl!, project.name, content)
-        .subscribe({
-          next: () => {
-            this.currentFlags.set(updated);
-            this.currentMetadata.set(metadata);
-            this.loading.set(false);
-          },
-          error: (err) => {
-            this.error.set(`Failed to rename flag "${oldKey}"`);
-            this.loading.set(false);
-            console.error('Failed to rename flag', err);
-          },
-        });
+      this.remoteApi.updateProject(project.backendUrl!, project.name, content).subscribe({
+        next: () => {
+          this.currentFlags.set(updated);
+          this.currentMetadata.set(metadata);
+          this.loading.set(false);
+        },
+        error: (err) => {
+          this.error.set(`Failed to rename flag "${oldKey}"`);
+          this.loading.set(false);
+          console.error('Failed to rename flag', err);
+        },
+      });
     }
   }
 

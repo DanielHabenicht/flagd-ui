@@ -11,7 +11,12 @@
           <input matInput [(ngModel)]="projectName" placeholder="my-flags" />
         </mat-form-field>
         <div class="tab-actions">
-          <button mat-flat-button color="primary" (click)="createEmptyProject()" [disabled]="!projectName.trim()">
+          <button
+            mat-flat-button
+            color="primary"
+            (click)="createEmptyProject()"
+            [disabled]="!projectName.trim()"
+          >
             <mat-icon>computer</mat-icon> Create Local File
           </button>
         </div>
@@ -21,10 +26,16 @@
     <!-- Tab 2: Import from URL -->
     <mat-tab label="From URL">
       <div class="tab-content">
-        <p class="tab-description">Import a <code>.flagd.json</code> file from a URL. The file will be stored locally.</p>
+        <p class="tab-description">
+          Import a <code>.flagd.json</code> file from a URL. The file will be stored locally.
+        </p>
         <mat-form-field appearance="outline" class="full-width">
           <mat-label>File URL</mat-label>
-          <input matInput [(ngModel)]="fileUrl" placeholder="https://example.com/flags.flagd.json" />
+          <input
+            matInput
+            [(ngModel)]="fileUrl"
+            placeholder="https://example.com/flags.flagd.json"
+          />
         </mat-form-field>
         @if (urlLoading) {
           <mat-progress-bar mode="indeterminate"></mat-progress-bar>
@@ -33,7 +44,12 @@
           <div class="error-message">{{ urlError }}</div>
         }
         <div class="tab-actions">
-          <button mat-flat-button color="primary" (click)="importFromUrl()" [disabled]="!fileUrl.trim() || urlLoading">
+          <button
+            mat-flat-button
+            color="primary"
+            (click)="importFromUrl()"
+            [disabled]="!fileUrl.trim() || urlLoading"
+          >
             <mat-icon>download</mat-icon> Import File
           </button>
         </div>
@@ -43,7 +59,9 @@
     <!-- Tab 3: Connect backend -->
     <mat-tab label="Connect Backend">
       <div class="tab-content">
-        <p class="tab-description">Connect to a flagd-ui backend instance to manage its flag files remotely.</p>
+        <p class="tab-description">
+          Connect to a flagd-ui backend instance to manage its flag files remotely.
+        </p>
         <mat-form-field appearance="outline" class="full-width">
           <mat-label>Backend URL</mat-label>
           <input matInput [(ngModel)]="backendUrl" placeholder="https://flagd.example.com:3000" />
@@ -60,7 +78,9 @@
         }
         @if (discoveredFiles.length) {
           <div class="discovered">
-            <span class="discovered-label">Discovered {{ discoveredFiles.length }} flag file(s):</span>
+            <span class="discovered-label"
+              >Discovered {{ discoveredFiles.length }} flag file(s):</span
+            >
             <ul>
               @for (f of discoveredFiles; track f) {
                 <li>{{ f }}</li>
@@ -70,7 +90,11 @@
         }
         <div class="tab-actions">
           @if (!discoveredFiles.length) {
-            <button mat-stroked-button (click)="discoverBackend()" [disabled]="!backendUrl.trim() || backendLoading">
+            <button
+              mat-stroked-button
+              (click)="discoverBackend()"
+              [disabled]="!backendUrl.trim() || backendLoading"
+            >
               <mat-icon>search</mat-icon> Discover Files
             </button>
           } @else {

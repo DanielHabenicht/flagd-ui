@@ -19,25 +19,34 @@
     <div class="drawer-header-right">
       @if (open()) {
         <div class="server-header-controls">
-          <mat-form-field appearance="outline" class="server-header-select" subscriptSizing="dynamic">
+          <mat-form-field
+            appearance="outline"
+            class="server-header-select"
+            subscriptSizing="dynamic"
+          >
             <mat-label>Server</mat-label>
-            <mat-select [value]="activeServerId()" (selectionChange)="onServerSelectionChange($event.value)">
-                <mat-select-trigger>
-                  @if (activeServer()) {
-                    <span class="server-provider-tag">{{ activeServer()!.provider }}</span>
-                    {{ activeServer()!.url }}
-                  }
-                </mat-select-trigger>
+            <mat-select
+              [value]="activeServerId()"
+              (selectionChange)="onServerSelectionChange($event.value)"
+            >
+              <mat-select-trigger>
+                @if (activeServer()) {
+                  <span class="server-provider-tag">{{ activeServer()!.provider }}</span>
+                  {{ activeServer()!.url }}
+                }
+              </mat-select-trigger>
               @for (server of servers(); track server.id) {
-                  <mat-option [value]="server.id">
-                    <span class="server-provider-tag">{{ server.provider }}</span>
-                    {{ server.url }}
-                  </mat-option>
+                <mat-option [value]="server.id">
+                  <span class="server-provider-tag">{{ server.provider }}</span>
+                  {{ server.url }}
+                </mat-option>
               }
             </mat-select>
           </mat-form-field>
 
-          <button mat-stroked-button type="button" (click)="openServerManager()">Manage servers</button>
+          <button mat-stroked-button type="button" (click)="openServerManager()">
+            Manage servers
+          </button>
         </div>
       }
 
@@ -60,7 +69,10 @@
       <div class="flag-action-row">
         <mat-form-field appearance="outline" class="full-width">
           <mat-label>Flag</mat-label>
-          <mat-select [value]="localSelectedFlagKey()" (selectionChange)="onSelectedFlagChange($event.value)">
+          <mat-select
+            [value]="localSelectedFlagKey()"
+            (selectionChange)="onSelectedFlagChange($event.value)"
+          >
             @for (flag of flags(); track flag.key) {
               <mat-option [value]="flag.key">{{ flag.key }}</mat-option>
             }
@@ -110,7 +122,10 @@
           <p><strong>Variant:</strong> {{ evaluation()!.variant ?? '-' }}</p>
           <p><strong>Reason:</strong> {{ evaluation()!.reason ?? '-' }}</p>
           @if (evaluation()!.errorCode || evaluation()!.errorMessage) {
-            <p><strong>Error:</strong> {{ evaluation()!.errorCode ?? '' }} {{ evaluation()!.errorMessage ?? '' }}</p>
+            <p>
+              <strong>Error:</strong> {{ evaluation()!.errorCode ?? '' }}
+              {{ evaluation()!.errorMessage ?? '' }}
+            </p>
           }
         </div>
       } @else {

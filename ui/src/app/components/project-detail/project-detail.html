@@ -62,8 +62,11 @@
             <ng-container matColumnDef="state">
               <th mat-header-cell *matHeaderCellDef>State</th>
               <td mat-cell *matCellDef="let flag">
-                <mat-chip class="state-badge" [class.enabled]="flag.state === 'ENABLED'"
-                          [highlighted]="flag.state === 'ENABLED'">
+                <mat-chip
+                  class="state-badge"
+                  [class.enabled]="flag.state === 'ENABLED'"
+                  [highlighted]="flag.state === 'ENABLED'"
+                >
                   {{ flag.state }}
                 </mat-chip>
               </td>
@@ -82,7 +85,9 @@
 
             <ng-container matColumnDef="default">
               <th mat-header-cell *matHeaderCellDef>Default</th>
-              <td mat-cell *matCellDef="let flag" class="col-default">{{ flag.defaultVariant ?? '-' }}</td>
+              <td mat-cell *matCellDef="let flag" class="col-default">
+                {{ flag.defaultVariant ?? '-' }}
+              </td>
             </ng-container>
 
             <ng-container matColumnDef="targeting">
@@ -99,21 +104,31 @@
             <ng-container matColumnDef="actions">
               <th mat-header-cell *matHeaderCellDef></th>
               <td mat-cell *matCellDef="let flag" class="col-actions">
-                <button mat-icon-button color="warn" (click)="confirmDelete(flag); $event.stopPropagation()" title="Delete">
+                <button
+                  mat-icon-button
+                  color="warn"
+                  (click)="confirmDelete(flag); $event.stopPropagation()"
+                  title="Delete"
+                >
                   <mat-icon>delete</mat-icon>
                 </button>
               </td>
             </ng-container>
 
             <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-            <tr mat-row *matRowDef="let row; columns: displayedColumns;"
+            <tr
+              mat-row
+              *matRowDef="let row; columns: displayedColumns"
               [class.selected-row]="row.key === selectedFlagKey()"
-              (click)="openEditFlagEditor(row)"></tr>
+              (click)="openEditFlagEditor(row)"
+            ></tr>
           </table>
         } @else {
           <div class="empty-flags">
             <p>No flags in this file yet.</p>
-            <button mat-flat-button color="primary" (click)="openNewFlagEditor()">Create your first flag</button>
+            <button mat-flat-button color="primary" (click)="openNewFlagEditor()">
+              Create your first flag
+            </button>
           </div>
         }
       </div>
@@ -141,8 +156,5 @@
     }
   </div>
 
-  <app-playground-drawer
-    [flags]="store.flagEntries()"
-    [selectedFlagKey]="selectedFlagKey()"
-  />
+  <app-playground-drawer [flags]="store.flagEntries()" [selectedFlagKey]="selectedFlagKey()" />
 </div>

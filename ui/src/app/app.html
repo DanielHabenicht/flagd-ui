@@ -2,16 +2,19 @@
   <mat-progress-bar mode="indeterminate" class="global-loading-bar"></mat-progress-bar>
 }
 
-<mat-sidenav-container class="app-shell"
-    (dragover)="onDragOver($event)"
-    (dragleave)="onDragLeave($event)"
-    (drop)="onDrop($event)"
-    [class.drag-active]="dragOver">
+<mat-sidenav-container
+  class="app-shell"
+  (dragover)="onDragOver($event)"
+  (dragleave)="onDragLeave($event)"
+  (drop)="onDrop($event)"
+  [class.drag-active]="dragOver"
+>
   <mat-sidenav
     [mode]="isCompactLayout() ? 'over' : 'side'"
     [opened]="isCompactLayout() ? navOpen() : true"
     (openedChange)="onNavigationStateChange($event)"
-    class="sidebar">
+    class="sidebar"
+  >
     <mat-toolbar>
       <div class="sidebar-header-row">
         <h1><a routerLink="/" class="home-link">flagd-ui</a></h1>
@@ -38,7 +41,8 @@
           type="button"
           (click)="toggleNavigation()"
           title="Toggle navigation"
-          aria-label="Toggle navigation">
+          aria-label="Toggle navigation"
+        >
           <mat-icon>menu</mat-icon>
         </button>
       </div>

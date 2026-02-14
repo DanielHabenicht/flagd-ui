@@ -5,17 +5,22 @@
     <div class="variant-row">
       <mat-form-field appearance="outline" class="variant-name-field">
         <mat-label>Name</mat-label>
-        <input matInput [value]="row.name"
-               (input)="onNameChange($index, $any($event.target).value)"
-               placeholder="variant name" />
+        <input
+          matInput
+          [value]="row.name"
+          (input)="onNameChange($index, $any($event.target).value)"
+          placeholder="variant name"
+        />
       </mat-form-field>
 
       @switch (flagType()) {
         @case ('boolean') {
           <mat-form-field appearance="outline" class="variant-value-field">
             <mat-label>Value</mat-label>
-            <mat-select [value]="'' + row.value"
-                        (selectionChange)="onBooleanChange($index, $event.value)">
+            <mat-select
+              [value]="'' + row.value"
+              (selectionChange)="onBooleanChange($index, $event.value)"
+            >
               <mat-option value="true">true</mat-option>
               <mat-option value="false">false</mat-option>
             </mat-select>
@@ -24,40 +29,52 @@
         @case ('string') {
           <mat-form-field appearance="outline" class="variant-value-field">
             <mat-label>Value</mat-label>
-            <input matInput type="text" [value]="row.value"
-                   (input)="onStringChange($index, $any($event.target).value)"
-                   placeholder="string value" />
+            <input
+              matInput
+              type="text"
+              [value]="row.value"
+              (input)="onStringChange($index, $any($event.target).value)"
+              placeholder="string value"
+            />
           </mat-form-field>
         }
         @case ('number') {
           <mat-form-field appearance="outline" class="variant-value-field">
             <mat-label>Value</mat-label>
-            <input matInput type="number" [value]="row.value"
-                   (input)="onNumberChange($index, $any($event.target).value)"
-                   placeholder="0" />
+            <input
+              matInput
+              type="number"
+              [value]="row.value"
+              (input)="onNumberChange($index, $any($event.target).value)"
+              placeholder="0"
+            />
           </mat-form-field>
         }
         @case ('object') {
           <mat-form-field appearance="outline" class="variant-value-field">
             <mat-label>Value (JSON)</mat-label>
-            <textarea matInput [value]="getObjectString(row.value)"
-                      (input)="onObjectChange($index, $any($event.target).value)"
-                      placeholder='{ "key": "value" }'
-                      rows="3"></textarea>
+            <textarea
+              matInput
+              [value]="getObjectString(row.value)"
+              (input)="onObjectChange($index, $any($event.target).value)"
+              placeholder='{ "key": "value" }'
+              rows="3"
+            ></textarea>
           </mat-form-field>
         }
       }
 
-      <button mat-icon-button color="warn"
-              (click)="removeVariant($index)"
-              title="Remove variant"
-              [disabled]="rows.length <= 1">
+      <button
+        mat-icon-button
+        color="warn"
+        (click)="removeVariant($index)"
+        title="Remove variant"
+        [disabled]="rows.length <= 1"
+      >
         <mat-icon>close</mat-icon>
       </button>
     </div>
   }
 
-  <button mat-stroked-button (click)="addVariant()">
-    <mat-icon>add</mat-icon> Add Variant
-  </button>
+  <button mat-stroked-button (click)="addVariant()"><mat-icon>add</mat-icon> Add Variant</button>
 </div>

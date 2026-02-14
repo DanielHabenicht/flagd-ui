@@ -57,14 +57,23 @@
       } @else {
         <mat-form-field appearance="outline" class="metadata-value-field">
           <mat-label>Value</mat-label>
-          <mat-select [value]="'' + row.value" (selectionChange)="onBooleanChange($index, $event.value)">
+          <mat-select
+            [value]="'' + row.value"
+            (selectionChange)="onBooleanChange($index, $event.value)"
+          >
             <mat-option value="true">true</mat-option>
             <mat-option value="false">false</mat-option>
           </mat-select>
         </mat-form-field>
       }
 
-      <button mat-icon-button color="warn" type="button" (click)="removeRow($index)" title="Remove metadata">
+      <button
+        mat-icon-button
+        color="warn"
+        type="button"
+        (click)="removeRow($index)"
+        title="Remove metadata"
+      >
         <mat-icon>close</mat-icon>
       </button>
     </div>

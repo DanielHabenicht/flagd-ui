@@ -12,8 +12,12 @@
       <div class="rule-row">
         <span class="rule-label">If</span>
         <mat-form-field appearance="outline" class="rule-field">
-          <input matInput [(ngModel)]="property" (ngModelChange)="onSimpleFieldChange()"
-                 placeholder="context property (e.g. email)" />
+          <input
+            matInput
+            [(ngModel)]="property"
+            (ngModelChange)="onSimpleFieldChange()"
+            placeholder="context property (e.g. email)"
+          />
         </mat-form-field>
         <mat-form-field appearance="outline" class="rule-select-field">
           <mat-select [(ngModel)]="operator" (ngModelChange)="onSimpleFieldChange()">
@@ -25,8 +29,12 @@
           </mat-select>
         </mat-form-field>
         <mat-form-field appearance="outline" class="rule-field">
-          <input matInput [(ngModel)]="compValue" (ngModelChange)="onSimpleFieldChange()"
-                 [placeholder]="operator === 'in' ? 'val1, val2, val3' : 'value'" />
+          <input
+            matInput
+            [(ngModel)]="compValue"
+            (ngModelChange)="onSimpleFieldChange()"
+            [placeholder]="operator === 'in' ? 'val1, val2, val3' : 'value'"
+          />
         </mat-form-field>
       </div>
       <div class="rule-row">
@@ -56,9 +64,15 @@
     <div class="json-editor">
       <mat-form-field appearance="outline" class="full-width">
         <mat-label>Targeting JSON</mat-label>
-        <textarea matInput [ngModel]="rawJson" (ngModelChange)="onJsonChange($event)"
-                  rows="8" placeholder='{ "if": [...] }' spellcheck="false"
-                  class="json-textarea"></textarea>
+        <textarea
+          matInput
+          [ngModel]="rawJson"
+          (ngModelChange)="onJsonChange($event)"
+          rows="8"
+          placeholder='{ "if": [...] }'
+          spellcheck="false"
+          class="json-textarea"
+        ></textarea>
       </mat-form-field>
       @if (jsonError) {
         <p class="json-error">{{ jsonError }}</p>

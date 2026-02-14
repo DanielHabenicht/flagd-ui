@@ -15,7 +15,14 @@ export interface VariantRow {
 @Component({
   selector: 'app-variants-editor',
   standalone: true,
-  imports: [FormsModule, MatFormFieldModule, MatInputModule, MatSelectModule, MatButtonModule, MatIconModule],
+  imports: [
+    FormsModule,
+    MatFormFieldModule,
+    MatInputModule,
+    MatSelectModule,
+    MatButtonModule,
+    MatIconModule,
+  ],
   templateUrl: './variants-editor.html',
   styleUrl: './variants-editor.scss',
 })

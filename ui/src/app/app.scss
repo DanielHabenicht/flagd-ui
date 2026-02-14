@@ -1,97 +1,97 @@
 :host {
-    display: block;
-    height: 100%;
+  display: block;
+  height: 100%;
 }
 
 .app-shell {
-    height: 100vh;
+  height: 100vh;
 }
 
 .global-loading-bar {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    z-index: 1000;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  z-index: 1000;
 }
 
 .sidebar {
-    width: 260px;
-    display: flex;
-    flex-direction: column;
+  width: 260px;
+  display: flex;
+  flex-direction: column;
 }
 
 ::ng-deep .sidebar .mat-drawer-inner-container {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
 }
 
 .sidebar mat-toolbar {
-    flex: 0 0 auto;
+  flex: 0 0 auto;
 }
 
 .sidebar-header-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    width: 100%;
-    gap: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: 8px;
 }
 
 .theme-mode-button {
-    flex-shrink: 0;
+  flex-shrink: 0;
 }
 
 .sidebar app-project-list {
-    display: block;
-    flex: 1 1 auto;
-    min-height: 0;
+  display: block;
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 h1 {
-    margin: 0;
-    font-size: 1.25rem;
-    font-weight: 700;
-    letter-spacing: -0.02em;
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
 }
 
 .home-link {
-    color: inherit;
-    text-decoration: none;
+  color: inherit;
+  text-decoration: none;
 }
 
 .main-content {
-    padding: 24px 0px 0px 0px;
-    height: 100%;
-    box-sizing: border-box;
-    display: flex;
-    flex-direction: column;
+  padding: 24px 0px 0px 0px;
+  height: 100%;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
 }
 
-.main-content>router-outlet+* {
-    flex: 1 1 auto;
-    min-height: 0;
-    display: flex;
-    flex-direction: column;
+.main-content > router-outlet + * {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 
-.main-content> :last-child {
-    flex: 1 1 auto;
-    min-height: 0;
+.main-content > :last-child {
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 .page-header-nav {
-    display: flex;
-    align-items: center;
-    margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
 }
 
 .nav-toggle-button {
-    margin-left: -8px;
+  margin-left: -8px;
 }
 
 .app-shell.drag-active {
-    outline: 3px dashed var(--color-primary);
-    outline-offset: -3px;
+  outline: 3px dashed var(--color-primary);
+  outline-offset: -3px;
 }

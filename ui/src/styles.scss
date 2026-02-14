@@ -1,41 +1,41 @@
 :root {
-    --color-bg: var(--mat-sys-surface, #ffffff);
-    --color-surface: var(--mat-sys-surface-container, #f8f9fa);
-    --color-surface-hover: var(--mat-sys-surface-container-high, #e9ecef);
-    --color-border: var(--mat-sys-outline-variant, #dee2e6);
-    --color-text: var(--mat-sys-on-surface, #212529);
-    --color-text-secondary: var(--mat-sys-on-surface-variant, #6c757d);
-    --color-primary: var(--mat-sys-primary, #4263eb);
-    --color-primary-hover: var(--mat-sys-primary, #364fc7);
-    --color-primary-light: var(--mat-sys-primary-container, #dbe4ff);
-    --color-danger: var(--mat-sys-error, #e03131);
-    --color-danger-hover: var(--mat-sys-error, #c92a2a);
-    --color-success: var(--mat-sys-secondary, #2f9e44);
-    --color-success-light: var(--mat-sys-secondary-container, #d3f9d8);
-    --color-warning: var(--mat-sys-tertiary, #f08c00);
-    --color-enabled: var(--mat-sys-secondary, #2f9e44);
-    --color-disabled: var(--mat-sys-outline, #adb5bd);
-    --radius-sm: 4px;
-    --radius-md: 8px;
-    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1);
-    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.15);
-    --font-mono: 'Menlo', 'Monaco', 'Courier New', monospace;
+  --color-bg: var(--mat-sys-surface, #ffffff);
+  --color-surface: var(--mat-sys-surface-container, #f8f9fa);
+  --color-surface-hover: var(--mat-sys-surface-container-high, #e9ecef);
+  --color-border: var(--mat-sys-outline-variant, #dee2e6);
+  --color-text: var(--mat-sys-on-surface, #212529);
+  --color-text-secondary: var(--mat-sys-on-surface-variant, #6c757d);
+  --color-primary: var(--mat-sys-primary, #4263eb);
+  --color-primary-hover: var(--mat-sys-primary, #364fc7);
+  --color-primary-light: var(--mat-sys-primary-container, #dbe4ff);
+  --color-danger: var(--mat-sys-error, #e03131);
+  --color-danger-hover: var(--mat-sys-error, #c92a2a);
+  --color-success: var(--mat-sys-secondary, #2f9e44);
+  --color-success-light: var(--mat-sys-secondary-container, #d3f9d8);
+  --color-warning: var(--mat-sys-tertiary, #f08c00);
+  --color-enabled: var(--mat-sys-secondary, #2f9e44);
+  --color-disabled: var(--mat-sys-outline, #adb5bd);
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.15);
+  --font-mono: 'Menlo', 'Monaco', 'Courier New', monospace;
 }
 
 body {
-    margin: 0;
-    font-family: Roboto, 'Helvetica Neue', sans-serif;
-    color: var(--color-text);
-    background: var(--color-bg);
-    line-height: 1.5;
-    font-size: 14px;
+  margin: 0;
+  font-family: Roboto, 'Helvetica Neue', sans-serif;
+  color: var(--color-text);
+  background: var(--color-bg);
+  line-height: 1.5;
+  font-size: 14px;
 }
 
 a {
-    color: var(--color-primary);
-    text-decoration: none;
+  color: var(--color-primary);
+  text-decoration: none;
 }
 
 a:hover {
-    text-decoration: underline;
+  text-decoration: underline;
 }

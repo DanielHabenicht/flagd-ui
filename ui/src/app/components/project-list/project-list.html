@@ -8,9 +8,20 @@
         </div>
         <mat-nav-list class="group-list">
           @for (entry of group.entries; track entry.name + entry.backendUrl) {
-            <a mat-list-item [routerLink]="getProjectRoute(entry)" routerLinkActive="active-link" [routerLinkActiveOptions]="{ exact: true }">
+            <a
+              mat-list-item
+              [routerLink]="getProjectRoute(entry)"
+              routerLinkActive="active-link"
+              [routerLinkActiveOptions]="{ exact: true }"
+            >
               <span matListItemTitle class="project-name">{{ entry.name }}</span>
-              <button mat-icon-button matListItemMeta (click)="deleteProject($event, entry)" title="Delete" class="btn-delete">
+              <button
+                mat-icon-button
+                matListItemMeta
+                (click)="deleteProject($event, entry)"
+                title="Delete"
+                class="btn-delete"
+              >
                 <mat-icon>delete</mat-icon>
               </button>
             </a>
@@ -35,7 +46,12 @@
         <mat-icon class="drop-hint-icon">upload_file</mat-icon>
         <span>Drop <code>.flagd.json</code> files anywhere or</span>
       </div>
-      <button mat-flat-button class="new-flag-button" (click)="openNewProjectDialog()" title="Add flag file">
+      <button
+        mat-flat-button
+        class="new-flag-button"
+        (click)="openNewProjectDialog()"
+        title="Add flag file"
+      >
         <mat-icon>add</mat-icon>
         <span>Create flag file</span>
       </button>

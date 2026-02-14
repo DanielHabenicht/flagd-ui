@@ -6,10 +6,16 @@
     <h2>{{ isEditing() ? 'Edit Flag' : 'Create Flag' }}</h2>
     <div class="panel-header-actions">
       <mat-button-toggle-group [value]="editorMode()" (change)="setMode($event.value)">
-        <mat-button-toggle value="easy"
+        <mat-button-toggle
+          value="easy"
           [disabled]="!easyModeAvailable() && editorMode() !== 'easy'"
-          [title]="!easyModeAvailable() && editorMode() !== 'easy' ? 'This flag uses features not available in easy mode' : ''"
-        >Easy</mat-button-toggle>
+          [title]="
+            !easyModeAvailable() && editorMode() !== 'easy'
+              ? 'This flag uses features not available in easy mode'
+              : ''
+          "
+          >Easy</mat-button-toggle
+        >
         <mat-button-toggle value="advanced">Advanced</mat-button-toggle>
         <mat-button-toggle value="json">JSON</mat-button-toggle>
       </mat-button-toggle-group>
@@ -27,13 +33,22 @@
       <mat-form-field appearance="outline" class="full-width">
         <mat-label>Flag Key</mat-label>
         <input matInput formControlName="key" placeholder="my-feature-flag" />
-        @if (form.get('key')!.hasError('required') && (form.get('key')!.dirty || form.get('key')!.touched)) {
+        @if (
+          form.get('key')!.hasError('required') &&
+          (form.get('key')!.dirty || form.get('key')!.touched)
+        ) {
           <mat-error>Flag key is required</mat-error>
         }
-        @if (form.get('key')!.hasError('pattern') && (form.get('key')!.dirty || form.get('key')!.touched)) {
+        @if (
+          form.get('key')!.hasError('pattern') &&
+          (form.get('key')!.dirty || form.get('key')!.touched)
+        ) {
           <mat-error>Use only letters, numbers, dots, hyphens, and underscores</mat-error>
         }
-        @if (form.get('key')!.hasError('duplicateKey') && (form.get('key')!.dirty || form.get('key')!.touched)) {
+        @if (
+          form.get('key')!.hasError('duplicateKey') &&
+          (form.get('key')!.dirty || form.get('key')!.touched)
+        ) {
           <mat-error>A flag with this key already exists in the current file</mat-error>
         }
       </mat-form-field>
@@ -43,7 +58,8 @@
         <mat-slide-toggle
           [checked]="form.get('state')!.value === 'ENABLED'"
           (change)="onStateToggle()"
-          labelPosition="before">
+          labelPosition="before"
+        >
           {{ form.get('state')!.value === 'ENABLED' ? 'Enabled' : 'Disabled' }}
         </mat-slide-toggle>
       </div>
@@ -54,8 +70,10 @@
       <div class="easy-mode">
         <div class="form-field">
           <label>Flag Type</label>
-          <mat-button-toggle-group [value]="form.get('easyType')!.value"
-            (change)="form.get('easyType')!.setValue($event.value); onEasyTypeChange()">
+          <mat-button-toggle-group
+            [value]="form.get('easyType')!.value"
+            (change)="form.get('easyType')!.setValue($event.value); onEasyTypeChange()"
+          >
             <mat-button-toggle value="boolean">Boolean</mat-button-toggle>
             <mat-button-toggle value="string">String</mat-button-toggle>
           </mat-button-toggle-group>
@@ -70,43 +88,40 @@
           <label class="time-window-label">Activate after</label>
           <div class="form-row">
             <mat-form-field appearance="outline" class="full-width">
-            <mat-label>From Date</mat-label>
-            <input matInput [matDatepicker]="startDatePicker"
-              formControlName="easyStartDate" />
-            <mat-datepicker-toggle matIconSuffix [for]="startDatePicker"></mat-datepicker-toggle>
-            <mat-datepicker #startDatePicker></mat-datepicker>
-               </mat-form-field>
-
-               <mat-form-field appearance="outline" class="full-width">
-            <mat-label>From Time</mat-label>
-            <input matInput [matTimepicker]="startTimePicker"
-              formControlName="easyStartTime" />
-            <mat-timepicker-toggle matIconSuffix [for]="startTimePicker"></mat-timepicker-toggle>
-            <mat-timepicker #startTimePicker></mat-timepicker>
+              <mat-label>From Date</mat-label>
+              <input matInput [matDatepicker]="startDatePicker" formControlName="easyStartDate" />
+              <mat-datepicker-toggle matIconSuffix [for]="startDatePicker"></mat-datepicker-toggle>
+              <mat-datepicker #startDatePicker></mat-datepicker>
             </mat-form-field>
-             </div>
+
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>From Time</mat-label>
+              <input matInput [matTimepicker]="startTimePicker" formControlName="easyStartTime" />
+              <mat-timepicker-toggle matIconSuffix [for]="startTimePicker"></mat-timepicker-toggle>
+              <mat-timepicker #startTimePicker></mat-timepicker>
+            </mat-form-field>
+          </div>
 
           <label class="time-window-label">Activate till</label>
           <div class="form-row">
             <mat-form-field appearance="outline" class="full-width">
-            <mat-label>Till Date</mat-label>
-            <input matInput [matDatepicker]="endDatePicker"
-              formControlName="easyEndDate" />
-            <mat-datepicker-toggle matIconSuffix [for]="endDatePicker"></mat-datepicker-toggle>
-            <mat-datepicker #endDatePicker></mat-datepicker>
-               </mat-form-field>
+              <mat-label>Till Date</mat-label>
+              <input matInput [matDatepicker]="endDatePicker" formControlName="easyEndDate" />
+              <mat-datepicker-toggle matIconSuffix [for]="endDatePicker"></mat-datepicker-toggle>
+              <mat-datepicker #endDatePicker></mat-datepicker>
+            </mat-form-field>
 
-               <mat-form-field appearance="outline" class="full-width">
-            <mat-label>Till Time</mat-label>
-            <input matInput [matTimepicker]="endTimePicker"
-              formControlName="easyEndTime" />
-            <mat-timepicker-toggle matIconSuffix [for]="endTimePicker"></mat-timepicker-toggle>
-            <mat-timepicker #endTimePicker></mat-timepicker>
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Till Time</mat-label>
+              <input matInput [matTimepicker]="endTimePicker" formControlName="easyEndTime" />
+              <mat-timepicker-toggle matIconSuffix [for]="endTimePicker"></mat-timepicker-toggle>
+              <mat-timepicker #endTimePicker></mat-timepicker>
             </mat-form-field>
           </div>
 
           <p class="easy-hint">
-            Builds targeting with <code>$flagd.timestamp</code>; if only one side is set, only that boundary is applied.
+            Builds targeting with <code>$flagd.timestamp</code>; if only one side is set, only that
+            boundary is applied.
           </p>
         </div>
 
@@ -114,29 +129,34 @@
           <div class="easy-string-section">
             <mat-form-field appearance="outline" class="full-width">
               <mat-label>On Value</mat-label>
-              <textarea matInput formControlName="easyStringOnValue"
-                        placeholder="Enter value when ON"
-                        rows="3"
-                        (input)="onEasyStringValueChange()"></textarea>
-              @if (form.get('easyStringOnValue')!.invalid && form.get('easyStringOnValue')!.touched) {
+              <textarea
+                matInput
+                formControlName="easyStringOnValue"
+                placeholder="Enter value when ON"
+                rows="3"
+                (input)="onEasyStringValueChange()"
+              ></textarea>
+              @if (
+                form.get('easyStringOnValue')!.invalid && form.get('easyStringOnValue')!.touched
+              ) {
                 <mat-error>On value is required</mat-error>
               }
             </mat-form-field>
 
             <mat-form-field appearance="outline" class="full-width">
               <mat-label>Off Value (optional)</mat-label>
-              <textarea matInput formControlName="easyStringOffValue"
-                        placeholder="Leave empty for no off value"
-                        rows="3"
-                        (input)="onEasyStringValueChange()"></textarea>
+              <textarea
+                matInput
+                formControlName="easyStringOffValue"
+                placeholder="Leave empty for no off value"
+                rows="3"
+                (input)="onEasyStringValueChange()"
+              ></textarea>
             </mat-form-field>
           </div>
         }
 
-        <app-metadata-editor
-          [metadata]="metadata()"
-          (metadataChange)="onMetadataChange($event)"
-        />
+        <app-metadata-editor [metadata]="metadata()" (metadataChange)="onMetadataChange($event)" />
       </div>
     }
 
@@ -175,10 +195,7 @@
           (targetingChange)="onTargetingChange($event)"
         />
 
-        <app-metadata-editor
-          [metadata]="metadata()"
-          (metadataChange)="onMetadataChange($event)"
-        />
+        <app-metadata-editor [metadata]="metadata()" (metadataChange)="onMetadataChange($event)" />
       </div>
     }
 
@@ -190,7 +207,8 @@
           <button mat-stroked-button type="button" (click)="formatJson()">Format</button>
         </div>
         <mat-form-field appearance="outline" class="full-width">
-          <textarea matInput
+          <textarea
+            matInput
             class="json-editor-textarea"
             [ngModel]="rawJson"
             [ngModelOptions]="{ standalone: true }"
@@ -204,7 +222,8 @@
           <p class="json-error">{{ jsonError }}</p>
         }
         <p class="json-hint">
-          Edit the full flag definition as JSON. Required fields: <code>state</code>, <code>variants</code>.
+          Edit the full flag definition as JSON. Required fields: <code>state</code>,
+          <code>variants</code>.
         </p>
       </div>
     }
@@ -212,7 +231,13 @@
     <!-- ==================== ACTIONS ==================== -->
     <div class="panel-actions">
       <button mat-button type="button" (click)="onCancel()">Cancel</button>
-      <button mat-flat-button color="primary" type="button" (click)="onSave()" [disabled]="!canSave()">
+      <button
+        mat-flat-button
+        color="primary"
+        type="button"
+        (click)="onSave()"
+        [disabled]="!canSave()"
+      >
         {{ isEditing() ? 'Save Changes' : 'Create Flag' }}
       </button>
     </div>

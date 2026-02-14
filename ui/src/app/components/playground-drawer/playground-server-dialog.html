@@ -19,7 +19,9 @@
       @if (editingServerId) {
         <button mat-button type="button" (click)="cancelEdit()">Cancel Edit</button>
       }
-      <button mat-stroked-button type="submit">{{ editingServerId ? 'Update Server' : 'Add Server' }}</button>
+      <button mat-stroked-button type="submit">
+        {{ editingServerId ? 'Update Server' : 'Add Server' }}
+      </button>
     </div>
 
     @if (formError) {
@@ -36,13 +38,28 @@
             <div class="server-target">{{ server.url }}</div>
           </div>
           <div class="server-actions">
-            <button mat-icon-button type="button" (click)="editServer(server.id)" title="Edit server">
+            <button
+              mat-icon-button
+              type="button"
+              (click)="editServer(server.id)"
+              title="Edit server"
+            >
               <mat-icon>edit</mat-icon>
             </button>
-            <button mat-button type="button" (click)="setActiveServer(server.id)" [disabled]="server.id === activeServerId">
+            <button
+              mat-button
+              type="button"
+              (click)="setActiveServer(server.id)"
+              [disabled]="server.id === activeServerId"
+            >
               {{ server.id === activeServerId ? 'Active' : 'Use' }}
             </button>
-            <button mat-icon-button type="button" (click)="removeServer(server.id)" title="Remove server">
+            <button
+              mat-icon-button
+              type="button"
+              (click)="removeServer(server.id)"
+              title="Remove server"
+            >
               <mat-icon>delete</mat-icon>
             </button>
           </div>

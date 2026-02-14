@@ -69,12 +69,14 @@ export class TargetingEditorComponent implements OnChanges {
       this.resetSimpleFields();
       if (this.variantKeys().length > 0) {
         this.thenVariant = this.variantKeys()[0];
-        this.elseVariant = this.variantKeys().length > 1 ? this.variantKeys()[1] : this.variantKeys()[0];
+        this.elseVariant =
+          this.variantKeys().length > 1 ? this.variantKeys()[1] : this.variantKeys()[0];
       }
       this.emitSimpleRule();
     } else if (mode === 'json') {
       const current = this.targeting();
-      this.rawJson = current && Object.keys(current).length > 0 ? JSON.stringify(current, null, 2) : '{}';
+      this.rawJson =
+        current && Object.keys(current).length > 0 ? JSON.stringify(current, null, 2) : '{}';
       this.jsonError = null;
     }
     this.mode = mode;
@@ -100,11 +102,7 @@ export class TargetingEditorComponent implements OnChanges {
       const variants = this.variantKeys();
       const v1 = variants[0] ?? 'variant-a';
       const v2 = variants[1] ?? variants[0] ?? 'variant-b';
-      this.rawJson = JSON.stringify(
-        { if: [{ '==': [{ var: '' }, ''] }, v1, v2] },
-        null,
-        2,
-      );
+      this.rawJson = JSON.stringify({ if: [{ '==': [{ var: '' }, ''] }, v1, v2] }, null, 2);
     } else {
       const variants = this.variantKeys();
       const buckets = variants.map((v) => [v, Math.floor(100 / variants.length)]);
@@ -136,7 +134,10 @@ export class TargetingEditorComponent implements OnChanges {
     const varRef = { var: this.property };
 
     if (this.operator === 'in') {
-      const values = this.compValue.split(',').map((v) => v.trim()).filter(Boolean);
+      const values = this.compValue
+        .split(',')
+        .map((v) => v.trim())
+        .filter(Boolean);
       condition = { in: [varRef, values] };
     } else if (this.operator === 'starts_with' || this.operator === 'ends_with') {
       condition = { [this.operator]: [varRef, this.compValue] };

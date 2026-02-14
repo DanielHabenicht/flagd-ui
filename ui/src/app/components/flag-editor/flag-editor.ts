@@ -1,5 +1,13 @@
 import { Component, input, output, OnChanges, OnInit, computed, signal } from '@angular/core';
-import { AbstractControl, FormControl, FormGroup, ReactiveFormsModule, ValidationErrors, ValidatorFn, Validators } from '@angular/forms';
+import {
+  AbstractControl,
+  FormControl,
+  FormGroup,
+  ReactiveFormsModule,
+  ValidationErrors,
+  ValidatorFn,
+  Validators,
+} from '@angular/forms';
 import { FormsModule } from '@angular/forms';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
@@ -11,7 +19,15 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule } from '@angular/material/core';
 import { MatTimepickerModule } from '@angular/material/timepicker';
-import { FlagDefinition, FlagEntry, FlagState, FlagType, MetadataMap, inferFlagType, getDefaultVariants } from '../../models/flag.models';
+import {
+  FlagDefinition,
+  FlagEntry,
+  FlagState,
+  FlagType,
+  MetadataMap,
+  inferFlagType,
+  getDefaultVariants,
+} from '../../models/flag.models';
 import { VariantsEditorComponent, VariantRow } from '../variants-editor/variants-editor';
 import { TargetingEditorComponent } from '../targeting-editor/targeting-editor';
 import { MetadataEditorComponent } from '../metadata-editor/metadata-editor';
@@ -63,7 +79,11 @@ export class FlagEditorComponent implements OnInit, OnChanges {
 
   readonly isEditing = computed(() => this.flag() !== null);
 
-  readonly variantNames = computed(() => this.variants().map((v) => v.name).filter(Boolean));
+  readonly variantNames = computed(() =>
+    this.variants()
+      .map((v) => v.name)
+      .filter(Boolean),
+  );
 
   readonly easyModeAvailable = computed(() => {
     const variants = this.variants();
@@ -71,7 +91,8 @@ export class FlagEditorComponent implements OnInit, OnChanges {
     const flagType = this.form?.get('flagType')?.value as FlagType | undefined;
 
     if (!flagType || (flagType !== 'boolean' && flagType !== 'string')) return false;
-    if (targeting && Object.keys(targeting).length > 0 && !this.isEasyTimeTargeting(targeting)) return false;
+    if (targeting && Object.keys(targeting).length > 0 && !this.isEasyTimeTargeting(targeting))
+      return false;
     return this.isSimpleFlagStructure(flagType, variants);
   });
 
@@ -533,9 +554,9 @@ export class FlagEditorComponent implements OnInit, OnChanges {
 
         const flagType = inferFlagType(parsed.variants);
         this.form.get('flagType')!.setValue(flagType);
-        this.form.get('easyType')!.setValue(
-          flagType === 'boolean' || flagType === 'string' ? flagType : 'boolean',
-        );
+        this.form
+          .get('easyType')!
+          .setValue(flagType === 'boolean' || flagType === 'string' ? flagType : 'boolean');
       }
 
       if (parsed.defaultVariant !== undefined) {
@@ -578,7 +599,11 @@ export class FlagEditorComponent implements OnInit, OnChanges {
         return;
       }
 
-      if (!parsed.variants || typeof parsed.variants !== 'object' || Object.keys(parsed.variants).length === 0) {
+      if (
+        !parsed.variants ||
+        typeof parsed.variants !== 'object' ||
+        Object.keys(parsed.variants).length === 0
+      ) {
         this.jsonError = 'Must have at least one variant';
         return;
       }

@@ -1,219 +1,219 @@
 .playground-drawer {
-    position: relative;
-    background: var(--color-bg);
-    border-top: 1px solid var(--color-border);
-    box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.12);
-    height: 56px;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
+  position: relative;
+  background: var(--color-bg);
+  border-top: 1px solid var(--color-border);
+  box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.12);
+  height: 56px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .playground-drawer.animate {
-    transition: height 0.2s ease-out;
+  transition: height 0.2s ease-out;
 }
 
 .playground-drawer:not(.open) .drawer-content {
-    pointer-events: none;
+  pointer-events: none;
 }
 
 .drawer-resize-handle {
-    height: 8px;
-    cursor: ns-resize;
-    flex-shrink: 0;
+  height: 8px;
+  cursor: ns-resize;
+  flex-shrink: 0;
 }
 
 .drawer-resize-handle::before {
-    content: '';
-    display: block;
-    width: 56px;
-    height: 3px;
-    margin: 2px auto 0;
-    border-radius: 999px;
-    background: var(--color-border);
+  content: '';
+  display: block;
+  width: 56px;
+  height: 3px;
+  margin: 2px auto 0;
+  border-radius: 999px;
+  background: var(--color-border);
 }
 
 .drawer-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    padding: 8px 12px;
-    border-bottom: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--color-border);
 }
 
 .drawer-header-left {
-    min-width: 0;
+  min-width: 0;
 }
 
 .drawer-header-right {
-    display: flex;
-    align-items: center;
-    gap: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .drawer-toggle {
-    flex-shrink: 0;
+  flex-shrink: 0;
 }
 
 .server-header-controls {
-    display: flex;
-    align-items: flex-start;
-    gap: 8px;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
 }
 
 .server-header-select {
-    width: min(420px, 48vw);
+  width: min(420px, 48vw);
 }
 
 .server-provider-tag {
-    display: inline-block;
-    margin-right: 6px;
-    padding: 1px 6px;
-    border: 1px solid var(--color-border);
-    border-radius: 999px;
-    font-size: 0.7rem;
-    line-height: 1.3;
-    text-transform: uppercase;
-    color: var(--color-text-secondary);
+  display: inline-block;
+  margin-right: 6px;
+  padding: 1px 6px;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  font-size: 0.7rem;
+  line-height: 1.3;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
 }
 
 .drawer-header h3 {
-    margin: 0;
-    font-size: 1rem;
+  margin: 0;
+  font-size: 1rem;
 }
 
 .drawer-header p {
-    margin: 4px 0 0;
-    font-size: 0.8rem;
-    color: var(--color-text-secondary);
+  margin: 4px 0 0;
+  font-size: 0.8rem;
+  color: var(--color-text-secondary);
 }
 
 .drawer-content {
-    padding: 6px 12px 12px;
-    display: grid;
-    grid-template-columns: minmax(320px, 1fr) minmax(320px, 1fr);
-    gap: 12px;
-    overflow: auto;
+  padding: 6px 12px 12px;
+  display: grid;
+  grid-template-columns: minmax(320px, 1fr) minmax(320px, 1fr);
+  gap: 12px;
+  overflow: auto;
 }
 
 .drawer-column {
-    min-width: 0;
+  min-width: 0;
 }
 
 .context-column,
 .result-column {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
 .drawer-column h4 {
-    margin: 0 0 8px;
-    font-size: 0.92rem;
+  margin: 0 0 8px;
+  font-size: 0.92rem;
 }
 
 .full-width {
-    width: 100%;
+  width: 100%;
 }
 
 .flag-action-row {
-    display: flex;
-    align-items: flex-start;
-    gap: 10px;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
 }
 
 .evaluate-button {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    margin-top: 10px;
-    white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+  white-space: nowrap;
 }
 
 .evaluate-spinner {
-    animation: evaluate-spin 0.9s linear infinite;
+  animation: evaluate-spin 0.9s linear infinite;
 }
 
 .result-box {
-    margin-top: 12px;
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-sm);
-    background: var(--color-surface);
-    padding: 10px;
+  margin-top: 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  padding: 10px;
 }
 
 .result-box p {
-    margin: 0 0 6px;
-    font-size: 0.85rem;
+  margin: 0 0 6px;
+  font-size: 0.85rem;
 }
 
 .result-box p:last-child {
-    margin-bottom: 0;
+  margin-bottom: 0;
 }
 
 .empty-result {
-    border-style: dashed;
+  border-style: dashed;
 }
 
 .empty-result p {
-    color: var(--color-text-secondary);
+  color: var(--color-text-secondary);
 }
 
 .status-error {
-    margin: 0 0 10px;
-    color: var(--color-danger);
-    font-size: 0.82rem;
+  margin: 0 0 10px;
+  color: var(--color-danger);
+  font-size: 0.82rem;
 }
 
 @keyframes evaluate-spin {
-    from {
-        transform: rotate(0deg);
-    }
+  from {
+    transform: rotate(0deg);
+  }
 
-    to {
-        transform: rotate(360deg);
-    }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 @media (max-width: 900px) {
-    .drawer-content {
-        grid-template-columns: 1fr;
-    }
+  .drawer-content {
+    grid-template-columns: 1fr;
+  }
 
-    .drawer-header {
-        flex-direction: column;
-        align-items: stretch;
-    }
+  .drawer-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
 
-    .server-header-select {
-        width: 100%;
-    }
+  .server-header-select {
+    width: 100%;
+  }
 
-    .server-header-controls {
-        width: 100%;
-        align-items: stretch;
-        flex-direction: column;
-    }
+  .server-header-controls {
+    width: 100%;
+    align-items: stretch;
+    flex-direction: column;
+  }
 
-    .drawer-header-right {
-        width: 100%;
-        align-items: stretch;
-        flex-direction: column;
-    }
+  .drawer-header-right {
+    width: 100%;
+    align-items: stretch;
+    flex-direction: column;
+  }
 
-    .drawer-toggle {
-        align-self: flex-end;
-    }
+  .drawer-toggle {
+    align-self: flex-end;
+  }
 
-    .flag-action-row {
-        flex-direction: column;
-        align-items: stretch;
-    }
+  .flag-action-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
 
-    .evaluate-button {
-        margin-top: 0;
-        width: fit-content;
-        align-self: flex-end;
-    }
+  .evaluate-button {
+    margin-top: 0;
+    width: fit-content;
+    align-self: flex-end;
+  }
 }
