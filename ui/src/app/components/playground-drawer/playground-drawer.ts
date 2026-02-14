@@ -121,10 +121,6 @@ export class PlaygroundDrawerComponent implements OnInit {
   }
 
   onServerSelectionChange(value: string): void {
-    if (value === '__manage__') {
-      this.openServerManager();
-      return;
-    }
     this.setActiveServer(value);
   }
 

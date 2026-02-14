@@ -45,6 +45,12 @@
     min-width: 0;
 }
 
+.server-header-controls {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+}
+
 .server-header-select {
     width: min(420px, 48vw);
 }
@@ -176,6 +182,12 @@
 
     .server-header-select {
         width: 100%;
+    }
+
+    .server-header-controls {
+        width: 100%;
+        align-items: stretch;
+        flex-direction: column;
     }
 
     .flag-action-row {
