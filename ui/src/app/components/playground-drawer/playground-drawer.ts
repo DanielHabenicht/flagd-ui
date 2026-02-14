@@ -1,5 +1,5 @@
 import { JsonPipe } from '@angular/common';
-import { Component, computed, effect, inject, input, OnInit, signal } from '@angular/core';
+import { Component, computed, effect, inject, input, OnDestroy, OnInit, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
@@ -33,8 +33,13 @@ interface EvaluationResult {
 }
 
 const STORAGE_KEY = 'flagd-ui-playground-servers';
+const STORAGE_HEIGHT_KEY = 'flagd-ui-playground-height';
 const OF_DOMAIN = 'flagd-ui-playground';
 const PROVIDER_SETUP_TIMEOUT_MS = 10000;
+const COLLAPSED_DRAWER_HEIGHT = 56;
+const DEFAULT_DRAWER_HEIGHT = 280;
+const MIN_DRAWER_HEIGHT = 180;
+const MAX_DRAWER_HEIGHT = 760;
 
 @Component({
   selector: 'app-playground-drawer',
@@ -50,7 +55,7 @@ const PROVIDER_SETUP_TIMEOUT_MS = 10000;
   templateUrl: './playground-drawer.html',
   styleUrl: './playground-drawer.css',
 })
-export class PlaygroundDrawerComponent implements OnInit {
+export class PlaygroundDrawerComponent implements OnInit, OnDestroy {
   readonly flags = input<FlagEntry[]>([]);
   readonly selectedFlagKey = input<string | null>(null);
   private readonly route = inject(ActivatedRoute);
@@ -63,6 +68,8 @@ export class PlaygroundDrawerComponent implements OnInit {
   readonly activeServerId = signal<string | null>(this.loadServers()[0]?.id ?? null);
   readonly localSelectedFlagKey = signal<string>('');
   readonly contextJson = signal('{\n  "targetingKey": "user-123"\n}');
+  readonly drawerHeight = signal(this.loadDrawerHeight());
+  readonly collapsedDrawerHeight = COLLAPSED_DRAWER_HEIGHT;
 
   readonly evaluating = signal(false);
   readonly evaluation = signal<EvaluationResult | null>(null);
@@ -79,6 +86,9 @@ export class PlaygroundDrawerComponent implements OnInit {
   });
 
   private connectedServerId: string | null = null;
+  private isResizing = false;
+  private resizeStartY = 0;
+  private resizeStartHeight = DEFAULT_DRAWER_HEIGHT;
 
   private readonly syncSelectedFromInput = effect(() => {
     const current = this.localSelectedFlagKey();
@@ -100,11 +110,29 @@ export class PlaygroundDrawerComponent implements OnInit {
     });
   }
 
+  ngOnDestroy(): void {
+    this.stopResizing();
+  }
+
   toggleDrawer(): void {
     this.animate.set(true);
     const nextOpen = !this.open();
+    if (nextOpen) {
+      this.drawerHeight.set(this.clampDrawerHeight(this.drawerHeight()));
+    }
     this.open.set(nextOpen);
     this.updatePlaygroundQueryParam(nextOpen);
+  }
+
+  onResizeStart(event: MouseEvent): void {
+    if (!this.open()) return;
+
+    this.isResizing = true;
+    this.resizeStartY = event.clientY;
+    this.resizeStartHeight = this.drawerHeight();
+    window.addEventListener('mousemove', this.onResizeMove);
+    window.addEventListener('mouseup', this.onResizeEnd);
+    event.preventDefault();
   }
 
   onDrawerClick(): void {
@@ -312,6 +340,45 @@ export class PlaygroundDrawerComponent implements OnInit {
     } catch {
       return [];
     }
+  }
+
+  private loadDrawerHeight(): number {
+    if (typeof window === 'undefined') return DEFAULT_DRAWER_HEIGHT;
+
+    const raw = window.localStorage.getItem(STORAGE_HEIGHT_KEY);
+    const parsed = Number(raw);
+    if (!Number.isFinite(parsed)) return DEFAULT_DRAWER_HEIGHT;
+    return this.clampDrawerHeight(parsed);
+  }
+
+  private clampDrawerHeight(height: number): number {
+    const viewportMax = typeof window !== 'undefined' ? Math.floor(window.innerHeight * 0.85) : MAX_DRAWER_HEIGHT;
+    const maxHeight = Math.min(viewportMax, MAX_DRAWER_HEIGHT);
+    return Math.max(MIN_DRAWER_HEIGHT, Math.min(height, maxHeight));
+  }
+
+  private readonly onResizeMove = (event: MouseEvent): void => {
+    if (!this.isResizing) return;
+    const deltaY = this.resizeStartY - event.clientY;
+    const nextHeight = this.clampDrawerHeight(this.resizeStartHeight + deltaY);
+    this.drawerHeight.set(nextHeight);
+  };
+
+  private readonly onResizeEnd = (): void => {
+    if (!this.isResizing) return;
+    this.stopResizing();
+    this.persistDrawerHeight(this.drawerHeight());
+  };
+
+  private stopResizing(): void {
+    this.isResizing = false;
+    window.removeEventListener('mousemove', this.onResizeMove);
+    window.removeEventListener('mouseup', this.onResizeEnd);
+  }
+
+  private persistDrawerHeight(height: number): void {
+    if (typeof window === 'undefined') return;
+    window.localStorage.setItem(STORAGE_HEIGHT_KEY, String(this.clampDrawerHeight(height)));
   }
 
   private parseServerUrl(rawUrl: string): {

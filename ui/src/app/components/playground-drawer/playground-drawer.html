@@ -1,4 +1,14 @@
-<section class="playground-drawer" [class.open]="open()" [class.animate]="animate()" (click)="onDrawerClick()">
+<section
+  class="playground-drawer"
+  [class.open]="open()"
+  [class.animate]="animate()"
+  [style.height.px]="open() ? drawerHeight() : collapsedDrawerHeight"
+  (click)="onDrawerClick()"
+>
+  @if (open()) {
+    <div class="drawer-resize-handle" (mousedown)="onResizeStart($event)"></div>
+  }
+
   <div class="drawer-header">
     <div class="drawer-header-left">
       <h3>Playground</h3>
