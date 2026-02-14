@@ -1,12 +1,12 @@
-mod local;
 mod azure;
+mod local;
 
-pub use local::LocalStorage;
 pub use azure::AzureStorage;
+pub use local::LocalStorage;
 
+use crate::error::AppResult;
 use async_trait::async_trait;
 use std::sync::Arc;
-use crate::error::AppResult;
 
 /// Trait defining the interface for flag storage backends
 #[async_trait]
@@ -32,7 +32,7 @@ pub trait StorageBackend: Send + Sync {
 
 /// Factory function to create a storage backend based on URI
 pub fn create_storage_backend(uri: &str) -> AppResult<Arc<dyn StorageBackend>> {
-    if uri.starts_with("https://") || uri.starts_with("http://") {
+    if uri.starts_with("azblob://") {
         // Azure Blob Storage URI
         Ok(Arc::new(AzureStorage::new(uri)?))
     } else if uri.starts_with("file://") {

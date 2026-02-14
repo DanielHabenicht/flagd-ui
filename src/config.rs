@@ -1,5 +1,5 @@
-use std::env;
 use clap::Parser;
+use std::env;
 
 /// Command-line arguments for the flagd-ui server
 #[derive(Parser, Debug, Clone)]
@@ -7,12 +7,10 @@ use clap::Parser;
 #[command(about = "A web UI for managing feature flags in OpenFeature flagd service")]
 pub struct CliArgs {
     /// Storage URI for feature flags
-    /// 
+    ///
     /// Supported formats:
     /// - Local filesystem: file:///path/to/flags or /path/to/flags or ./flags
-    /// - Azure Blob Storage URL: https://<account>.blob.core.windows.net/<container>
-    /// - Azure connection string: DefaultEndpointsProtocol=https;AccountName=...;AccountKey=...;Container=<container>
-    /// - Azurite (local): http://127.0.0.1:10000/devstoreaccount1/<container>
+    /// - Azure Blob Storage connection string: DefaultEndpointsProtocol=https;AccountName=...;AccountKey=...;Container=<container>
     #[arg(long, env = "STORAGE_URI")]
     pub storage_uri: Option<String>,
 
@@ -25,7 +23,11 @@ pub struct CliArgs {
     pub static_dir: String,
 
     /// Path to the flagd JSON schema file
-    #[arg(long, env = "FLAGD_SCHEMA_FILE", default_value = "./schema/flagd-schema.json")]
+    #[arg(
+        long,
+        env = "FLAGD_SCHEMA_FILE",
+        default_value = "./schema/flagd-schema.json"
+    )]
     pub schema_file_path: String,
 }
 
@@ -36,7 +38,7 @@ pub struct ServerConfig {
     pub port: u16,
     /// Directory for static files
     pub static_dir: String,
-    /// Storage URI for feature flags (supports file://, https://, http://)
+    /// Storage URI for feature flags (supports file://, local paths, or Azure connection strings)
     pub storage_uri: String,
     /// Path to the flagd JSON schema file
     pub schema_file_path: String,
@@ -46,8 +48,9 @@ impl ServerConfig {
     /// Load configuration from CLI arguments and environment variables
     pub fn from_cli() -> Self {
         let args = CliArgs::parse();
-        
-        let storage_uri = args.storage_uri
+
+        let storage_uri = args
+            .storage_uri
             .or_else(|| env::var("FLAGS_DIR").ok())
             .unwrap_or_else(|| "./flags".to_string());
 

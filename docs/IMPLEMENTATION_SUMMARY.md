@@ -1,11 +1,13 @@
 # Azure Blob Storage Implementation - Summary
 
 ## Overview
+
 Successfully implemented Azure Blob Storage support for the flagd-ui application, allowing users to store feature flag files in cloud storage instead of (or in addition to) local filesystem storage.
 
 ## Implementation Details
 
 ### Architecture
+
 - **Storage Abstraction**: Created a trait-based architecture (`StorageBackend`) that allows for multiple storage implementations
 - **Factory Pattern**: Implemented protocol-based routing to automatically select the correct storage backend
 - **Backward Compatibility**: Existing functionality preserved - defaults to local filesystem storage
@@ -37,14 +39,15 @@ Successfully implemented Azure Blob Storage support for the flagd-ui application
    - Azure Blob Storage
 
 2. **CLI Configuration**
+
    ```bash
    # Local filesystem
    cargo run -- --storage-uri ./flags
    cargo run -- --storage-uri file:///path/to/flags
-   
+
    # Azure Blob Storage
    cargo run -- --storage-uri https://account.blob.core.windows.net/container
-   
+
    # Azurite (local emulator)
    cargo run -- --storage-uri http://127.0.0.1:10000/devstoreaccount1/container
    ```
@@ -57,6 +60,7 @@ Successfully implemented Azure Blob Storage support for the flagd-ui application
 ### Testing Results
 
 #### Local Filesystem Storage ✅
+
 - **CREATE**: Successfully creates flag files
 - **READ**: Successfully reads flag content
 - **LIST**: Successfully lists all flags
@@ -65,6 +69,7 @@ Successfully implemented Azure Blob Storage support for the flagd-ui application
 - **Backward Compatibility**: All existing functionality works without changes
 
 #### Azure Blob Storage ⚠️
+
 - **Implementation**: Complete with proper error handling
 - **Authentication**: Supports account key authentication
 - **Container Detection**: Handles missing containers gracefully
@@ -155,15 +160,17 @@ futures = "0.3"
 ## Migration Guide
 
 ### For Existing Users
+
 No changes required! The default behavior remains unchanged:
+
 - Flags stored in `./flags` directory
 - All existing environment variables work
 - No breaking changes
 
 ### To Use Azure Blob Storage
+
 1. Set up Azure Storage account and container
-2. Set environment variable: `export AZURE_STORAGE_ACCOUNT_KEY="your-key"`
-3. Run with: `cargo run -- --storage-uri https://account.blob.core.windows.net/container`
+2. Use connection string with container name: `cargo run -- --storage-uri "DefaultEndpointsProtocol=https;AccountName=myaccount;AccountKey=your-key;EndpointSuffix=core.windows.net;Container=feature-flags"`
 
 ## Conclusion
 

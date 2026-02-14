@@ -90,11 +90,7 @@ cargo run
 cargo run -- --storage-uri ./my-flags
 
 # Run with Azure Blob Storage (using connection string)
-export AZURE_STORAGE_CONNECTION_STRING="DefaultEndpointsProtocol=https;AccountName=myaccount;AccountKey=...;EndpointSuffix=core.windows.net"
-cargo run -- --storage-uri https://myaccount.blob.core.windows.net/feature-flags
-
-# Or use connection string directly
-cargo run -- --storage-uri "DefaultEndpointsProtocol=https;AccountName=myaccount;AccountKey=...;Container=feature-flags"
+cargo run -- --storage-uri "DefaultEndpointsProtocol=https;AccountName=myaccount;AccountKey=...;EndpointSuffix=core.windows.net;Container=feature-flags"
 
 # View all CLI options
 cargo run -- --help

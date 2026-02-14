@@ -1,17 +1,18 @@
-FROM mcr.microsoft.com/azure-storage/azurite
+FROM alpine/mkcert AS mkcert
 
-# Create certs directory
+RUN mkcert -install && mkcert -cert-file /127.0.0.1.pem -key-file /127.0.0.1-key.pem 127.0.0.1 localhost azurite
+
+
+FROM mcr.microsoft.com/azure-storage/azurite:3.35.0
+
 RUN mkdir -p /certs
 
-# Create startup script that runs without SSL if certificates are not present
+COPY --from=mkcert /127.0.0.1.pem /certs/127.0.0.1.pem
+COPY --from=mkcert /127.0.0.1-key.pem /certs/127.0.0.1-key.pem
+
 RUN echo '#!/bin/sh' > startup.sh && \
-    echo 'if [ -f /certs/127.0.0.1.pem ] && [ -f /certs/127.0.0.1-key.pem ]; then' >> startup.sh && \
-    echo '    echo "Starting Azurite with SSL certificates"' >> startup.sh && \
-    echo '    azurite -l /data --blobHost 0.0.0.0 --queueHost 0.0.0.0 --tableHost 0.0.0.0 --oauth basic --cert /certs/127.0.0.1.pem --key /certs/127.0.0.1-key.pem' >> startup.sh && \
-    echo 'else' >> startup.sh && \
-    echo '    echo "Starting Azurite without SSL (certificates not found)"' >> startup.sh && \
-    echo '    azurite -l /data --blobHost 0.0.0.0 --queueHost 0.0.0.0 --tableHost 0.0.0.0 --oauth basic' >> startup.sh && \
-    echo 'fi' >> startup.sh && \
+    echo 'echo "Starting Azurite with SSL certificates"' >> startup.sh && \
+    echo 'azurite -l /data --blobHost 0.0.0.0 --queueHost 0.0.0.0 --tableHost 0.0.0.0 --oauth basic --cert /certs/127.0.0.1.pem --key /certs/127.0.0.1-key.pem' >> startup.sh && \
     chmod +x startup.sh
 
 CMD ["./startup.sh"]
