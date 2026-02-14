@@ -8,6 +8,9 @@ import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { MatDatepickerModule } from '@angular/material/datepicker';
+import { MatNativeDateModule } from '@angular/material/core';
+import { MatTimepickerModule } from '@angular/material/timepicker';
 import { FlagDefinition, FlagEntry, FlagState, FlagType, inferFlagType, getDefaultVariants } from '../../models/flag.models';
 import { VariantsEditorComponent, VariantRow } from '../variants-editor/variants-editor';
 import { TargetingEditorComponent } from '../targeting-editor/targeting-editor';
@@ -29,11 +32,16 @@ export type EditorMode = 'easy' | 'advanced' | 'json';
     MatSelectModule,
     MatButtonModule,
     MatIconModule,
+    MatDatepickerModule,
+    MatNativeDateModule,
+    MatTimepickerModule,
   ],
   templateUrl: './flag-editor.html',
   styleUrl: './flag-editor.css',
 })
 export class FlagEditorComponent implements OnInit, OnChanges {
+  private static readonly TIMESTAMP_CONTEXT_VAR = '$flagd.timestamp';
+
   readonly inline = input(false);
   readonly flag = input<FlagEntry | null>(null);
   readonly existingKeys = input<string[]>([]);
@@ -61,7 +69,7 @@ export class FlagEditorComponent implements OnInit, OnChanges {
     const flagType = this.form?.get('flagType')?.value as FlagType | undefined;
 
     if (!flagType || (flagType !== 'boolean' && flagType !== 'string')) return false;
-    if (targeting && Object.keys(targeting).length > 0) return false;
+    if (targeting && Object.keys(targeting).length > 0 && !this.isEasyTimeTargeting(targeting)) return false;
     return this.isSimpleFlagStructure(flagType, variants);
   });
 
@@ -123,6 +131,10 @@ export class FlagEditorComponent implements OnInit, OnChanges {
           ? String(initialVariants.find((variant) => variant.name === 'off')?.value ?? '')
           : '',
       ),
+      easyStartDate: new FormControl<Date | null>(null),
+      easyStartTime: new FormControl<Date | null>(null),
+      easyEndDate: new FormControl<Date | null>(null),
+      easyEndTime: new FormControl<Date | null>(null),
     });
 
     this.applyFlagToForm(f);
@@ -143,6 +155,8 @@ export class FlagEditorComponent implements OnInit, OnChanges {
     this.targeting.set(f?.targeting);
     this.metadata.set(f?.metadata);
 
+    const parsedEasyTimeTargeting = this.parseEasyTimeTargeting(f?.targeting);
+
     this.form.patchValue(
       {
         key: f?.key ?? '',
@@ -162,6 +176,10 @@ export class FlagEditorComponent implements OnInit, OnChanges {
           nextType === 'string'
             ? String(nextVariants.find((variant) => variant.name === 'off')?.value ?? '')
             : '',
+        easyStartDate: this.parseTimestampDate(parsedEasyTimeTargeting?.start),
+        easyStartTime: this.parseTimestampDate(parsedEasyTimeTargeting?.start),
+        easyEndDate: this.parseTimestampDate(parsedEasyTimeTargeting?.end),
+        easyEndTime: this.parseTimestampDate(parsedEasyTimeTargeting?.end),
       },
       { emitEvent: false },
     );
@@ -173,10 +191,13 @@ export class FlagEditorComponent implements OnInit, OnChanges {
     // Determine editor mode
     if (f) {
       const isSimpleType = nextType === 'boolean' || nextType === 'string';
-      const hasTargeting = f.targeting && Object.keys(f.targeting).length > 0;
+      const hasUnsupportedTargeting =
+        !!f.targeting &&
+        Object.keys(f.targeting).length > 0 &&
+        !this.isEasyTimeTargeting(f.targeting);
       const isSimpleVariants = this.isSimpleFlagStructure(nextType, nextVariants);
 
-      if (isSimpleType && !hasTargeting && isSimpleVariants) {
+      if (isSimpleType && !hasUnsupportedTargeting && isSimpleVariants) {
         this.editorMode.set('easy');
       } else {
         this.editorMode.set('advanced');
@@ -269,6 +290,13 @@ export class FlagEditorComponent implements OnInit, OnChanges {
     this.form.get('defaultVariant')!.setValue(value);
   }
 
+  resetEasyTimeWindow(): void {
+    this.form.get('easyStartDate')!.setValue(null);
+    this.form.get('easyStartTime')!.setValue(null);
+    this.form.get('easyEndDate')!.setValue(null);
+    this.form.get('easyEndTime')!.setValue(null);
+  }
+
   // --- Advanced mode ---
 
   onTypeChange(): void {
@@ -348,7 +376,7 @@ export class FlagEditorComponent implements OnInit, OnChanges {
       flag.defaultVariant = defaultVariant;
     }
 
-    if (mode === 'advanced') {
+    if (mode === 'advanced' || mode === 'easy') {
       const t = this.targeting();
       if (t && Object.keys(t).length > 0) {
         flag.targeting = t;
@@ -412,6 +440,8 @@ export class FlagEditorComponent implements OnInit, OnChanges {
         this.form.get('defaultVariant')!.setValue('on');
       }
     }
+
+    this.targeting.set(this.buildEasyTimeTargeting());
   }
 
   private syncAdvancedToEasy(): void {
@@ -437,6 +467,12 @@ export class FlagEditorComponent implements OnInit, OnChanges {
     } else {
       this.form.get('defaultVariant')!.setValue('on');
     }
+
+    const parsedTimeTargeting = this.parseEasyTimeTargeting(this.targeting());
+    this.form.get('easyStartTime')!.setValue(this.parseTimestampDate(parsedTimeTargeting?.start));
+    this.form.get('easyStartDate')!.setValue(this.parseTimestampDate(parsedTimeTargeting?.start));
+    this.form.get('easyEndTime')!.setValue(this.parseTimestampDate(parsedTimeTargeting?.end));
+    this.form.get('easyEndDate')!.setValue(this.parseTimestampDate(parsedTimeTargeting?.end));
   }
 
   private syncToJson(): void {
@@ -582,6 +618,20 @@ export class FlagEditorComponent implements OnInit, OnChanges {
     const easyStringValue = this.form?.get('easyStringValue')?.value ?? '';
     const easyStringOnValue = this.form?.get('easyStringOnValue')?.value ?? '';
     const easyStringOffValue = this.form?.get('easyStringOffValue')?.value ?? '';
+    const easyStartTime =
+      this.toTimestampString(
+        this.combineDateAndTime(
+          this.form?.get('easyStartDate')?.value ?? null,
+          this.form?.get('easyStartTime')?.value ?? null,
+        ),
+      ) ?? '';
+    const easyEndTime =
+      this.toTimestampString(
+        this.combineDateAndTime(
+          this.form?.get('easyEndDate')?.value ?? null,
+          this.form?.get('easyEndTime')?.value ?? null,
+        ),
+      ) ?? '';
 
     return JSON.stringify({
       key,
@@ -592,6 +642,8 @@ export class FlagEditorComponent implements OnInit, OnChanges {
       easyStringValue,
       easyStringOnValue,
       easyStringOffValue,
+      easyStartTime,
+      easyEndTime,
       editorMode: this.editorMode(),
       variants: this.variants(),
       targeting: this.targeting() ?? null,
@@ -663,6 +715,138 @@ export class FlagEditorComponent implements OnInit, OnChanges {
     }
 
     return true;
+  }
+
+  private buildEasyTimeTargeting(): Record<string, unknown> | undefined {
+    const startDate = this.form.get('easyStartDate')?.value ?? null;
+    const startTime = this.form.get('easyStartTime')?.value ?? null;
+    const endDate = this.form.get('easyEndDate')?.value ?? null;
+    const endTime = this.form.get('easyEndTime')?.value ?? null;
+
+    const start = this.toTimestampString(this.combineDateAndTime(startDate, startTime)) ?? '';
+    const end = this.toTimestampString(this.combineDateAndTime(endDate, endTime)) ?? '';
+
+    if (!start && !end) return undefined;
+
+    const varRef = { var: FlagEditorComponent.TIMESTAMP_CONTEXT_VAR };
+    const conditions: Record<string, unknown>[] = [];
+
+    if (start) {
+      conditions.push({ '>=': [varRef, start] });
+    }
+
+    if (end) {
+      conditions.push({ '<=': [varRef, end] });
+    }
+
+    const condition = conditions.length === 1 ? conditions[0] : { and: conditions };
+
+    return {
+      if: [condition, 'on', 'off'],
+    };
+  }
+
+  private isEasyTimeTargeting(targeting: Record<string, unknown>): boolean {
+    return this.parseEasyTimeTargeting(targeting) !== null;
+  }
+
+  private parseEasyTimeTargeting(
+    targeting: Record<string, unknown> | undefined,
+  ): { start: string; end: string } | null {
+    if (!targeting || Object.keys(targeting).length === 0) return null;
+
+    const ifClause = targeting['if'];
+    if (!Array.isArray(ifClause) || ifClause.length < 3) return null;
+
+    if (ifClause[1] !== 'on' || ifClause[2] !== 'off') return null;
+
+    const bounds = this.extractTimestampBounds(ifClause[0]);
+    if (!bounds) return null;
+
+    return {
+      start: bounds.start ?? '',
+      end: bounds.end ?? '',
+    };
+  }
+
+  private extractTimestampBounds(value: unknown): { start?: string; end?: string } | null {
+    if (!value || typeof value !== 'object') return null;
+    const condition = value as Record<string, unknown>;
+
+    if ('>=' in condition) {
+      const start = this.readTimestampComparison(condition['>='], '>=');
+      return start ? { start } : null;
+    }
+
+    if ('<=' in condition) {
+      const end = this.readTimestampComparison(condition['<='], '<=');
+      return end ? { end } : null;
+    }
+
+    if ('and' in condition) {
+      const subConditions = condition['and'];
+      if (!Array.isArray(subConditions) || subConditions.length === 0) return null;
+
+      let start: string | undefined;
+      let end: string | undefined;
+
+      for (const subCondition of subConditions) {
+        const parsed = this.extractTimestampBounds(subCondition);
+        if (!parsed) return null;
+        if (parsed.start) start = parsed.start;
+        if (parsed.end) end = parsed.end;
+      }
+
+      if (!start && !end) return null;
+      return { start, end };
+    }
+
+    return null;
+  }
+
+  private readTimestampComparison(value: unknown, operator: '>=' | '<='): string | null {
+    if (!Array.isArray(value) || value.length < 2) return null;
+
+    const variableRef = value[0];
+    if (!variableRef || typeof variableRef !== 'object') return null;
+
+    const varName = (variableRef as Record<string, unknown>)['var'];
+    if (varName !== FlagEditorComponent.TIMESTAMP_CONTEXT_VAR) return null;
+
+    const comparedValue = value[1];
+    if (typeof comparedValue !== 'string') return null;
+
+    const trimmedValue = comparedValue.trim();
+    if (!trimmedValue) return null;
+
+    if (operator === '>=') return trimmedValue;
+    return trimmedValue;
+  }
+
+  private parseTimestampDate(value: string | undefined): Date | null {
+    if (!value) return null;
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  }
+
+  private toTimestampString(value: unknown): string | null {
+    if (!(value instanceof Date) || Number.isNaN(value.getTime())) return null;
+    return value.toISOString();
+  }
+
+  private combineDateAndTime(dateValue: unknown, timeValue: unknown): Date | null {
+    if (!(dateValue instanceof Date) || Number.isNaN(dateValue.getTime())) return null;
+    if (!(timeValue instanceof Date) || Number.isNaN(timeValue.getTime())) return null;
+
+    return new Date(
+      dateValue.getFullYear(),
+      dateValue.getMonth(),
+      dateValue.getDate(),
+      timeValue.getHours(),
+      timeValue.getMinutes(),
+      timeValue.getSeconds(),
+      timeValue.getMilliseconds(),
+    );
   }
 
   private syncJsonState(state: FlagState): void {

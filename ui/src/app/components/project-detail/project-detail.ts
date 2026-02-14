@@ -142,6 +142,17 @@ export class ProjectDetailComponent implements OnInit {
     } else {
       this.store.saveFlag(event.key, event.flag);
     }
+
+    if (this.isWideLayout()) {
+      this.updateSelectedFlagInUrl(event.key);
+      this.editingFlag.set({
+        key: event.key,
+        ...event.flag,
+      });
+      this.showEditor.set(true);
+      return;
+    }
+
     this.closeEditor();
   }
 

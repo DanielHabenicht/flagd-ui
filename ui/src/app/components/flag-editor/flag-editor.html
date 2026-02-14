@@ -61,6 +61,55 @@
           </mat-button-toggle-group>
         </div>
 
+        <div class="easy-time-window-section">
+          <div class="easy-time-window-header">
+            <label>Active Time Window</label>
+            <button mat-stroked-button type="button" (click)="resetEasyTimeWindow()">Reset</button>
+          </div>
+
+          <label class="time-window-label">Activate after</label>
+          <div class="form-row">
+            <mat-form-field appearance="outline" class="full-width">
+            <mat-label>From Date</mat-label>
+            <input matInput [matDatepicker]="startDatePicker"
+              formControlName="easyStartDate" />
+            <mat-datepicker-toggle matIconSuffix [for]="startDatePicker"></mat-datepicker-toggle>
+            <mat-datepicker #startDatePicker></mat-datepicker>
+               </mat-form-field>
+
+               <mat-form-field appearance="outline" class="full-width">
+            <mat-label>From Time</mat-label>
+            <input matInput [matTimepicker]="startTimePicker"
+              formControlName="easyStartTime" />
+            <mat-timepicker-toggle matIconSuffix [for]="startTimePicker"></mat-timepicker-toggle>
+            <mat-timepicker #startTimePicker></mat-timepicker>
+            </mat-form-field>
+             </div>
+
+          <label class="time-window-label">Activate till</label>
+          <div class="form-row">
+            <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Till Date</mat-label>
+            <input matInput [matDatepicker]="endDatePicker"
+              formControlName="easyEndDate" />
+            <mat-datepicker-toggle matIconSuffix [for]="endDatePicker"></mat-datepicker-toggle>
+            <mat-datepicker #endDatePicker></mat-datepicker>
+               </mat-form-field>
+
+               <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Till Time</mat-label>
+            <input matInput [matTimepicker]="endTimePicker"
+              formControlName="easyEndTime" />
+            <mat-timepicker-toggle matIconSuffix [for]="endTimePicker"></mat-timepicker-toggle>
+            <mat-timepicker #endTimePicker></mat-timepicker>
+            </mat-form-field>
+          </div>
+
+          <p class="easy-hint">
+            Builds targeting with <code>$flagd.timestamp</code>; if only one side is set, only that boundary is applied.
+          </p>
+        </div>
+
         @if (form.get('easyType')!.value === 'boolean') {
           <div class="easy-toggle-section">
             <p class="easy-hint">
