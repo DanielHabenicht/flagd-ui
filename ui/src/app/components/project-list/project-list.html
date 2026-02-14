@@ -8,10 +8,10 @@
         </div>
         <mat-nav-list class="group-list">
           @for (entry of group.entries; track entry.name + entry.backendUrl) {
-            <a mat-list-item [routerLink]="getProjectRoute(entry)" routerLinkActive="active-link">
+            <a mat-list-item [routerLink]="getProjectRoute(entry)" routerLinkActive="active-link" [routerLinkActiveOptions]="{ exact: true }">
               <span matListItemTitle class="project-name">{{ entry.name }}</span>
               <button mat-icon-button matListItemMeta (click)="deleteProject($event, entry)" title="Delete" class="btn-delete">
-                <mat-icon>close</mat-icon>
+                <mat-icon>delete</mat-icon>
               </button>
             </a>
           }

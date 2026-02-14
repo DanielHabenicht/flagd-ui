@@ -1,3 +1,7 @@
+@if (globalLoading.isLoading()) {
+  <mat-progress-bar mode="indeterminate" class="global-loading-bar"></mat-progress-bar>
+}
+
 <mat-sidenav-container class="app-shell"
     (dragover)="onDragOver($event)"
     (dragleave)="onDragLeave($event)"
@@ -5,7 +9,7 @@
     [class.drag-active]="dragOver">
   <mat-sidenav mode="side" opened class="sidebar">
     <mat-toolbar>
-      <h1>flagd-ui</h1>
+      <h1><a routerLink="/" class="home-link">flagd-ui</a></h1>
     </mat-toolbar>
     <app-project-list />
   </mat-sidenav>

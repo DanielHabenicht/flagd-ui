@@ -5,6 +5,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatChipsModule } from '@angular/material/chips';
 import { FlagStore } from '../../services/flag-store';
+import { BackendRegistry } from '../../services/backend-registry';
 import { FlagEditorComponent } from '../flag-editor/flag-editor';
 import { FlagDefinition, FlagEntry, inferFlagType } from '../../models/flag.models';
 
@@ -17,12 +18,27 @@ import { FlagDefinition, FlagEntry, inferFlagType } from '../../models/flag.mode
 })
 export class ProjectDetailComponent implements OnInit {
   readonly store = inject(FlagStore);
+  private readonly backendRegistry = inject(BackendRegistry);
   private readonly route = inject(ActivatedRoute);
 
   showEditor = signal(false);
   editingFlag = signal<FlagEntry | null>(null);
   readonly existingFlagKeys = computed(() => this.store.flagEntries().map((f) => f.key));
   readonly displayedColumns = ['key', 'type', 'state', 'variants', 'default', 'targeting', 'actions'];
+  readonly sourceBreadcrumb = computed(() => {
+    const project = this.store.currentProject();
+    if (!project) return null;
+
+    if (project.source === 'local') {
+      return 'Source › Local Files';
+    }
+
+    const backend = this.backendRegistry
+      .getBackends()
+      .find((entry) => entry.url === project.backendUrl);
+    const backendLabel = backend?.label ?? project.backendUrl ?? 'Unknown Backend';
+    return `Source › ${backendLabel}`;
+  });
 
   getFlagType(flag: FlagEntry): string {
     return inferFlagType(flag.variants);

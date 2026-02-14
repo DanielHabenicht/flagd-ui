@@ -15,6 +15,12 @@
   font-weight: 600;
 }
 
+.source-breadcrumb {
+  margin-bottom: 4px;
+  font-size: 0.8rem;
+  color: var(--color-text-secondary);
+}
+
 .header-actions {
   display: flex;
   align-items: center;

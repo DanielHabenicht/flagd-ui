@@ -1,20 +1,23 @@
 import { Component, inject } from '@angular/core';
-import { RouterOutlet } from '@angular/router';
+import { RouterLink, RouterOutlet } from '@angular/router';
 import { MatSidenavModule } from '@angular/material/sidenav';
 import { MatToolbarModule } from '@angular/material/toolbar';
+import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { ProjectListComponent } from './components/project-list/project-list';
 import { FlagStore } from './services/flag-store';
 import { FlagFileContent } from './models/flag.models';
+import { GlobalLoadingService } from './services/global-loading.service';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet, ProjectListComponent, MatSidenavModule, MatToolbarModule],
+  imports: [RouterOutlet, RouterLink, ProjectListComponent, MatSidenavModule, MatToolbarModule, MatProgressBarModule],
   templateUrl: './app.html',
   styleUrl: './app.css',
 })
 export class App {
   private readonly store = inject(FlagStore);
+  readonly globalLoading = inject(GlobalLoadingService);
   dragOver = false;
 
   onDragOver(event: DragEvent): void {

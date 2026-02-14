@@ -40,6 +40,11 @@ a[mat-list-item]:hover .btn-delete {
 
 .active-link {
   --mat-list-active-indicator-color: var(--color-primary-light);
+  border-left: 3px solid var(--color-primary);
+}
+
+a[mat-list-item].active-link .project-name {
+  font-weight: 600;
 }
 
 .empty-state {
