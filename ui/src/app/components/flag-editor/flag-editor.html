@@ -22,17 +22,32 @@
   </div>
 
   <form [formGroup]="form" (ngSubmit)="onSave()" class="panel-body">
-    <!-- Flag Key (shared across all modes) -->
-    <mat-form-field appearance="outline" class="full-width">
-      <mat-label>Flag Key</mat-label>
-      <input matInput formControlName="key" placeholder="my-feature-flag" />
-      @if (form.get('key')!.invalid && form.get('key')!.touched) {
-        <mat-error>Use only letters, numbers, dots, hyphens, and underscores</mat-error>
-      }
-      @if (keyAlreadyExists()) {
-        <mat-error>A flag with this key already exists in the current file</mat-error>
-      }
-    </mat-form-field>
+    <!-- Flag Key + State (shared across all modes) -->
+    <div class="key-state-row">
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Flag Key</mat-label>
+        <input matInput formControlName="key" placeholder="my-feature-flag" />
+        @if (form.get('key')!.hasError('required') && (form.get('key')!.dirty || form.get('key')!.touched)) {
+          <mat-error>Flag key is required</mat-error>
+        }
+        @if (form.get('key')!.hasError('pattern') && (form.get('key')!.dirty || form.get('key')!.touched)) {
+          <mat-error>Use only letters, numbers, dots, hyphens, and underscores</mat-error>
+        }
+        @if (form.get('key')!.hasError('duplicateKey') && (form.get('key')!.dirty || form.get('key')!.touched)) {
+          <mat-error>A flag with this key already exists in the current file</mat-error>
+        }
+      </mat-form-field>
+
+      <div class="state-toggle-field">
+        <label>State</label>
+        <mat-slide-toggle
+          [checked]="form.get('state')!.value === 'ENABLED'"
+          (change)="onStateToggle()"
+          labelPosition="before">
+          {{ form.get('state')!.value === 'ENABLED' ? 'Enabled' : 'Disabled' }}
+        </mat-slide-toggle>
+      </div>
+    </div>
 
     <!-- ==================== EASY MODE ==================== -->
     @if (editorMode() === 'easy') {
@@ -48,46 +63,31 @@
 
         @if (form.get('easyType')!.value === 'boolean') {
           <div class="easy-toggle-section">
-            <div class="easy-toggle-row">
-              <mat-slide-toggle
-                [checked]="form.get('state')!.value === 'ENABLED'"
-                (change)="onEasyStateToggle()"
-                labelPosition="before">
-                Flag is currently {{ form.get('state')!.value === 'ENABLED' ? 'ON' : 'OFF' }}
-              </mat-slide-toggle>
-            </div>
             <p class="easy-hint">
-               Use the toggle to control whether this flag is enabled.
+               Use the state switch next to Flag Key to control whether this flag is enabled.
             </p>
           </div>
         }
 
         @if (form.get('easyType')!.value === 'string') {
           <div class="easy-string-section">
-            <div class="easy-toggle-row">
-              <mat-slide-toggle
-                [checked]="form.get('state')!.value === 'ENABLED'"
-                (change)="onEasyStateToggle()"
-                labelPosition="before">
-                Enabled {{ form.get('state')!.value === 'ENABLED' ? 'ON' : 'OFF' }}
-              </mat-slide-toggle>
-            </div>
-
             <mat-form-field appearance="outline" class="full-width">
-              <mat-label>Value</mat-label>
-              <input matInput formControlName="easyStringValue"
-                     placeholder="Enter string value"
-                     (input)="onEasyStringValueChange()" />
+              <mat-label>On Value</mat-label>
+              <textarea matInput formControlName="easyStringOnValue"
+                        placeholder="Enter value when ON"
+                        rows="3"
+                        (input)="onEasyStringValueChange()"></textarea>
+              @if (form.get('easyStringOnValue')!.invalid && form.get('easyStringOnValue')!.touched) {
+                <mat-error>On value is required</mat-error>
+              }
             </mat-form-field>
 
             <mat-form-field appearance="outline" class="full-width">
-              <mat-label>Default Variant</mat-label>
-              <mat-select formControlName="defaultVariant">
-                <mat-option value="">-- none --</mat-option>
-                @for (name of variantNames(); track name) {
-                  <mat-option [value]="name">{{ name }}</mat-option>
-                }
-              </mat-select>
+              <mat-label>Off Value (optional)</mat-label>
+              <textarea matInput formControlName="easyStringOffValue"
+                        placeholder="Leave empty for no off value"
+                        rows="3"
+                        (input)="onEasyStringValueChange()"></textarea>
             </mat-form-field>
           </div>
         }
@@ -97,25 +97,15 @@
     <!-- ==================== ADVANCED MODE ==================== -->
     @if (editorMode() === 'advanced') {
       <div class="advanced-mode">
-        <div class="form-row">
-          <mat-form-field appearance="outline">
-            <mat-label>State</mat-label>
-            <mat-select formControlName="state">
-              <mat-option value="ENABLED">Enabled</mat-option>
-              <mat-option value="DISABLED">Disabled</mat-option>
-            </mat-select>
-          </mat-form-field>
-
-          <mat-form-field appearance="outline">
-            <mat-label>Flag Type</mat-label>
-            <mat-select formControlName="flagType" (selectionChange)="onTypeChange()">
-              <mat-option value="boolean">Boolean</mat-option>
-              <mat-option value="string">String</mat-option>
-              <mat-option value="number">Number</mat-option>
-              <mat-option value="object">Object</mat-option>
-            </mat-select>
-          </mat-form-field>
-        </div>
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Flag Type</mat-label>
+          <mat-select formControlName="flagType" (selectionChange)="onTypeChange()">
+            <mat-option value="boolean">Boolean</mat-option>
+            <mat-option value="string">String</mat-option>
+            <mat-option value="number">Number</mat-option>
+            <mat-option value="object">Object</mat-option>
+          </mat-select>
+        </mat-form-field>
 
         <app-variants-editor
           [flagType]="form.get('flagType')!.value"

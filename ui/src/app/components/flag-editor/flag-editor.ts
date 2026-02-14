@@ -1,5 +1,5 @@
 import { Component, input, output, OnChanges, OnInit, computed, signal } from '@angular/core';
-import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { AbstractControl, FormControl, FormGroup, ReactiveFormsModule, ValidationErrors, ValidatorFn, Validators } from '@angular/forms';
 import { FormsModule } from '@angular/forms';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
@@ -66,16 +66,13 @@ export class FlagEditorComponent implements OnInit, OnChanges {
   });
 
   keyAlreadyExists(): boolean {
-    if (!this.form) return false;
-    const key = String(this.form.get('key')?.value ?? '').trim();
-    if (!key) return false;
-    if (this.flag()?.key === key) return false;
-    return this.existingKeys().includes(key);
+    const keyControl = this.form?.get('key');
+    return !!keyControl?.hasError('duplicateKey');
   }
 
   canSave(): boolean {
     if (!this.form) return false;
-    if (this.form.invalid || this.keyAlreadyExists()) return false;
+    if (!this.isCurrentModeFormValid() || this.keyAlreadyExists()) return false;
     if (!this.hasChanges()) return false;
 
     if (this.editorMode() === 'json') {
@@ -101,6 +98,7 @@ export class FlagEditorComponent implements OnInit, OnChanges {
       key: new FormControl(f?.key ?? '', [
         Validators.required,
         Validators.pattern(/^[a-zA-Z0-9._-]+$/),
+        this.duplicateKeyValidator(),
       ]),
       state: new FormControl<FlagState>(f?.state ?? 'ENABLED', { nonNullable: true }),
       flagType: new FormControl<FlagType>(initialType, { nonNullable: true }),
@@ -113,6 +111,16 @@ export class FlagEditorComponent implements OnInit, OnChanges {
       easyStringValue: new FormControl<string>(
         initialType === 'string' && initialVariants.length > 0
           ? String(initialVariants[0]?.value ?? '')
+          : '',
+      ),
+      easyStringOnValue: new FormControl<string>(
+        initialType === 'string'
+          ? String(initialVariants.find((variant) => variant.name === 'on')?.value ?? '')
+          : '',
+      ),
+      easyStringOffValue: new FormControl<string>(
+        initialType === 'string'
+          ? String(initialVariants.find((variant) => variant.name === 'off')?.value ?? '')
           : '',
       ),
     });
@@ -146,9 +154,21 @@ export class FlagEditorComponent implements OnInit, OnChanges {
           nextType === 'string' && nextVariants.length > 0
             ? String(nextVariants[0]?.value ?? '')
             : '',
+        easyStringOnValue:
+          nextType === 'string'
+            ? String(nextVariants.find((variant) => variant.name === 'on')?.value ?? '')
+            : '',
+        easyStringOffValue:
+          nextType === 'string'
+            ? String(nextVariants.find((variant) => variant.name === 'off')?.value ?? '')
+            : '',
       },
       { emitEvent: false },
     );
+
+    this.form.get('key')?.updateValueAndValidity({ emitEvent: false });
+
+    this.updateEasyStringValidators();
 
     // Determine editor mode
     if (f) {
@@ -210,6 +230,7 @@ export class FlagEditorComponent implements OnInit, OnChanges {
   onEasyTypeChange(): void {
     const easyType = this.form.get('easyType')!.value as 'boolean' | 'string';
     this.form.get('flagType')!.setValue(easyType);
+    this.updateEasyStringValidators();
     if (easyType === 'boolean') {
       this.variants.set(getDefaultVariants('boolean'));
       this.form.get('defaultVariant')!.setValue('on');
@@ -220,22 +241,28 @@ export class FlagEditorComponent implements OnInit, OnChanges {
       ]);
       this.form.get('defaultVariant')!.setValue('on');
       this.form.get('easyStringValue')!.setValue('');
+      this.form.get('easyStringOnValue')!.setValue('');
+      this.form.get('easyStringOffValue')!.setValue('');
     }
   }
 
-  onEasyStateToggle(): void {
+  onStateToggle(): void {
     const current = this.form.get('state')!.value as FlagState;
-    this.form.get('state')!.setValue(current === 'ENABLED' ? 'DISABLED' : 'ENABLED');
+    const nextState: FlagState = current === 'ENABLED' ? 'DISABLED' : 'ENABLED';
+    this.form.get('state')!.setValue(nextState);
+
+    if (this.editorMode() === 'json') {
+      this.syncJsonState(nextState);
+    }
   }
 
   onEasyStringValueChange(): void {
-    const value = this.form.get('easyStringValue')!.value;
-    const currentVariants = this.variants();
-    if (currentVariants.length >= 1) {
-      const updated = [...currentVariants];
-      updated[0] = { ...updated[0], value };
-      this.variants.set(updated);
-    }
+    const onValue = this.form.get('easyStringOnValue')!.value ?? '';
+    const offValue = this.form.get('easyStringOffValue')!.value ?? '';
+    this.variants.set([
+      { name: 'on', value: onValue },
+      { name: 'off', value: offValue },
+    ]);
   }
 
   onEasyDefaultChange(value: string): void {
@@ -300,7 +327,7 @@ export class FlagEditorComponent implements OnInit, OnChanges {
       this.syncEasyToAdvanced();
     }
 
-    if (!this.form.valid || this.keyAlreadyExists() || !key) return;
+    if (!this.isCurrentModeFormValid() || this.keyAlreadyExists() || !key) return;
 
     const variantsObj: Record<string, unknown> = {};
     for (const v of this.variants()) {
@@ -374,10 +401,11 @@ export class FlagEditorComponent implements OnInit, OnChanges {
         this.form.get('defaultVariant')!.setValue('on');
       }
     } else {
-      const value = this.form.get('easyStringValue')!.value ?? '';
+      const onValue = this.form.get('easyStringOnValue')!.value ?? '';
+      const offValue = this.form.get('easyStringOffValue')!.value ?? '';
       this.variants.set([
-        { name: 'on', value },
-        { name: 'off', value: '' },
+        { name: 'on', value: onValue },
+        { name: 'off', value: offValue },
       ]);
       const currentDefault = this.form.get('defaultVariant')!.value;
       if (currentDefault !== 'on' && currentDefault !== 'off') {
@@ -394,11 +422,14 @@ export class FlagEditorComponent implements OnInit, OnChanges {
     if (easyType === 'string') {
       const currentVariants = this.variants();
       const onVariant = currentVariants.find((variant) => variant.name === 'on');
+      const offVariant = currentVariants.find((variant) => variant.name === 'off');
       const fallback = currentVariants[0];
       const source = onVariant ?? fallback;
       if (source) {
         this.form.get('easyStringValue')!.setValue(String(source.value ?? ''));
+        this.form.get('easyStringOnValue')!.setValue(String(source.value ?? ''));
       }
+      this.form.get('easyStringOffValue')!.setValue(String(offVariant?.value ?? ''));
       const currentDefault = this.form.get('defaultVariant')!.value;
       if (currentDefault !== 'on' && currentDefault !== 'off') {
         this.form.get('defaultVariant')!.setValue('on');
@@ -549,6 +580,8 @@ export class FlagEditorComponent implements OnInit, OnChanges {
     const defaultVariant = this.form?.get('defaultVariant')?.value ?? '';
     const easyType = this.form?.get('easyType')?.value ?? 'boolean';
     const easyStringValue = this.form?.get('easyStringValue')?.value ?? '';
+    const easyStringOnValue = this.form?.get('easyStringOnValue')?.value ?? '';
+    const easyStringOffValue = this.form?.get('easyStringOffValue')?.value ?? '';
 
     return JSON.stringify({
       key,
@@ -557,12 +590,51 @@ export class FlagEditorComponent implements OnInit, OnChanges {
       defaultVariant,
       easyType,
       easyStringValue,
+      easyStringOnValue,
+      easyStringOffValue,
       editorMode: this.editorMode(),
       variants: this.variants(),
       targeting: this.targeting() ?? null,
       metadata: this.metadata() ?? null,
       rawJson: this.rawJson.trim(),
     });
+  }
+
+  private updateEasyStringValidators(): void {
+    const easyType = this.form.get('easyType')!.value as 'boolean' | 'string';
+    const onControl = this.form.get('easyStringOnValue');
+    const offControl = this.form.get('easyStringOffValue');
+
+    if (!onControl || !offControl) return;
+
+    if (easyType === 'string') {
+      onControl.setValidators([this.nonWhitespaceRequiredValidator()]);
+    } else {
+      onControl.clearValidators();
+      offControl.clearValidators();
+    }
+
+    onControl.updateValueAndValidity({ emitEvent: false });
+    offControl.updateValueAndValidity({ emitEvent: false });
+  }
+
+  private nonWhitespaceRequiredValidator(): ValidatorFn {
+    return (control: AbstractControl): ValidationErrors | null => {
+      const value = String(control.value ?? '');
+      return value.trim().length > 0 ? null : { required: true };
+    };
+  }
+
+  private duplicateKeyValidator(): ValidatorFn {
+    return (control: AbstractControl): ValidationErrors | null => {
+      const key = String(control.value ?? '').trim();
+      if (!key) return null;
+
+      const originalKey = this.flag()?.key;
+      if (originalKey && originalKey === key) return null;
+
+      return this.existingKeys().includes(key) ? { duplicateKey: true } : null;
+    };
   }
 
   private isJsonSaveValid(): boolean {
@@ -577,6 +649,34 @@ export class FlagEditorComponent implements OnInit, OnChanges {
       return Object.keys(parsed.variants).length > 0;
     } catch {
       return false;
+    }
+  }
+
+  private isCurrentModeFormValid(): boolean {
+    const keyControl = this.form.get('key');
+    if (!keyControl || keyControl.invalid) return false;
+
+    const mode = this.editorMode();
+    if (mode === 'easy' && this.form.get('easyType')!.value === 'string') {
+      const onValueControl = this.form.get('easyStringOnValue');
+      return !!onValueControl && onValueControl.valid;
+    }
+
+    return true;
+  }
+
+  private syncJsonState(state: FlagState): void {
+    const raw = this.rawJson.trim();
+    if (!raw) return;
+
+    try {
+      const parsed = JSON.parse(raw);
+      if (typeof parsed !== 'object' || parsed === null) return;
+      parsed.state = state;
+      this.rawJson = JSON.stringify(parsed, null, 2);
+      this.jsonError = null;
+    } catch {
+      this.jsonError = 'Invalid JSON';
     }
   }
 }
