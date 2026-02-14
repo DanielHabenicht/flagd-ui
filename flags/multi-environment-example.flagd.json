@@ -1,0 +1,188 @@
+{
+  "$schema": "https://flagd.dev/schema/v0/flags.json",
+  "$evaluators": {
+    "isProduction": {
+      "in": [
+        {
+          "var": "environment"
+        },
+        [
+          "prod",
+          "production"
+        ]
+      ]
+    },
+    "isStaging": {
+      "in": [
+        {
+          "var": "environment"
+        },
+        [
+          "staging",
+          "stage"
+        ]
+      ]
+    },
+    "isDevelopment": {
+      "in": [
+        {
+          "var": "environment"
+        },
+        [
+          "dev",
+          "development",
+          "local"
+        ]
+      ]
+    }
+  },
+  "flags": {
+    "new-checkout-flow": {
+      "defaultVariant": "off",
+      "state": "ENABLED",
+      "targeting": {
+        "if": [
+          {
+            "$ref": "isProduction"
+          },
+          "production",
+          {
+            "if": [
+              {
+                "$ref": "isStaging"
+              },
+              "staging",
+              {
+                "if": [
+                  {
+                    "$ref": "isDevelopment"
+                  },
+                  "development",
+                  "off"
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "variants": {
+        "development": false,
+        "off": false,
+        "production": true,
+        "staging": true
+      }
+    },
+    "experimental-ai-features": {
+      "defaultVariant": "off",
+      "state": "ENABLED",
+      "targeting": {
+        "if": [
+          {
+            "$ref": "isProduction"
+          },
+          "production",
+          {
+            "if": [
+              {
+                "$ref": "isStaging"
+              },
+              "staging",
+              {
+                "if": [
+                  {
+                    "$ref": "isDevelopment"
+                  },
+                  "development",
+                  "off"
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "variants": {
+        "development": true,
+        "off": false,
+        "production": false,
+        "staging": true
+      }
+    },
+    "api-timeout-ms": {
+      "defaultVariant": "default",
+      "state": "ENABLED",
+      "targeting": {
+        "if": [
+          {
+            "$ref": "isProduction"
+          },
+          "production",
+          {
+            "if": [
+              {
+                "$ref": "isStaging"
+              },
+              "staging",
+              {
+                "if": [
+                  {
+                    "$ref": "isDevelopment"
+                  },
+                  "development",
+                  "default"
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "variants": {
+        "default": 5000,
+        "development": 1000,
+        "production": 5000,
+        "staging": 3000
+      }
+    },
+    "background-color": {
+      "defaultVariant": "blue",
+      "state": "ENABLED",
+      "targeting": {
+        "if": [
+          {
+            "$ref": "isProduction"
+          },
+          "production",
+          {
+            "if": [
+              {
+                "$ref": "isStaging"
+              },
+              "staging",
+              {
+                "if": [
+                  {
+                    "$ref": "isDevelopment"
+                  },
+                  "development",
+                  "blue"
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "variants": {
+        "blue": "#0000FF",
+        "development": "#00FF00",
+        "green": "#00FF00",
+        "production": "#FF0000",
+        "red": "#FF0000",
+        "staging": "#FFFF00",
+        "yellow": "#FFFF00"
+      }
+    }
+  },
+  "metadata": {
+    "description": "Multi-environment feature flags example",
+    "version": "1.0.0"
+  }
+}

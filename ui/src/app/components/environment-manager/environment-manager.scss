@@ -1,0 +1,94 @@
+.environment-manager {
+  min-width: 600px;
+  max-width: 800px;
+
+  mat-dialog-content {
+    padding: 24px;
+  }
+
+  .environments-list {
+    margin-bottom: 32px;
+
+    h3 {
+      margin-bottom: 16px;
+      color: rgba(0, 0, 0, 0.87);
+    }
+
+    .empty-message {
+      padding: 16px;
+      background: #f5f5f5;
+      border-radius: 4px;
+      color: rgba(0, 0, 0, 0.6);
+      font-style: italic;
+    }
+
+    .environment-items {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .environment-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      border: 1px solid #e0e0e0;
+      border-radius: 4px;
+      background: #fafafa;
+
+      .environment-info {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+
+        strong {
+          font-size: 16px;
+          color: rgba(0, 0, 0, 0.87);
+        }
+
+        .aliases {
+          font-size: 14px;
+          color: rgba(0, 0, 0, 0.6);
+        }
+      }
+
+      .environment-actions {
+        display: flex;
+        gap: 4px;
+      }
+    }
+  }
+
+  .environment-form {
+    padding: 16px;
+    background: #f9f9f9;
+    border-radius: 4px;
+
+    h3 {
+      margin-bottom: 16px;
+      color: rgba(0, 0, 0, 0.87);
+    }
+
+    form {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+
+      mat-form-field {
+        width: 100%;
+      }
+
+      .form-actions {
+        display: flex;
+        gap: 8px;
+        justify-content: flex-end;
+      }
+    }
+  }
+
+  mat-dialog-actions {
+    padding: 16px 24px;
+    gap: 8px;
+  }
+}

@@ -1,0 +1,86 @@
+<div class="environment-manager">
+  <h2 mat-dialog-title>Manage Environments</h2>
+
+  <mat-dialog-content>
+    <div class="environments-list">
+      <h3>Current Environments</h3>
+      @if (environments().length === 0) {
+        <p class="empty-message">No environments defined. Add one below to get started.</p>
+      } @else {
+        <div class="environment-items">
+          @for (env of environments(); track env.name; let i = $index) {
+            <div class="environment-item">
+              <div class="environment-info">
+                <strong>{{ env.displayName }}</strong>
+                <span class="aliases">Aliases: {{ env.aliases.join(', ') }}</span>
+              </div>
+              <div class="environment-actions">
+                <button mat-icon-button (click)="editEnvironment(i)" [disabled]="isEditing()">
+                  <mat-icon>edit</mat-icon>
+                </button>
+                <button mat-icon-button (click)="deleteEnvironment(i)" [disabled]="isEditing()">
+                  <mat-icon>delete</mat-icon>
+                </button>
+              </div>
+            </div>
+          }
+        </div>
+      }
+    </div>
+
+    <div class="environment-form">
+      <h3>{{ isEditing() ? 'Edit Environment' : 'Add Environment' }}</h3>
+      <form [formGroup]="form" (ngSubmit)="addEnvironment()">
+        <mat-form-field appearance="outline">
+          <mat-label>Environment Name</mat-label>
+          <input
+            matInput
+            formControlName="name"
+            placeholder="e.g., Production"
+            autocomplete="off"
+          />
+          <mat-hint>Must start with a letter and contain only letters and numbers</mat-hint>
+          @if (form.get('name')?.hasError('required')) {
+            <mat-error>Environment name is required</mat-error>
+          }
+          @if (form.get('name')?.hasError('pattern')) {
+            <mat-error>Invalid name format</mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Aliases</mat-label>
+          <input
+            matInput
+            formControlName="aliases"
+            placeholder="e.g., prod, production"
+            autocomplete="off"
+          />
+          <mat-hint>Comma-separated list of alias names</mat-hint>
+          @if (form.get('aliases')?.hasError('required')) {
+            <mat-error>At least one alias is required</mat-error>
+          }
+        </mat-form-field>
+
+        <div class="form-actions">
+          @if (isEditing()) {
+            <button type="button" mat-stroked-button (click)="cancelEdit()">Cancel Edit</button>
+          }
+          <button
+            type="submit"
+            mat-flat-button
+            color="primary"
+            [disabled]="!form.valid"
+          >
+            {{ isEditing() ? 'Update' : 'Add' }} Environment
+          </button>
+        </div>
+      </form>
+    </div>
+  </mat-dialog-content>
+
+  <mat-dialog-actions align="end">
+    <button mat-button (click)="cancel()">Cancel</button>
+    <button mat-flat-button color="primary" (click)="save()">Save All</button>
+  </mat-dialog-actions>
+</div>

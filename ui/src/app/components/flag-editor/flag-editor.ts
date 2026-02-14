@@ -1,4 +1,4 @@
-import { Component, input, output, OnChanges, OnInit, computed, signal } from '@angular/core';
+import { Component, input, output, OnChanges, OnInit, computed, signal, inject } from '@angular/core';
 import {
   AbstractControl,
   FormControl,
@@ -9,6 +9,7 @@ import {
   Validators,
 } from '@angular/forms';
 import { FormsModule } from '@angular/forms';
+import { CommonModule } from '@angular/common';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -25,19 +26,26 @@ import {
   FlagState,
   FlagType,
   MetadataMap,
+  Environment,
   inferFlagType,
   getDefaultVariants,
+  generateEnvironmentTargeting,
+  generateEnvironmentVariants,
+  isEnvironmentBasedFlag,
+  extractEnvironmentStates,
 } from '../../models/flag.models';
 import { VariantsEditorComponent, VariantRow } from '../variants-editor/variants-editor';
 import { TargetingEditorComponent } from '../targeting-editor/targeting-editor';
 import { MetadataEditorComponent } from '../metadata-editor/metadata-editor';
+import { FlagStore } from '../../services/flag-store';
 
-export type EditorMode = 'easy' | 'advanced' | 'json';
+export type EditorMode = 'easy' | 'environments' | 'advanced' | 'json';
 
 @Component({
   selector: 'app-flag-editor',
   standalone: true,
   imports: [
+    CommonModule,
     ReactiveFormsModule,
     FormsModule,
     VariantsEditorComponent,
@@ -59,6 +67,7 @@ export type EditorMode = 'easy' | 'advanced' | 'json';
 })
 export class FlagEditorComponent implements OnInit, OnChanges {
   private static readonly TIMESTAMP_CONTEXT_VAR = '$flagd.timestamp';
+  private readonly store = inject(FlagStore);
 
   readonly inline = input(false);
   readonly flag = input<FlagEntry | null>(null);
@@ -71,6 +80,21 @@ export class FlagEditorComponent implements OnInit, OnChanges {
   targeting = signal<Record<string, unknown> | undefined>(undefined);
   metadata = signal<MetadataMap | undefined>(undefined);
   editorMode = signal<EditorMode>('easy');
+  
+  // Environment mode state
+  environmentStates = signal<Record<string, unknown>>({});
+  
+  // Expose JSON to template for object editing
+  readonly JSON = JSON;
+
+  readonly environments = computed(() => this.store.currentEnvironments());
+  readonly hasEnvironments = computed(() => this.environments().length > 0);
+  readonly isEnvironmentMode = computed(() => this.editorMode() === 'environments');
+  readonly environmentModeAvailable = computed(() => {
+    if (!this.hasEnvironments()) return false;
+    const flagType = this.form?.get('flagType')?.value as FlagType | undefined;
+    return flagType !== undefined;
+  });
 
   // JSON editor state
   rawJson = '';
@@ -124,6 +148,24 @@ export class FlagEditorComponent implements OnInit, OnChanges {
     this.variants.set(initialVariants);
     this.targeting.set(f?.targeting);
     this.metadata.set(f?.metadata);
+    
+    // Initialize environment states if this is an environment-based flag
+    const envs = this.environments();
+    if (f && envs.length > 0 && isEnvironmentBasedFlag(f, envs)) {
+      const states = extractEnvironmentStates(f, envs, initialType);
+      this.environmentStates.set(states);
+      // Auto-select environment mode if flag is using it
+      if (this.editorMode() === 'easy') {
+        this.editorMode.set('environments');
+      }
+    } else if (envs.length > 0) {
+      // Initialize with default values for new flags
+      const defaultStates: Record<string, unknown> = {};
+      for (const env of envs) {
+        defaultStates[env.name.toLowerCase()] = this.getDefaultValueForType(initialType);
+      }
+      this.environmentStates.set(defaultStates);
+    }
 
     this.form = new FormGroup({
       key: new FormControl(f?.key ?? '', [
@@ -375,6 +417,20 @@ export class FlagEditorComponent implements OnInit, OnChanges {
 
     if (mode === 'json') {
       this.saveFromJson();
+      return;
+    }
+
+    // Handle environment mode separately
+    if (mode === 'environments') {
+      if (!this.isCurrentModeFormValid() || this.keyAlreadyExists() || !key) return;
+
+      const flag = this.buildEnvironmentBasedFlag();
+
+      this.save.emit({
+        key,
+        flag,
+        originalKey: this.flag()?.key,
+      });
       return;
     }
 
@@ -902,5 +958,84 @@ export class FlagEditorComponent implements OnInit, OnChanges {
     } catch {
       this.jsonError = 'Invalid JSON';
     }
+  }
+
+  // Environment mode helpers
+  private getDefaultValueForType(flagType: FlagType, enabled: boolean = true): unknown {
+    switch (flagType) {
+      case 'boolean':
+        return enabled;
+      case 'string':
+        return '';
+      case 'number':
+        return 0;
+      case 'object':
+        return {};
+    }
+  }
+
+  onEnvironmentValueChange(envName: string, value: unknown): void {
+    const states = { ...this.environmentStates() };
+    states[envName] = value;
+    this.environmentStates.set(states);
+  }
+
+  onEnvironmentTypeChange(): void {
+    const flagType = this.form.get('flagType')?.value as FlagType;
+    // Reset all environment values to defaults for the new type
+    const states: Record<string, unknown> = {};
+    for (const env of this.environments()) {
+      states[env.name.toLowerCase()] = this.getDefaultValueForType(flagType);
+    }
+    this.environmentStates.set(states);
+  }
+
+  buildEnvironmentBasedFlag(): FlagDefinition {
+    const flagType = this.form.get('flagType')!.value as FlagType;
+    const envs = this.environments();
+    const states = this.environmentStates();
+
+    // Generate variants
+    const variants = generateEnvironmentVariants(envs, flagType, states);
+
+    // Generate targeting
+    const targeting = generateEnvironmentTargeting(envs, this.getEnvironmentBooleanStates(), 'off');
+
+    return {
+      state: this.form.get('state')!.value as FlagState,
+      variants,
+      defaultVariant: 'off',
+      targeting: Object.keys(targeting).length > 0 ? targeting : undefined,
+      metadata: this.metadata() && Object.keys(this.metadata()!).length > 0 ? this.metadata() : undefined,
+    };
+  }
+
+  private getEnvironmentBooleanStates(): Record<string, boolean> {
+    const flagType = this.form.get('flagType')?.value as FlagType;
+    const states = this.environmentStates();
+    const boolStates: Record<string, boolean> = {};
+
+    for (const env of this.environments()) {
+      const envName = env.name.toLowerCase();
+      const value = states[envName];
+
+      // Determine if this environment is "enabled" based on flag type
+      switch (flagType) {
+        case 'boolean':
+          boolStates[envName] = value === true;
+          break;
+        case 'string':
+          boolStates[envName] = typeof value === 'string' && value.length > 0;
+          break;
+        case 'number':
+          boolStates[envName] = typeof value === 'number' && value !== 0;
+          break;
+        case 'object':
+          boolStates[envName] = typeof value === 'object' && value !== null && Object.keys(value).length > 0;
+          break;
+      }
+    }
+
+    return boolStates;
   }
 }

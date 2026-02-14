@@ -4,12 +4,14 @@ import { MatTableModule } from '@angular/material/table';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatChipsModule } from '@angular/material/chips';
+import { MatDialog } from '@angular/material/dialog';
 import { FlagStore } from '../../services/flag-store';
 import { BackendRegistry } from '../../services/backend-registry';
 import { FlagEditorComponent } from '../flag-editor/flag-editor';
 import { FlagDefinition, FlagEntry, MetadataMap, inferFlagType } from '../../models/flag.models';
 import { PlaygroundDrawerComponent } from '../playground-drawer/playground-drawer';
 import { MetadataEditorComponent } from '../metadata-editor/metadata-editor';
+import { EnvironmentManagerComponent } from '../environment-manager/environment-manager';
 
 @Component({
   selector: 'app-project-detail',
@@ -31,6 +33,7 @@ export class ProjectDetailComponent implements OnInit {
   private readonly backendRegistry = inject(BackendRegistry);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+  private readonly dialog = inject(MatDialog);
   private readonly inlineEditorMinWidth = 1280;
   private readonly initialWideLayout =
     typeof window !== 'undefined' && window.innerWidth > this.inlineEditorMinWidth;
@@ -147,6 +150,14 @@ export class ProjectDetailComponent implements OnInit {
     this.updateSelectedFlagInUrl(null);
     this.editingFlag.set(null);
     this.showEditor.set(true);
+  }
+
+  openEnvironmentManager(): void {
+    this.dialog.open(EnvironmentManagerComponent, {
+      width: '700px',
+      maxWidth: '90vw',
+      disableClose: false,
+    });
   }
 
   openEditFlagEditor(flag: FlagEntry): void {
