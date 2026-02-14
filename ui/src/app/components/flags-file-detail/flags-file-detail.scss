@@ -168,6 +168,15 @@
   color: var(--color-text-secondary);
 }
 
+.col-info {
+  min-width: 260px;
+}
+
+.info-chip {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+}
+
 .col-actions {
   white-space: nowrap;
   text-align: right;

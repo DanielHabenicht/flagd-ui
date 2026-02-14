@@ -8,6 +8,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSortModule, Sort } from '@angular/material/sort';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { FlagStore } from '../../services/flag-store';
 import { FlagEditorComponent } from '../flag-editor/flag-editor';
 import { FlagDefinition, FlagEntry, inferFlagType } from '../../models/flag.models';
@@ -27,6 +28,7 @@ import { PlaygroundDrawerComponent } from '../playground-drawer/playground-drawe
     MatInputModule,
     MatSortModule,
     MatSlideToggleModule,
+    MatTooltipModule,
   ],
   templateUrl: './flags-file-detail.html',
   styleUrl: './flags-file-detail.scss',
@@ -55,6 +57,7 @@ export class FlagsFileDetailComponent implements OnInit {
     'key',
     'type',
     'default',
+    'info',
     'targeting',
     'actions',
   ] as const;
@@ -106,6 +109,33 @@ export class FlagsFileDetailComponent implements OnInit {
 
   getDefaultValueDisplay(flag: FlagEntry): string {
     return this.stringifyValue(this.getDefaultValue(flag));
+  }
+
+  getVariantValueCounts(
+    flag: FlagEntry,
+  ): Array<{ value: string; count: number; variantNames: string[] }> {
+    const counts = new Map<string, { count: number; variantNames: string[] }>();
+
+    for (const [variantName, variantValue] of Object.entries(flag.variants)) {
+      const value = this.stringifyValue(variantValue);
+      const existing = counts.get(value);
+
+      if (existing) {
+        existing.count += 1;
+        existing.variantNames.push(variantName);
+        continue;
+      }
+
+      counts.set(value, { count: 1, variantNames: [variantName] });
+    }
+
+    return [...counts.entries()]
+      .map(([value, data]) => ({
+        value,
+        count: data.count,
+        variantNames: [...data.variantNames].sort((left, right) => left.localeCompare(right)),
+      }))
+      .sort((left, right) => left.value.localeCompare(right.value));
   }
 
   hasTargeting(flag: FlagEntry): boolean {
@@ -281,7 +311,10 @@ export class FlagsFileDetailComponent implements OnInit {
       .toLowerCase();
   }
 
-  private getSortValue(flag: FlagEntry, column: 'key' | 'type' | 'state' | 'default' | 'targeting'): string {
+  private getSortValue(
+    flag: FlagEntry,
+    column: 'key' | 'type' | 'state' | 'default' | 'targeting',
+  ): string {
     switch (column) {
       case 'key':
         return flag.key.toLowerCase();
