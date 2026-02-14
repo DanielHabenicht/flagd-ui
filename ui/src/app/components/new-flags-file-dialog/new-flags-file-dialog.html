@@ -1,7 +1,7 @@
 <h2 mat-dialog-title>Add Flag File</h2>
 
 <mat-dialog-content>
-  <mat-tab-group>
+  <mat-tab-group (selectedTabChange)="onTabChange($event.index)">
     <!-- Tab 1: Empty local file -->
     <mat-tab label="Empty File">
       <div class="tab-content">
@@ -10,16 +10,6 @@
           <mat-label>File name</mat-label>
           <input matInput [(ngModel)]="flagsFileName" placeholder="my-flags" />
         </mat-form-field>
-        <div class="tab-actions">
-          <button
-            mat-flat-button
-            color="primary"
-            (click)="createEmptyFlagsFile()"
-            [disabled]="!flagsFileName.trim()"
-          >
-            <mat-icon>computer</mat-icon> Create Local File
-          </button>
-        </div>
       </div>
     </mat-tab>
 
@@ -37,22 +27,25 @@
             placeholder="https://example.com/flags.flagd.json"
           />
         </mat-form-field>
+        <div class="sample-links">
+          <span class="sample-links-label">Examples from flagd samples:</span>
+          <ul>
+            @for (sample of sampleFiles; track sample.rawUrl) {
+              <li>
+                <a [href]="sample.githubUrl" target="_blank" rel="noopener noreferrer">
+                  {{ sample.name }}
+                </a>
+                <button mat-button type="button" (click)="useSample(sample.rawUrl)">Use</button>
+              </li>
+            }
+          </ul>
+        </div>
         @if (urlLoading) {
           <mat-progress-bar mode="indeterminate"></mat-progress-bar>
         }
         @if (urlError) {
           <div class="error-message">{{ urlError }}</div>
         }
-        <div class="tab-actions">
-          <button
-            mat-flat-button
-            color="primary"
-            (click)="importFromUrl()"
-            [disabled]="!fileUrl.trim() || urlLoading"
-          >
-            <mat-icon>download</mat-icon> Import File
-          </button>
-        </div>
       </div>
     </mat-tab>
 
@@ -70,38 +63,15 @@
           <mat-label>Label (optional)</mat-label>
           <input matInput [(ngModel)]="backendLabel" placeholder="Production" />
         </mat-form-field>
-        @if (backendLoading) {
-          <mat-progress-bar mode="indeterminate"></mat-progress-bar>
-        }
-        @if (backendError) {
-          <div class="error-message">{{ backendError }}</div>
-        }
-        @if (discoveredFiles.length) {
-          <div class="discovered">
-            <span class="discovered-label"
-              >Discovered {{ discoveredFiles.length }} flag file(s):</span
-            >
-            <ul>
-              @for (f of discoveredFiles; track f) {
-                <li>{{ f }}</li>
-              }
-            </ul>
-          </div>
-        }
-        <div class="tab-actions">
-          @if (!discoveredFiles.length) {
-            <button
-              mat-stroked-button
-              (click)="discoverBackend()"
-              [disabled]="!backendUrl.trim() || backendLoading"
-            >
-              <mat-icon>search</mat-icon> Discover flags-files
-            </button>
-          } @else {
-            <button mat-flat-button color="primary" (click)="addBackend()">
-              <mat-icon>cloud</mat-icon> Add Backend
-            </button>
-          }
+        <div class="loading-message" [hidden]="!backendLoading">Discovering backend files…</div>
+        <div class="error-message" [hidden]="!backendError">{{ backendError }}</div>
+        <div class="discovered" [hidden]="!discoveredFiles.length">
+          <span class="discovered-label">Discovered {{ discoveredFiles.length }} flag file(s):</span>
+          <ul>
+            @for (f of discoveredFiles; track f) {
+              <li>{{ f }}</li>
+            }
+          </ul>
         </div>
       </div>
     </mat-tab>
@@ -110,4 +80,8 @@
 
 <mat-dialog-actions align="end">
   <button mat-button (click)="cancel()">Cancel</button>
+  <button mat-flat-button color="primary" (click)="onPrimaryAction()" [disabled]="actionDisabled">
+    <mat-icon>{{ actionIcon }}</mat-icon>
+    {{ actionLabel }}
+  </button>
 </mat-dialog-actions>

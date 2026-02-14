@@ -180,9 +180,34 @@ export class FlagStoreState {
   @Action(RemoveBackend)
   removeBackend(ctx: StateContext<FlagStoreStateModel>, action: RemoveBackend): void {
     const state = ctx.getState();
+    const removedBackend = state.backends.find((backend) => backend.id === action.id);
+    if (!removedBackend) {
+      return;
+    }
+
+    const nextFlagsFiles = state.flagsFiles.filter(
+      (entry) => !(entry.source === 'remote' && entry.backendUrl === removedBackend.url),
+    );
+    const isCurrentRemovedBackend =
+      state.currentFlagsFile?.source === 'remote' &&
+      state.currentFlagsFile.backendUrl === removedBackend.url;
+
     ctx.patchState({
       backends: state.backends.filter((backend) => backend.id !== action.id),
+      flagsFiles: nextFlagsFiles,
+      ...(isCurrentRemovedBackend
+        ? {
+            currentFlagsFile: null,
+            currentFlags: null,
+            currentEvaluators: undefined,
+            currentMetadata: undefined,
+          }
+        : {}),
     });
+
+    if (isCurrentRemovedBackend) {
+      void this.router.navigate(['/']);
+    }
   }
 
   @Action(SaveLocalFlagsFileContent)

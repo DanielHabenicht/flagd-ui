@@ -44,12 +44,107 @@ export class NewFlagsFileDialogComponent {
   urlLoading = false;
   urlError = '';
 
+  // Tabs
+  selectedTabIndex = 0;
+
+  readonly sampleFiles = [
+    {
+      name: 'example_flags.flagd.2.json',
+      githubUrl:
+        'https://github.com/open-feature/flagd/blob/main/config/samples/example_flags.flagd.2.json',
+      rawUrl:
+        'https://raw.githubusercontent.com/open-feature/flagd/main/config/samples/example_flags.flagd.2.json',
+    },
+    {
+      name: 'example_flags.flagd.json',
+      githubUrl:
+        'https://github.com/open-feature/flagd/blob/main/config/samples/example_flags.flagd.json',
+      rawUrl:
+        'https://raw.githubusercontent.com/open-feature/flagd/main/config/samples/example_flags.flagd.json',
+    },
+    {
+      name: 'example_flags.json',
+      githubUrl:
+        'https://github.com/open-feature/flagd/blob/main/config/samples/example_flags.json',
+      rawUrl:
+        'https://raw.githubusercontent.com/open-feature/flagd/main/config/samples/example_flags.json',
+    },
+    {
+      name: 'example_flags_secondary.flagd.json',
+      githubUrl:
+        'https://github.com/open-feature/flagd/blob/main/config/samples/example_flags_secondary.flagd.json',
+      rawUrl:
+        'https://raw.githubusercontent.com/open-feature/flagd/main/config/samples/example_flags_secondary.flagd.json',
+    },
+    {
+      name: 'example_flags_secondary.json',
+      githubUrl:
+        'https://github.com/open-feature/flagd/blob/main/config/samples/example_flags_secondary.json',
+      rawUrl:
+        'https://raw.githubusercontent.com/open-feature/flagd/main/config/samples/example_flags_secondary.json',
+    },
+  ];
+
   // Backend tab
   backendUrl = '';
   backendLabel = '';
   backendLoading = false;
   backendError = '';
   discoveredFiles: string[] = [];
+
+  get actionLabel(): string {
+    if (this.selectedTabIndex === 0) {
+      return 'Create';
+    }
+    if (this.selectedTabIndex === 1) {
+      return 'Import';
+    }
+    return this.discoveredFiles.length ? 'Create' : 'Discover';
+  }
+
+  get actionIcon(): string {
+    if (this.selectedTabIndex === 0) {
+      return 'add';
+    }
+    if (this.selectedTabIndex === 1) {
+      return 'download';
+    }
+    return this.discoveredFiles.length ? 'cloud' : 'search';
+  }
+
+  get actionDisabled(): boolean {
+    if (this.selectedTabIndex === 0) {
+      return !this.flagsFileName.trim();
+    }
+    if (this.selectedTabIndex === 1) {
+      return !this.fileUrl.trim() || this.urlLoading;
+    }
+    return !this.backendUrl.trim() || this.backendLoading;
+  }
+
+  onTabChange(index: number): void {
+    this.selectedTabIndex = index;
+  }
+
+  onPrimaryAction(): void {
+    if (this.selectedTabIndex === 0) {
+      this.createEmptyFlagsFile();
+      return;
+    }
+    if (this.selectedTabIndex === 1) {
+      this.importFromUrl();
+      return;
+    }
+    if (this.discoveredFiles.length) {
+      this.addBackend();
+      return;
+    }
+    this.discoverBackend();
+  }
+
+  useSample(sampleUrl: string): void {
+    this.fileUrl = sampleUrl;
+  }
 
   createEmptyFlagsFile(): void {
     const name = this.flagsFileName.trim();
@@ -108,15 +203,19 @@ export class NewFlagsFileDialogComponent {
 
     this.remoteApi.listFlagsFiles(url).subscribe({
       next: (files) => {
-        this.discoveredFiles = files;
-        this.backendLoading = false;
-        if (files.length === 0) {
-          this.backendError = 'No flag files found on this backend';
-        }
+        queueMicrotask(() => {
+          this.discoveredFiles = files;
+          this.backendLoading = false;
+          if (files.length === 0) {
+            this.backendError = 'No flag files found on this backend';
+          }
+        });
       },
       error: () => {
-        this.backendError = 'Failed to connect to backend. Ensure CORS is enabled.';
-        this.backendLoading = false;
+        queueMicrotask(() => {
+          this.backendError = 'Failed to connect to backend. Ensure CORS is enabled.';
+          this.backendLoading = false;
+        });
       },
     });
   }

@@ -65,4 +65,13 @@ export class FlagsFileListComponent implements OnInit {
       this.store.deleteFlagsFile(flagsFile);
     }
   }
+
+  removeBackend(event: Event, backendId: string, backendLabel: string): void {
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (confirm(`Remove backend "${backendLabel}" from navigation?`)) {
+      this.backendRegistry.removeBackend(backendId);
+    }
+  }
 }
