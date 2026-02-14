@@ -119,3 +119,8 @@
     (cancel)="closeEditor()"
   />
 }
+
+<app-playground-drawer
+  [flags]="store.flagEntries()"
+  [selectedFlagKey]="selectedFlagKey()"
+/>

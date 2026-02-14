@@ -8,11 +8,19 @@ import { FlagStore } from '../../services/flag-store';
 import { BackendRegistry } from '../../services/backend-registry';
 import { FlagEditorComponent } from '../flag-editor/flag-editor';
 import { FlagDefinition, FlagEntry, inferFlagType } from '../../models/flag.models';
+import { PlaygroundDrawerComponent } from '../playground-drawer/playground-drawer';
 
 @Component({
   selector: 'app-project-detail',
   standalone: true,
-  imports: [FlagEditorComponent, MatTableModule, MatButtonModule, MatIconModule, MatChipsModule],
+  imports: [
+    FlagEditorComponent,
+    PlaygroundDrawerComponent,
+    MatTableModule,
+    MatButtonModule,
+    MatIconModule,
+    MatChipsModule,
+  ],
   templateUrl: './project-detail.html',
   styleUrl: './project-detail.css',
 })

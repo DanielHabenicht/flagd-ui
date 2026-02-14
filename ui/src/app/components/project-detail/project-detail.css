@@ -16,6 +16,7 @@
 .project-detail {
   min-width: 0;
   max-width: 960px;
+  padding-bottom: 96px;
 }
 
 .inline-editor {

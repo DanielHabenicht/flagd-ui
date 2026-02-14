@@ -1,0 +1,60 @@
+<h2 mat-dialog-title>Manage Playground Servers</h2>
+
+<mat-dialog-content>
+  <form [formGroup]="form" class="server-form" (ngSubmit)="addOrUpdateServer()">
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Provider</mat-label>
+      <mat-select formControlName="provider">
+        <mat-option value="flagd">flagd</mat-option>
+        <mat-option value="ofrep">ofrep</mat-option>
+      </mat-select>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Server URL</mat-label>
+      <input matInput formControlName="url" placeholder="https://localhost:8013/flagd-api" />
+    </mat-form-field>
+
+    <div class="form-actions">
+      @if (editingServerId) {
+        <button mat-button type="button" (click)="cancelEdit()">Cancel Edit</button>
+      }
+      <button mat-stroked-button type="submit">{{ editingServerId ? 'Update Server' : 'Add Server' }}</button>
+    </div>
+
+    @if (formError) {
+      <p class="error-message">{{ formError }}</p>
+    }
+  </form>
+
+  <div class="server-list">
+    @if (servers.length) {
+      @for (server of servers; track server.id) {
+        <div class="server-row" [class.active]="server.id === activeServerId">
+          <div class="server-info">
+            <div class="server-provider">{{ server.provider }}</div>
+            <div class="server-target">{{ server.url }}</div>
+          </div>
+          <div class="server-actions">
+            <button mat-icon-button type="button" (click)="editServer(server.id)" title="Edit server">
+              <mat-icon>edit</mat-icon>
+            </button>
+            <button mat-button type="button" (click)="setActiveServer(server.id)" [disabled]="server.id === activeServerId">
+              {{ server.id === activeServerId ? 'Active' : 'Use' }}
+            </button>
+            <button mat-icon-button type="button" (click)="removeServer(server.id)" title="Remove server">
+              <mat-icon>delete</mat-icon>
+            </button>
+          </div>
+        </div>
+      }
+    } @else {
+      <p class="empty-state">No servers configured yet.</p>
+    }
+  </div>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button type="button" (click)="cancel()">Cancel</button>
+  <button mat-flat-button color="primary" type="button" (click)="save()">Save</button>
+</mat-dialog-actions>

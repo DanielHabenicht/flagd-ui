@@ -1,0 +1,105 @@
+<button
+  mat-fab
+  color="primary"
+  class="playground-toggle"
+  type="button"
+  (click)="toggleDrawer()"
+  [attr.aria-expanded]="open()"
+  aria-label="Toggle playground drawer"
+>
+  <mat-icon>{{ open() ? 'keyboard_arrow_down' : 'science' }}</mat-icon>
+</button>
+
+<section class="playground-drawer" [class.open]="open()" [class.animate]="animate()" (click)="onDrawerClick()">
+  <div class="drawer-header">
+    <div class="drawer-header-left">
+      <h3>Playground</h3>
+      <p>Evaluate a flag with OpenFeature against a flagd server.</p>
+    </div>
+    <mat-form-field appearance="outline" class="server-header-select" subscriptSizing="dynamic">
+      <mat-label>Server</mat-label>
+      <mat-select [value]="activeServerId()" (selectionChange)="onServerSelectionChange($event.value)">
+          <mat-select-trigger>
+            @if (activeServer()) {
+              <span class="server-provider-tag">{{ activeServer()!.provider }}</span>
+              {{ activeServer()!.url }}
+            }
+          </mat-select-trigger>
+        @for (server of servers(); track server.id) {
+            <mat-option [value]="server.id">
+              <span class="server-provider-tag">{{ server.provider }}</span>
+              {{ server.url }}
+            </mat-option>
+        }
+        <mat-option value="__manage__">Manage servers…</mat-option>
+      </mat-select>
+    </mat-form-field>
+  </div>
+
+  <div class="drawer-content">
+    <div class="drawer-column context-column">
+      <h4>Context</h4>
+      <div class="flag-action-row">
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Flag</mat-label>
+          <mat-select [value]="localSelectedFlagKey()" (selectionChange)="onSelectedFlagChange($event.value)">
+            @for (flag of flags(); track flag.key) {
+              <mat-option [value]="flag.key">{{ flag.key }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+
+        <button
+          mat-flat-button
+          color="primary"
+          type="button"
+          class="evaluate-button"
+          (click)="evaluate()"
+          [disabled]="evaluating()"
+        >
+          <mat-icon [class.evaluate-spinner]="evaluating()">
+            {{ evaluating() ? 'autorenew' : 'play_arrow' }}
+          </mat-icon>
+          {{ evaluating() ? 'Evaluating' : 'Evaluate' }}
+        </button>
+      </div>
+
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Evaluation Context (JSON)</mat-label>
+        <textarea
+          matInput
+          rows="8"
+          [value]="contextJson()"
+          (input)="onContextChange($any($event.target).value)"
+          spellcheck="false"
+        ></textarea>
+      </mat-form-field>
+
+      @if (contextError()) {
+        <p class="status-error">{{ contextError() }}</p>
+      }
+    </div>
+
+    <div class="drawer-column result-column">
+      <h4>Evaluation Result</h4>
+      @if (evaluationError()) {
+        <p class="status-error">{{ evaluationError() }}</p>
+      }
+
+      @if (evaluation()) {
+        <div class="result-box">
+          <p><strong>Value:</strong> {{ evaluation()!.value | json }}</p>
+          <p><strong>Variant:</strong> {{ evaluation()!.variant ?? '-' }}</p>
+          <p><strong>Reason:</strong> {{ evaluation()!.reason ?? '-' }}</p>
+          @if (evaluation()!.errorCode || evaluation()!.errorMessage) {
+            <p><strong>Error:</strong> {{ evaluation()!.errorCode ?? '' }} {{ evaluation()!.errorMessage ?? '' }}</p>
+          }
+        </div>
+      } @else {
+        <div class="result-box empty-result">
+          <p>Run an evaluation to see the result details.</p>
+        </div>
+      }
+    </div>
+  </div>
+</section>
