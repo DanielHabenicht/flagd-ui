@@ -54,12 +54,15 @@ impl AzureStorage {
                 // Use Azurite's default account key
                 let account_key = "Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==";
                 
+                // Set environment variable to use storage emulator
+                std::env::set_var("AZURE_STORAGE_USE_EMULATOR", "true");
+                
                 let storage_credentials = StorageCredentials::access_key(
                     account_name.to_string(),
                     account_key.to_string()
                 );
                 
-                // For Azurite, use BlobServiceClient and specify custom endpoint
+                // For Azurite, use BlobServiceClient which will automatically use localhost:10000
                 let blob_service = BlobServiceClient::new(account_name, storage_credentials);
                 Ok(blob_service.container_client(container_name))
             } else {
@@ -116,15 +119,23 @@ impl StorageBackend for AzureStorage {
         use futures::StreamExt;
         
         while let Some(result) = stream.next().await {
-            let response = result.map_err(|e| {
-                AppError::InternalServerError(format!("Failed to list blobs: {}", e))
-            })?;
-
-            for blob in response.blobs.blobs() {
-                let blob_name = &blob.name;
-                if blob_name.ends_with(".flagd.json") {
-                    let name = blob_name.trim_end_matches(".flagd.json").to_string();
-                    files.push(name);
+            match result {
+                Ok(response) => {
+                    for blob in response.blobs.blobs() {
+                        let blob_name = &blob.name;
+                        if blob_name.ends_with(".flagd.json") {
+                            let name = blob_name.trim_end_matches(".flagd.json").to_string();
+                            files.push(name);
+                        }
+                    }
+                }
+                Err(e) => {
+                    // If container doesn't exist (404), return empty list
+                    if matches!(e.kind(), ErrorKind::HttpResponse { status, .. } if *status == 404) {
+                        tracing::warn!("Container not found, returning empty list");
+                        return Ok(vec![]);
+                    }
+                    return Err(AppError::InternalServerError(format!("Failed to list blobs: {}", e)));
                 }
             }
         }
