@@ -31,6 +31,18 @@
     flex: 0 0 auto;
 }
 
+.sidebar-header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    gap: 8px;
+}
+
+.theme-mode-button {
+    flex-shrink: 0;
+}
+
 .sidebar app-project-list {
     display: block;
     flex: 1 1 auto;

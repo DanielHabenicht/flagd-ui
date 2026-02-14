@@ -13,7 +13,19 @@
     (openedChange)="onNavigationStateChange($event)"
     class="sidebar">
     <mat-toolbar>
-      <h1><a routerLink="/" class="home-link">flagd-ui</a></h1>
+      <div class="sidebar-header-row">
+        <h1><a routerLink="/" class="home-link">flagd-ui</a></h1>
+        <button
+          mat-icon-button
+          type="button"
+          class="theme-mode-button"
+          (click)="cycleThemeMode()"
+          [attr.aria-label]="themeModeLabel()"
+          [title]="themeModeLabel() + ' (click to cycle auto/dark/light)'"
+        >
+          <mat-icon>{{ themeModeIcon() }}</mat-icon>
+        </button>
+      </div>
     </mat-toolbar>
     <app-project-list />
   </mat-sidenav>
