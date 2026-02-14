@@ -3,6 +3,12 @@
   "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
 
   "features": {
+    "ghcr.io/devcontainers/features/apt-get:1": {
+      "packages": [
+        "pkg-config",
+        "libssl-dev"
+      ]
+    },
     "ghcr.io/devcontainers/features/rust:1": {
       "version": "1.93.1"
     },

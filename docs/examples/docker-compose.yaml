@@ -1,14 +1,14 @@
 services:
-  # flagd-ui:
-  #   build:
-  #     context: .
-  #     dockerfile: Dockerfile
-  #   image: flagd-ui:local
-  #   user: "${UID:-1000}:${GID:-1000}"
-  #   ports:
-  #     - '3000:3000'
-  #   volumes:
-  #     - ./flags:/app/flags
+  flagd-ui:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: flagd-ui:local
+    user: "${UID:-1000}:${GID:-1000}"
+    ports:
+      - '3000:3000'
+    volumes:
+      - ./flags:/app/flags
 
   flagd:
     image: ghcr.io/open-feature/flagd:latest
@@ -32,16 +32,6 @@ services:
     volumes:
       - ./services/azurite/azurite-store:/data
       - ./services/azurite/azurite-logs:/logs
-
-  azurite-init:
-    image: mcr.microsoft.com/azure-cli:2.81.0
-    depends_on:
-      - azurite
-    volumes:
-      - ./services/azurite/init.sh:/workdir/init.sh:ro
-      - ./flags/demo.flagd.json:/workdir/demo.flagd.json
-    working_dir: /workdir
-    command: ["sh", "/workdir/init.sh"]
 
   # auth:
   #   image: local-keycloak:latest

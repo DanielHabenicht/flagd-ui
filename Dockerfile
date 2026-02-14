@@ -31,7 +31,7 @@ FROM node:22-bookworm-slim AS frontend-builder
 WORKDIR /ui
 
 COPY ui/package*.json ./
-RUN npm ci
+RUN npm ci --ignore-scripts
 
 COPY ui/ ./
 COPY --from=api-client-generator /local/api-client ./src/app/api-client
