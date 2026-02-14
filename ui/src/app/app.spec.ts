@@ -1,12 +1,26 @@
+import '../test-setup';
+import { provideHttpClient } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
+import { MatDialog } from '@angular/material/dialog';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
+import { provideRouter } from '@angular/router';
 import { App } from './app';
 
 describe('App', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [App],
-      providers: [provideAnimationsAsync()],
+      providers: [
+        provideAnimationsAsync(),
+        provideRouter([]),
+        provideHttpClient(),
+        {
+          provide: MatDialog,
+          useValue: {
+            open: () => ({}),
+          },
+        },
+      ],
     }).compileComponents();
   });
 
