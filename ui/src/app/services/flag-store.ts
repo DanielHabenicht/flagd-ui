@@ -120,6 +120,16 @@ export class FlagStore {
   }
 
   selectProject(entry: ProjectEntry): void {
+    const current = this.currentProject();
+    const isSameProject =
+      current?.name === entry.name &&
+      current?.source === entry.source &&
+      (current?.backendUrl ?? '') === (entry.backendUrl ?? '');
+
+    if (isSameProject && (this.loading() || this.currentFlags() !== null)) {
+      return;
+    }
+
     this.currentProject.set(entry);
     this.loading.set(true);
     this.error.set(null);
