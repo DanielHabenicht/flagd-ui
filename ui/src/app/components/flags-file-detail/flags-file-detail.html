@@ -6,24 +6,6 @@
           <div class="error-banner">{{ store.error() }}</div>
         }
 
-        <section class="project-metadata-section">
-          <div class="project-metadata-header">
-            <h3>Flags-File Metadata</h3>
-            <button
-              mat-stroked-button
-              type="button"
-              (click)="saveFlagsFileMetadata()"
-              [disabled]="metadataSaveDisabled()"
-            >
-              Save Metadata
-            </button>
-          </div>
-          <app-metadata-editor
-            [metadata]="projectMetadataDraft()"
-            (metadataChange)="onProjectMetadataChange($event)"
-          />
-        </section>
-
         @if (store.loading() && !store.flagEntries().length) {
           <div class="loading">Loading flags...</div>
         } @else if (store.flagEntries().length) {

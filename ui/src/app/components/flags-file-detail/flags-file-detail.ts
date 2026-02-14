@@ -4,20 +4,16 @@ import { MatTableModule } from '@angular/material/table';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatChipsModule } from '@angular/material/chips';
-import { MatDialog } from '@angular/material/dialog';
 import { FlagStore } from '../../services/flag-store';
 import { FlagEditorComponent } from '../flag-editor/flag-editor';
-import { FlagDefinition, FlagEntry, MetadataMap, inferFlagType } from '../../models/flag.models';
+import { FlagDefinition, FlagEntry, inferFlagType } from '../../models/flag.models';
 import { PlaygroundDrawerComponent } from '../playground-drawer/playground-drawer';
-import { MetadataEditorComponent } from '../metadata-editor/metadata-editor';
-import { EnvironmentManagerComponent } from '../environment-manager/environment-manager';
 
 @Component({
   selector: 'app-flags-file-detail',
   standalone: true,
   imports: [
     FlagEditorComponent,
-    MetadataEditorComponent,
     PlaygroundDrawerComponent,
     MatTableModule,
     MatButtonModule,
@@ -31,7 +27,6 @@ export class FlagsFileDetailComponent implements OnInit {
   readonly store = inject(FlagStore);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
-  private readonly dialog = inject(MatDialog);
   private readonly inlineEditorMinWidth = 1280;
   private readonly keepEditorOpenAfterSaveMinWidth = 1920;
   private readonly initialWideLayout =
@@ -53,16 +48,6 @@ export class FlagsFileDetailComponent implements OnInit {
     'targeting',
     'actions',
   ];
-  readonly projectMetadataDirty = computed(
-    () =>
-      this.metadataSnapshot(this.projectMetadataDraft()) !==
-      this.metadataSnapshot(this.store.currentMetadata()),
-  );
-  readonly metadataSaveDisabled = computed(
-    () => this.store.loading() || !this.projectMetadataDirty(),
-  );
-
-  readonly projectMetadataDraft = signal<MetadataMap | undefined>(undefined);
 
   private readonly syncSelectedFlagFromRoute = effect(() => {
     const selectedFlagKey = this.routeSelectedFlagKey();
@@ -73,10 +58,6 @@ export class FlagsFileDetailComponent implements OnInit {
 
     this.editingFlag.set(match);
     this.showEditor.set(true);
-  });
-
-  private readonly syncProjectMetadataDraft = effect(() => {
-    this.projectMetadataDraft.set(this.store.currentMetadata());
   });
 
   getFlagType(flag: FlagEntry): string {
@@ -135,14 +116,6 @@ export class FlagsFileDetailComponent implements OnInit {
     this.showEditor.set(true);
   }
 
-  openEnvironmentManager(): void {
-    this.dialog.open(EnvironmentManagerComponent, {
-      width: '700px',
-      maxWidth: '90vw',
-      disableClose: false,
-    });
-  }
-
   openEditFlagEditor(flag: FlagEntry): void {
     if (!this.isWideLayout()) {
       this.navigateToEditRoute(flag.key);
@@ -192,12 +165,17 @@ export class FlagsFileDetailComponent implements OnInit {
     this.store.downloadCurrentFlagsFile();
   }
 
-  onProjectMetadataChange(metadata: MetadataMap | undefined): void {
-    this.projectMetadataDraft.set(metadata);
-  }
+  openSettingsPage(): void {
+    const name = this.route.snapshot.paramMap.get('name');
+    if (!name) return;
 
-  saveFlagsFileMetadata(): void {
-    this.store.saveFlagsFileMetadata(this.projectMetadataDraft());
+    const backendId = this.route.snapshot.paramMap.get('backendId');
+    if (backendId) {
+      this.router.navigate(['/flags-files', 'remote', backendId, name, 'settings']);
+      return;
+    }
+
+    this.router.navigate(['/flags-files', 'local', name, 'settings']);
   }
 
   private navigateToEditRoute(flagKey: string | null): void {
@@ -213,11 +191,5 @@ export class FlagsFileDetailComponent implements OnInit {
     }
 
     this.router.navigate(['/flags-files', 'local', name, 'edit', targetFlagKey]);
-  }
-
-  private metadataSnapshot(metadata: MetadataMap | undefined): string {
-    if (!metadata || Object.keys(metadata).length === 0) return '';
-    const sorted = Object.entries(metadata).sort(([a], [b]) => a.localeCompare(b));
-    return JSON.stringify(sorted);
   }
 }

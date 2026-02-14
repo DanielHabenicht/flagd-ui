@@ -18,6 +18,7 @@ import { filter, Subscription } from 'rxjs';
 import { FlagsFileListComponent } from './components/flags-file-list/flags-file-list';
 import { FlagsFileDetailComponent } from './components/flags-file-detail/flags-file-detail';
 import { FlagsFileEditPageComponent } from './components/flags-file-edit-page/flags-file-edit-page';
+import { FlagsFileSettingsPageComponent } from './components/flags-file-settings-page/flags-file-settings-page';
 import { FlagStore } from './services/flag-store';
 import { FlagFileContent } from './models/flag.models';
 import { GlobalLoadingService } from './services/global-loading.service';
@@ -74,6 +75,9 @@ export class App implements OnDestroy {
   readonly isEditComponentActive = computed(
     () => this.activeRouteComponent() instanceof FlagsFileEditPageComponent,
   );
+  readonly isSettingsComponentActive = computed(
+    () => this.activeRouteComponent() instanceof FlagsFileSettingsPageComponent,
+  );
   readonly editedFlagBreadcrumb = computed(() => {
     const component = this.activeRouteComponent();
     if (!(component instanceof FlagsFileEditPageComponent)) {
@@ -92,6 +96,17 @@ export class App implements OnDestroy {
 
     return decodeURIComponent(routeFlagKey);
   });
+  readonly detailBreadcrumb = computed(() => {
+    if (this.isSettingsComponentActive()) {
+      return 'Settings';
+    }
+
+    if (this.isEditComponentActive()) {
+      return this.editedFlagBreadcrumb();
+    }
+
+    return null;
+  });
   readonly sourceBreadcrumb = computed(() => {
     const flagsFile = this.store.currentFlagsFile();
     if (!flagsFile) return null;
@@ -104,6 +119,27 @@ export class App implements OnDestroy {
       .getBackends()
       .find((entry) => entry.url === flagsFile.backendUrl);
     return backend?.label ?? flagsFile.backendUrl ?? 'Unknown Backend';
+  });
+  readonly sourceBreadcrumbRoute = computed(() => ['/']);
+  readonly flagsFileDetailRoute = computed(() => {
+    const path = this.currentUrl().split('?')[0];
+
+    const localMatch = path.match(/^\/flags-files\/local\/([^/]+)/);
+    if (localMatch) {
+      return ['/flags-files', 'local', decodeURIComponent(localMatch[1])];
+    }
+
+    const remoteMatch = path.match(/^\/flags-files\/remote\/([^/]+)\/([^/]+)/);
+    if (remoteMatch) {
+      return [
+        '/flags-files',
+        'remote',
+        decodeURIComponent(remoteMatch[1]),
+        decodeURIComponent(remoteMatch[2]),
+      ];
+    }
+
+    return null;
   });
   navOpen = signal(!this.isCompactLayout());
   private readonly routerEventsSub: Subscription;
@@ -217,8 +253,8 @@ export class App implements OnDestroy {
     }
   }
 
-  openEnvironmentManager(): void {
-    this.getActiveDetailComponent()?.openEnvironmentManager();
+  openSettingsPage(): void {
+    this.getActiveDetailComponent()?.openSettingsPage();
   }
 
   downloadFlagsFile(): void {

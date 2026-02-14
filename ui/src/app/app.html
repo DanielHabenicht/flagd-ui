@@ -52,20 +52,30 @@
           <div class="flags-context-header">
             <div class="flags-title-row">
               @if (sourceBreadcrumb()) {
-                <span class="source-breadcrumb">{{ sourceBreadcrumb() }}</span>
+                <a class="source-breadcrumb breadcrumb-link" [routerLink]="sourceBreadcrumbRoute()">
+                  {{ sourceBreadcrumb() }}
+                </a>
                 <span class="source-separator" aria-hidden="true">›</span>
               }
-              <h2>{{ store.currentFlagsFileName() }}</h2>
-              @if (isEditComponentActive() && editedFlagBreadcrumb()) {
+              @if (flagsFileDetailRoute()) {
+                <h2>
+                  <a class="file-breadcrumb breadcrumb-link" [routerLink]="flagsFileDetailRoute()">
+                    {{ store.currentFlagsFileName() }}
+                  </a>
+                </h2>
+              } @else {
+                <h2>{{ store.currentFlagsFileName() }}</h2>
+              }
+              @if (detailBreadcrumb()) {
                 <span class="source-separator" aria-hidden="true">›</span>
-                <span class="edit-breadcrumb">{{ editedFlagBreadcrumb() }}</span>
+                <span class="edit-breadcrumb">{{ detailBreadcrumb() }}</span>
               }
             </div>
 
             @if (isOverviewComponentActive()) {
               <div class="header-actions">
-                <button mat-icon-button (click)="openEnvironmentManager()" title="Manage Environments">
-                  <mat-icon>layers</mat-icon>
+                <button mat-icon-button (click)="openSettingsPage()" title="Settings">
+                  <mat-icon>settings</mat-icon>
                 </button>
                 <button mat-icon-button (click)="downloadFlagsFile()" title="Download JSON">
                   <mat-icon>download</mat-icon>

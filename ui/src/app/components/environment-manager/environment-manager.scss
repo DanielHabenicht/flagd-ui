@@ -1,8 +1,13 @@
 .environment-manager {
-  min-width: 600px;
+  width: 100%;
+  min-width: min(600px, 100%);
   max-width: 800px;
 
-  mat-dialog-content {
+  h2 {
+    margin: 0 0 16px;
+  }
+
+  .environment-content {
     padding: 24px;
   }
 
@@ -89,8 +94,14 @@
     }
   }
 
-  mat-dialog-actions {
-    padding: 16px 24px;
+  .manager-actions {
+    padding: 0 24px 16px;
+    display: flex;
+    justify-content: flex-end;
     gap: 8px;
+  }
+
+  .manager-actions.dialog-actions {
+    padding-top: 8px;
   }
 }
