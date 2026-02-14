@@ -10,6 +10,7 @@ import {
   signal,
 } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
+import { Store } from '@ngxs/store';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -25,14 +26,18 @@ import {
   PlaygroundServerDialogComponent,
   PlaygroundServerDialogResult,
 } from './playground-server-dialog';
+import {
+  SetPlaygroundDrawerHeight,
+  SetPlaygroundServers,
+} from '../../state/playground-preferences.actions';
+import { PlaygroundPreferencesState } from '../../state/playground-preferences.state';
 
-const STORAGE_KEY = 'flagd-ui-playground-servers';
-const STORAGE_HEIGHT_KEY = 'flagd-ui-playground-height';
 const LOCAL_EVALUATOR_ID = '__local__';
 const COLLAPSED_DRAWER_HEIGHT = 56;
 const DEFAULT_DRAWER_HEIGHT = 280;
 const MIN_DRAWER_HEIGHT = 180;
 const MAX_DRAWER_HEIGHT = 760;
+const AUTO_EVALUATE_DEBOUNCE_MS = 250;
 
 @Component({
   selector: 'app-playground-drawer',
@@ -55,16 +60,21 @@ export class PlaygroundDrawerComponent implements OnInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly dialog = inject(MatDialog);
+  private readonly ngxsStore = inject(Store);
   private readonly evaluator = inject(PlaygroundEvaluatorService);
 
   readonly open = signal(this.route.snapshot.queryParamMap.get('playground') === 'expanded');
   readonly animate = signal(false);
-  readonly servers = signal<PlaygroundServer[]>(this.loadServers());
-  readonly activeServerId = signal<string>(this.loadServers()[0]?.id ?? LOCAL_EVALUATOR_ID);
+  readonly servers = signal<PlaygroundServer[]>(
+    this.ngxsStore.selectSnapshot(PlaygroundPreferencesState.servers),
+  );
+  readonly activeServerId = signal<string>(this.servers()[0]?.id ?? LOCAL_EVALUATOR_ID);
   readonly localEvaluatorId = LOCAL_EVALUATOR_ID;
   readonly localSelectedFlagKey = signal<string>('');
   readonly contextJson = signal('{\n  "targetingKey": "user-123"\n}');
-  readonly drawerHeight = signal(this.loadDrawerHeight());
+  readonly drawerHeight = signal(
+    this.clampDrawerHeight(this.ngxsStore.selectSnapshot(PlaygroundPreferencesState.drawerHeight)),
+  );
   readonly collapsedDrawerHeight = COLLAPSED_DRAWER_HEIGHT;
 
   readonly evaluating = signal(false);
@@ -83,6 +93,7 @@ export class PlaygroundDrawerComponent implements OnInit, OnDestroy {
   private isResizing = false;
   private resizeStartY = 0;
   private resizeStartHeight = DEFAULT_DRAWER_HEIGHT;
+  private autoEvaluateTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
   private readonly syncSelectedFromInput = effect(() => {
     const current = this.localSelectedFlagKey();
@@ -98,6 +109,19 @@ export class PlaygroundDrawerComponent implements OnInit, OnDestroy {
     this.localSelectedFlagKey.set(fallback);
   });
 
+  private readonly autoEvaluateLocal = effect(() => {
+    const activeEvaluatorId = this.activeServerId();
+    const selectedFlagKey = this.localSelectedFlagKey();
+    this.contextJson();
+
+    if (activeEvaluatorId !== LOCAL_EVALUATOR_ID || !selectedFlagKey) {
+      this.clearAutoEvaluateTimer();
+      return;
+    }
+
+    this.scheduleAutoEvaluate();
+  });
+
   ngOnInit(): void {
     this.route.queryParamMap.subscribe((params) => {
       this.open.set(params.get('playground') === 'expanded');
@@ -105,6 +129,7 @@ export class PlaygroundDrawerComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.clearAutoEvaluateTimer();
     this.stopResizing();
   }
 
@@ -255,34 +280,6 @@ export class PlaygroundDrawerComponent implements OnInit, OnDestroy {
     }
   }
 
-  private loadServers(): PlaygroundServer[] {
-    if (typeof window === 'undefined') return [];
-
-    try {
-      const raw = window.localStorage.getItem(STORAGE_KEY);
-      if (!raw) return [];
-      const parsed = JSON.parse(raw) as PlaygroundServer[];
-      if (!Array.isArray(parsed)) return [];
-      return parsed.filter(
-        (server) =>
-          typeof server?.id === 'string' &&
-          (server.provider === 'flagd' || server.provider === 'ofrep') &&
-          typeof server?.url === 'string',
-      );
-    } catch {
-      return [];
-    }
-  }
-
-  private loadDrawerHeight(): number {
-    if (typeof window === 'undefined') return DEFAULT_DRAWER_HEIGHT;
-
-    const raw = window.localStorage.getItem(STORAGE_HEIGHT_KEY);
-    const parsed = Number(raw);
-    if (!Number.isFinite(parsed)) return DEFAULT_DRAWER_HEIGHT;
-    return this.clampDrawerHeight(parsed);
-  }
-
   private clampDrawerHeight(height: number): number {
     const viewportMax =
       typeof window !== 'undefined' ? Math.floor(window.innerHeight * 0.85) : MAX_DRAWER_HEIGHT;
@@ -310,13 +307,26 @@ export class PlaygroundDrawerComponent implements OnInit, OnDestroy {
   }
 
   private persistDrawerHeight(height: number): void {
-    if (typeof window === 'undefined') return;
-    window.localStorage.setItem(STORAGE_HEIGHT_KEY, String(this.clampDrawerHeight(height)));
+    this.ngxsStore.dispatch(new SetPlaygroundDrawerHeight(this.clampDrawerHeight(height)));
   }
 
   private persistServers(servers: PlaygroundServer[]): void {
-    if (typeof window === 'undefined') return;
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(servers));
+    this.ngxsStore.dispatch(new SetPlaygroundServers(servers));
+  }
+
+  private scheduleAutoEvaluate(): void {
+    this.clearAutoEvaluateTimer();
+    this.autoEvaluateTimeoutId = setTimeout(() => {
+      this.autoEvaluateTimeoutId = null;
+      if (this.activeServerId() !== LOCAL_EVALUATOR_ID) return;
+      void this.evaluate();
+    }, AUTO_EVALUATE_DEBOUNCE_MS);
+  }
+
+  private clearAutoEvaluateTimer(): void {
+    if (!this.autoEvaluateTimeoutId) return;
+    clearTimeout(this.autoEvaluateTimeoutId);
+    this.autoEvaluateTimeoutId = null;
   }
 
   private getErrorMessage(error: unknown): string {

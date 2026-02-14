@@ -90,13 +90,22 @@
       "targeting": {
         "if": [
           {
-            "$ref": "isTest"
+            "$ref": "isAnother"
           },
-          "test",
-          "off"
+          "another",
+          {
+            "if": [
+              {
+                "$ref": "isTest"
+              },
+              "test",
+              "off"
+            ]
+          }
         ]
       },
       "variants": {
+        "another": true,
         "off": false,
         "test": true
       }

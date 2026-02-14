@@ -32,7 +32,7 @@ export class ProjectListComponent implements OnInit {
   ngOnInit(): void {
     // Auto-detect same-origin backend and register it
     this.backendRegistry.probeDefaultBackend().subscribe((available) => {
-      this.store.hasDefaultBackend.set(available);
+      this.store.setHasDefaultBackend(available);
       if (available) {
         this.backendRegistry.addBackend('', 'This Server');
       }

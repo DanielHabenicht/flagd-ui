@@ -1,5 +1,6 @@
-import { Component, HostListener, OnDestroy, computed, inject, signal } from '@angular/core';
+import { Component, HostListener, OnDestroy, computed, effect, inject, signal } from '@angular/core';
 import { RouterLink, RouterOutlet } from '@angular/router';
+import { Store } from '@ngxs/store';
 import { MatSidenavModule } from '@angular/material/sidenav';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
@@ -9,10 +10,10 @@ import { ProjectListComponent } from './components/project-list/project-list';
 import { FlagStore } from './services/flag-store';
 import { FlagFileContent } from './models/flag.models';
 import { GlobalLoadingService } from './services/global-loading.service';
+import { SetThemeMode, ThemeMode } from './state/ui-preferences.actions';
+import { UiPreferencesState } from './state/ui-preferences.state';
 
-const THEME_STORAGE_KEY = 'flagd-ui-theme';
 type AppTheme = 'light' | 'dark';
-type ThemeMode = 'auto' | 'dark' | 'light';
 
 @Component({
   selector: 'app-root',
@@ -32,9 +33,10 @@ type ThemeMode = 'auto' | 'dark' | 'light';
 })
 export class App implements OnDestroy {
   private readonly store = inject(FlagStore);
+  private readonly ngxsStore = inject(Store);
   private readonly navigationCollapseWidth = 1280;
   readonly globalLoading = inject(GlobalLoadingService);
-  readonly themeMode = signal<ThemeMode>(this.loadInitialThemeMode());
+  readonly themeMode = this.ngxsStore.selectSignal(UiPreferencesState.themeMode);
   readonly prefersDark = signal(this.systemPrefersDark());
   readonly theme = computed<AppTheme>(() => {
     const mode = this.themeMode();
@@ -55,9 +57,11 @@ export class App implements OnDestroy {
       this.applyTheme(this.theme());
     }
   };
+  private readonly syncTheme = effect(() => {
+    this.applyTheme(this.theme());
+  });
 
   constructor() {
-    this.applyTheme(this.theme());
     this.mediaQuery?.addEventListener('change', this.onMediaThemeChange);
   }
 
@@ -82,9 +86,7 @@ export class App implements OnDestroy {
   cycleThemeMode(): void {
     const current = this.themeMode();
     const next: ThemeMode = current === 'auto' ? 'dark' : current === 'dark' ? 'light' : 'auto';
-    this.themeMode.set(next);
-    this.applyTheme(this.theme());
-    this.persistThemeMode(next);
+    this.ngxsStore.dispatch(new SetThemeMode(next));
   }
 
   @HostListener('window:resize')
@@ -143,17 +145,6 @@ export class App implements OnDestroy {
     }
   }
 
-  private loadInitialThemeMode(): ThemeMode {
-    if (typeof window === 'undefined') return 'auto';
-
-    const storedTheme = window.localStorage.getItem(THEME_STORAGE_KEY);
-    if (storedTheme === 'auto' || storedTheme === 'dark' || storedTheme === 'light') {
-      return storedTheme;
-    }
-
-    return 'auto';
-  }
-
   private systemPrefersDark(): boolean {
     if (typeof window === 'undefined') return false;
     return window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -163,10 +154,5 @@ export class App implements OnDestroy {
     if (typeof document === 'undefined') return;
     document.documentElement.setAttribute('data-theme', theme);
     document.documentElement.style.colorScheme = theme;
-  }
-
-  private persistThemeMode(theme: ThemeMode): void {
-    if (typeof window === 'undefined') return;
-    window.localStorage.setItem(THEME_STORAGE_KEY, theme);
   }
 }
