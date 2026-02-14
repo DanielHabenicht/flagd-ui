@@ -46,10 +46,10 @@ import { VariantsEditorComponent, VariantRow } from '../variants-editor/variants
 import { TargetingEditorComponent } from '../targeting-editor/targeting-editor';
 import { MetadataEditorComponent } from '../metadata-editor/metadata-editor';
 import { FlagStore } from '../../services/flag-store';
+import { FlagSchemaAdapter, TimeWindowBounds } from '../../services/flag-schema-adapter';
 
 export type EditorMode = 'easy' | 'advanced' | 'json';
 
-type TimeWindowBounds = { start?: number; end?: number };
 type TimeWindowFormState = {
   startDate: Date | null;
   startTime: Date | null;
@@ -83,8 +83,8 @@ type TimeWindowFormState = {
   styleUrl: './flag-editor.scss',
 })
 export class FlagEditorComponent implements OnInit, OnChanges {
-  private static readonly TIMESTAMP_CONTEXT_VAR = '$flagd.timestamp';
   private readonly store = inject(FlagStore);
+  private readonly schemaAdapter = new FlagSchemaAdapter();
 
   readonly inline = input(false);
   readonly flag = input<FlagEntry | null>(null);
@@ -504,21 +504,16 @@ export class FlagEditorComponent implements OnInit, OnChanges {
 
   onJsonInput(value: string): void {
     this.rawJson = value;
-    try {
-      JSON.parse(value);
-      this.jsonError = null;
-    } catch {
-      this.jsonError = 'Invalid JSON';
-    }
+    this.jsonError = this.schemaAdapter.isValidJson(value) ? null : 'Invalid JSON';
   }
 
   formatJson(): void {
-    try {
-      const parsed = JSON.parse(this.rawJson);
-      this.rawJson = JSON.stringify(parsed, null, 2);
+    const formatted = this.schemaAdapter.formatJson(this.rawJson);
+    if (formatted.ok) {
+      this.rawJson = formatted.value;
       this.jsonError = null;
-    } catch {
-      this.jsonError = 'Cannot format: invalid JSON';
+    } else {
+      this.jsonError = formatted.error;
     }
   }
 
@@ -689,129 +684,64 @@ export class FlagEditorComponent implements OnInit, OnChanges {
       }
     }
 
-    const flag: Record<string, unknown> = {
+    this.rawJson = this.schemaAdapter.serializeFlagDefinition({
       state: this.form.get('state')!.value,
       variants: variantsObj,
-    };
-
-    const defaultVariant = this.form.get('defaultVariant')!.value;
-    if (defaultVariant) {
-      flag['defaultVariant'] = defaultVariant;
-    }
-
-    const t = this.targeting();
-    if (t && Object.keys(t).length > 0) {
-      flag['targeting'] = t;
-    }
-
-    const metadata = this.metadata();
-    if (metadata && Object.keys(metadata).length > 0) {
-      flag['metadata'] = metadata;
-    }
-
-    this.rawJson = JSON.stringify(flag, null, 2);
+      defaultVariant: this.form.get('defaultVariant')!.value,
+      targeting: this.targeting(),
+      metadata: this.metadata(),
+    });
     this.jsonError = null;
   }
 
   private applyJsonToForm(): boolean {
-    try {
-      const parsed = JSON.parse(this.rawJson);
-      if (typeof parsed !== 'object' || parsed === null) {
-        this.jsonError = 'JSON must be an object';
-        return false;
-      }
-
-      const state: FlagState = parsed.state === 'DISABLED' ? 'DISABLED' : 'ENABLED';
-      this.form.get('state')!.setValue(state);
-
-      if (parsed.variants && typeof parsed.variants === 'object') {
-        const variantRows: VariantRow[] = Object.entries(parsed.variants).map(([name, value]) => ({
-          name,
-          value,
-        }));
-        this.variants.set(variantRows);
-
-        const flagType = inferFlagType(parsed.variants);
-        this.form.get('flagType')!.setValue(flagType);
-        this.form
-          .get('easyType')!
-          .setValue(flagType === 'boolean' || flagType === 'string' ? flagType : 'boolean');
-      }
-
-      if (parsed.defaultVariant !== undefined) {
-        this.form.get('defaultVariant')!.setValue(parsed.defaultVariant ?? '');
-      }
-
-      if (parsed.targeting && typeof parsed.targeting === 'object') {
-        this.targeting.set(parsed.targeting);
-      } else {
-        this.targeting.set(undefined);
-      }
-
-      if (parsed.metadata && typeof parsed.metadata === 'object') {
-        this.metadata.set(parsed.metadata as MetadataMap);
-      } else {
-        this.metadata.set(undefined);
-      }
-
-      this.jsonError = null;
-      return true;
-    } catch {
-      this.jsonError = 'Invalid JSON - fix before switching modes';
+    const result = this.schemaAdapter.parseEditorStateFromJson(this.rawJson);
+    if (!result.ok) {
+      this.jsonError = result.error;
       return false;
     }
+
+    const parsed = result.value;
+    this.form.get('state')!.setValue(parsed.state);
+
+    if (parsed.variants) {
+      this.variants.set(parsed.variants as VariantRow[]);
+    }
+
+    if (parsed.flagType) {
+      this.form.get('flagType')!.setValue(parsed.flagType);
+    }
+
+    if (parsed.easyType) {
+      this.form.get('easyType')!.setValue(parsed.easyType);
+    }
+
+    if (parsed.hasDefaultVariant) {
+      this.form.get('defaultVariant')!.setValue(parsed.defaultVariant ?? '');
+    }
+
+    this.targeting.set(parsed.targeting);
+    this.metadata.set(parsed.metadata);
+
+    this.jsonError = null;
+    return true;
   }
 
   private saveFromJson(): void {
     const key = String(this.form.get('key')!.value ?? '').trim();
     if (!key || this.form.get('key')!.invalid || this.keyAlreadyExists()) return;
 
-    try {
-      const parsed = JSON.parse(this.rawJson);
-      if (typeof parsed !== 'object' || parsed === null) {
-        this.jsonError = 'JSON must be an object';
-        return;
-      }
-
-      if (!parsed.state) {
-        this.jsonError = 'Missing required field: "state"';
-        return;
-      }
-
-      if (
-        !parsed.variants ||
-        typeof parsed.variants !== 'object' ||
-        Object.keys(parsed.variants).length === 0
-      ) {
-        this.jsonError = 'Must have at least one variant';
-        return;
-      }
-
-      const flag: FlagDefinition = {
-        state: parsed.state,
-        variants: parsed.variants,
-      };
-
-      if (parsed.defaultVariant) {
-        flag.defaultVariant = parsed.defaultVariant;
-      }
-
-      if (parsed.targeting && Object.keys(parsed.targeting).length > 0) {
-        flag.targeting = parsed.targeting;
-      }
-
-      if (parsed.metadata) {
-        flag.metadata = parsed.metadata;
-      }
-
-      this.save.emit({
-        key,
-        flag,
-        originalKey: this.flag()?.key,
-      });
-    } catch {
-      this.jsonError = 'Invalid JSON';
+    const result = this.schemaAdapter.parseFlagForSave(this.rawJson);
+    if (!result.ok) {
+      this.jsonError = result.error;
+      return;
     }
+
+    this.save.emit({
+      key,
+      flag: result.value,
+      originalKey: this.flag()?.key,
+    });
   }
 
   private hasChanges(): boolean {
@@ -907,15 +837,7 @@ export class FlagEditorComponent implements OnInit, OnChanges {
     const raw = this.rawJson.trim();
     if (!raw) return false;
 
-    try {
-      const parsed = JSON.parse(raw);
-      if (typeof parsed !== 'object' || parsed === null) return false;
-      if (!parsed.state) return false;
-      if (!parsed.variants || typeof parsed.variants !== 'object') return false;
-      return Object.keys(parsed.variants).length > 0;
-    } catch {
-      return false;
-    }
+    return this.schemaAdapter.isJsonSaveValid(raw);
   }
 
   private isCurrentModeFormValid(): boolean {
@@ -936,111 +858,23 @@ export class FlagEditorComponent implements OnInit, OnChanges {
   }
 
   private buildEasyTimeTargeting(): Record<string, unknown> | undefined {
-    const startDate = this.form.get('easyStartDate')?.value ?? null;
-    const startTime = this.form.get('easyStartTime')?.value ?? null;
-    const endDate = this.form.get('easyEndDate')?.value ?? null;
-    const endTime = this.form.get('easyEndTime')?.value ?? null;
-
-    const start = this.toUnixEpochSeconds(this.combineDateAndTime(startDate, startTime));
-    const end = this.toUnixEpochSeconds(this.combineDateAndTime(endDate, endTime));
-
-    if (start === null && end === null) return undefined;
-
-    const varRef = { var: FlagEditorComponent.TIMESTAMP_CONTEXT_VAR };
-    const conditions: Record<string, unknown>[] = [];
-
-    if (start !== null) {
-      conditions.push({ '>=': [varRef, start] });
-    }
-
-    if (end !== null) {
-      conditions.push({ '<=': [varRef, end] });
-    }
-
-    const condition = conditions.length === 1 ? conditions[0] : { and: conditions };
-
-    return {
-      if: [condition, 'on', 'off'],
-    };
+    return this.schemaAdapter.buildEasyTimeTargeting(this.getEasyTimeWindowBounds());
   }
 
   private isEasyTimeTargeting(targeting: Record<string, unknown>): boolean {
-    return this.parseEasyTimeTargeting(targeting) !== null;
+    return this.schemaAdapter.isEasyTimeTargeting(targeting);
   }
 
   private parseEasyTimeTargeting(
     targeting: Record<string, unknown> | undefined,
   ): { start?: number; end?: number } | null {
-    if (!targeting || Object.keys(targeting).length === 0) return null;
-
-    const ifClause = targeting['if'];
-    if (!Array.isArray(ifClause) || ifClause.length < 3) return null;
-
-    if (ifClause[1] !== 'on' || ifClause[2] !== 'off') return null;
-
-    const bounds = this.extractTimestampBounds(ifClause[0]);
-    if (!bounds) return null;
-
-    return {
-      start: bounds.start,
-      end: bounds.end,
-    };
-  }
-
-  private extractTimestampBounds(value: unknown): { start?: number; end?: number } | null {
-    if (!value || typeof value !== 'object') return null;
-    const condition = value as Record<string, unknown>;
-
-    if ('>=' in condition) {
-      const start = this.readTimestampComparison(condition['>=']);
-      return start !== null ? { start } : null;
-    }
-
-    if ('<=' in condition) {
-      const end = this.readTimestampComparison(condition['<=']);
-      return end !== null ? { end } : null;
-    }
-
-    if ('and' in condition) {
-      const subConditions = condition['and'];
-      if (!Array.isArray(subConditions) || subConditions.length === 0) return null;
-
-      let start: number | undefined;
-      let end: number | undefined;
-
-      for (const subCondition of subConditions) {
-        const parsed = this.extractTimestampBounds(subCondition);
-        if (!parsed) return null;
-        if (parsed.start !== undefined) start = parsed.start;
-        if (parsed.end !== undefined) end = parsed.end;
-      }
-
-      if (start === undefined && end === undefined) return null;
-      return { start, end };
-    }
-
-    return null;
-  }
-
-  private readTimestampComparison(value: unknown): number | null {
-    if (!Array.isArray(value) || value.length < 2) return null;
-
-    const variableRef = value[0];
-    if (!variableRef || typeof variableRef !== 'object') return null;
-
-    const varName = (variableRef as Record<string, unknown>)['var'];
-    if (varName !== FlagEditorComponent.TIMESTAMP_CONTEXT_VAR) return null;
-
-    const comparedValue = value[1];
-    if (typeof comparedValue === 'number' && Number.isFinite(comparedValue)) {
-      return comparedValue;
-    }
-
-    return null;
+    return this.schemaAdapter.parseEasyTimeTargeting(targeting);
   }
 
   private parseTimestampDate(value: unknown): Date | null {
-    if (value === null || value === undefined) return null;
+    if (value === null || value === undefined) {
+      return null;
+    }
 
     if (typeof value === 'number' && Number.isFinite(value)) {
       const timestampMs = value > 1_000_000_000_000 ? value : value * 1000;
@@ -1077,18 +911,13 @@ export class FlagEditorComponent implements OnInit, OnChanges {
   }
 
   private syncJsonState(state: FlagState): void {
-    const raw = this.rawJson.trim();
-    if (!raw) return;
-
-    try {
-      const parsed = JSON.parse(raw);
-      if (typeof parsed !== 'object' || parsed === null) return;
-      parsed.state = state;
-      this.rawJson = JSON.stringify(parsed, null, 2);
+    const result = this.schemaAdapter.syncJsonState(this.rawJson, state);
+    if (result.ok) {
+      this.rawJson = result.value;
       this.jsonError = null;
-    } catch {
-      this.jsonError = 'Invalid JSON';
+      return;
     }
+    this.jsonError = result.error;
   }
 
   // Environment mode helpers
@@ -1166,60 +995,34 @@ export class FlagEditorComponent implements OnInit, OnChanges {
   }
 
   private buildEnvironmentTimeAwareTargeting(): Record<string, unknown> {
-    const environments = this.environments();
-    if (environments.length === 0) {
-      return {};
-    }
-
-    const buildChain = (index: number): unknown => {
-      if (index >= environments.length) {
-        return 'off';
-      }
-
-      const env = environments[index];
+    const perEnvironmentBounds: Record<string, TimeWindowBounds | null> = {};
+    for (const env of this.environments()) {
       const envName = env.name.toLowerCase();
-      const envRef = { $ref: `is${env.name.charAt(0).toUpperCase()}${env.name.slice(1)}` };
-      const envTimeBounds = this.getEnvironmentTimeWindowBounds(envName);
-      const envTimeCondition = this.buildTimestampConditionFromBounds(envTimeBounds);
-      const envCondition = envTimeCondition !== null ? { and: [envRef, envTimeCondition] } : envRef;
-
-      return {
-        if: [envCondition, envName, buildChain(index + 1)],
-      };
-    };
-
-    const environmentChain = buildChain(0);
-    const globalTimeCondition = this.buildTimestampConditionFromBounds(
-      this.getGlobalTimeWindowBounds(),
-    );
-
-    if (globalTimeCondition !== null) {
-      return {
-        if: [globalTimeCondition, environmentChain, 'off'],
-      };
+      perEnvironmentBounds[envName] = this.getEnvironmentTimeWindowBounds(envName);
     }
 
-    return (environmentChain as Record<string, unknown>) ?? {};
+    return this.schemaAdapter.buildEnvironmentTimeAwareTargeting(
+      this.environments(),
+      this.getGlobalTimeWindowBounds(),
+      perEnvironmentBounds,
+    );
   }
 
-  private buildTimestampConditionFromBounds(
-    bounds: TimeWindowBounds | null,
-  ): Record<string, unknown> | null {
-    if (!bounds) return null;
+  private getEasyTimeWindowBounds(): TimeWindowBounds | null {
+    const startDate = this.form.get('easyStartDate')?.value ?? null;
+    const startTime = this.form.get('easyStartTime')?.value ?? null;
+    const endDate = this.form.get('easyEndDate')?.value ?? null;
+    const endTime = this.form.get('easyEndTime')?.value ?? null;
 
-    const conditions: Record<string, unknown>[] = [];
-    const varRef = { var: FlagEditorComponent.TIMESTAMP_CONTEXT_VAR };
+    const start = this.toUnixEpochSeconds(this.combineDateAndTime(startDate, startTime));
+    const end = this.toUnixEpochSeconds(this.combineDateAndTime(endDate, endTime));
 
-    if (bounds.start !== undefined) {
-      conditions.push({ '>=': [varRef, bounds.start] });
-    }
+    if (start === null && end === null) return null;
 
-    if (bounds.end !== undefined) {
-      conditions.push({ '<=': [varRef, bounds.end] });
-    }
-
-    if (conditions.length === 0) return null;
-    return conditions.length === 1 ? conditions[0] : { and: conditions };
+    const bounds: TimeWindowBounds = {};
+    if (start !== null) bounds.start = start;
+    if (end !== null) bounds.end = end;
+    return bounds;
   }
 
   private getGlobalTimeWindowBounds(): TimeWindowBounds | null {
@@ -1262,96 +1065,7 @@ export class FlagEditorComponent implements OnInit, OnChanges {
     global?: TimeWindowBounds;
     perEnvironment: Record<string, TimeWindowBounds>;
   } {
-    const result: { global?: TimeWindowBounds; perEnvironment: Record<string, TimeWindowBounds> } =
-      {
-        perEnvironment: {},
-      };
-
-    if (!targeting) return result;
-
-    let cursor: unknown = targeting;
-    const maybeIf = this.asIfClause(cursor);
-    if (maybeIf) {
-      const maybeGlobal = this.extractTimestampBounds(maybeIf[0]);
-      if (maybeGlobal && maybeIf[2] === 'off') {
-        result.global = maybeGlobal;
-        cursor = maybeIf[1];
-      }
-    }
-
-    this.parseEnvironmentChainTimeWindows(cursor, result.perEnvironment);
-    return result;
-  }
-
-  private parseEnvironmentChainTimeWindows(
-    node: unknown,
-    perEnvironment: Record<string, TimeWindowBounds>,
-  ): void {
-    const ifClause = this.asIfClause(node);
-    if (!ifClause) return;
-
-    const parsedCondition = this.extractEnvironmentCondition(ifClause[0]);
-    if (parsedCondition?.environmentName) {
-      const envName = parsedCondition.environmentName.toLowerCase();
-      if (parsedCondition.timeBounds) {
-        perEnvironment[envName] = parsedCondition.timeBounds;
-      }
-    }
-
-    this.parseEnvironmentChainTimeWindows(ifClause[2], perEnvironment);
-  }
-
-  private asIfClause(node: unknown): [unknown, unknown, unknown] | null {
-    if (!node || typeof node !== 'object') return null;
-    const ifValue = (node as Record<string, unknown>)['if'];
-    if (!Array.isArray(ifValue) || ifValue.length < 3) return null;
-    return [ifValue[0], ifValue[1], ifValue[2]];
-  }
-
-  private extractEnvironmentCondition(
-    condition: unknown,
-  ): { environmentName?: string; timeBounds?: TimeWindowBounds } | null {
-    if (!condition || typeof condition !== 'object') return null;
-
-    const conditionRecord = condition as Record<string, unknown>;
-    if (typeof conditionRecord['$ref'] === 'string') {
-      return { environmentName: this.environmentNameFromRef(conditionRecord['$ref']) };
-    }
-
-    if (Array.isArray(conditionRecord['and'])) {
-      const parts = conditionRecord['and'] as unknown[];
-      let environmentName: string | undefined;
-      let timeBounds: TimeWindowBounds | undefined;
-
-      for (const part of parts) {
-        if (part && typeof part === 'object') {
-          const partRecord = part as Record<string, unknown>;
-          if (typeof partRecord['$ref'] === 'string') {
-            environmentName = this.environmentNameFromRef(partRecord['$ref']);
-            continue;
-          }
-        }
-
-        const parsedTime = this.extractTimestampBounds(part);
-        if (parsedTime) {
-          timeBounds = parsedTime;
-        }
-      }
-
-      if (environmentName) {
-        return { environmentName, timeBounds };
-      }
-    }
-
-    return null;
-  }
-
-  private environmentNameFromRef(value: unknown): string | undefined {
-    if (typeof value !== 'string' || !value.startsWith('is') || value.length <= 2) {
-      return undefined;
-    }
-
-    return value.charAt(2).toLowerCase() + value.slice(3);
+    return this.schemaAdapter.parseEnvironmentTimingTargeting(targeting);
   }
 
   private timeWindowStateFromBounds(bounds: TimeWindowBounds): TimeWindowFormState {
