@@ -1,4 +1,13 @@
-import { Component, input, output, OnChanges, OnInit, computed, signal, inject } from '@angular/core';
+import {
+  Component,
+  input,
+  output,
+  OnChanges,
+  OnInit,
+  computed,
+  signal,
+  inject,
+} from '@angular/core';
 import {
   AbstractControl,
   FormControl,
@@ -20,16 +29,15 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule } from '@angular/material/core';
 import { MatTimepickerModule } from '@angular/material/timepicker';
+import { MatExpansionModule } from '@angular/material/expansion';
 import {
   FlagDefinition,
   FlagEntry,
   FlagState,
   FlagType,
   MetadataMap,
-  Environment,
   inferFlagType,
   getDefaultVariants,
-  generateEnvironmentTargeting,
   generateEnvironmentVariants,
   isEnvironmentBasedFlag,
   extractEnvironmentStates,
@@ -39,7 +47,15 @@ import { TargetingEditorComponent } from '../targeting-editor/targeting-editor';
 import { MetadataEditorComponent } from '../metadata-editor/metadata-editor';
 import { FlagStore } from '../../services/flag-store';
 
-export type EditorMode = 'easy' | 'environments' | 'advanced' | 'json';
+export type EditorMode = 'easy' | 'advanced' | 'json';
+
+type TimeWindowBounds = { start?: number; end?: number };
+type TimeWindowFormState = {
+  startDate: Date | null;
+  startTime: Date | null;
+  endDate: Date | null;
+  endTime: Date | null;
+};
 
 @Component({
   selector: 'app-flag-editor',
@@ -61,6 +77,7 @@ export type EditorMode = 'easy' | 'environments' | 'advanced' | 'json';
     MatDatepickerModule,
     MatNativeDateModule,
     MatTimepickerModule,
+    MatExpansionModule,
   ],
   templateUrl: './flag-editor.html',
   styleUrl: './flag-editor.scss',
@@ -80,21 +97,23 @@ export class FlagEditorComponent implements OnInit, OnChanges {
   targeting = signal<Record<string, unknown> | undefined>(undefined);
   metadata = signal<MetadataMap | undefined>(undefined);
   editorMode = signal<EditorMode>('easy');
-  
+
   // Environment mode state
   environmentStates = signal<Record<string, unknown>>({});
-  
+  environmentTimeWindows = signal<Record<string, TimeWindowFormState>>({});
+  globalEnvironmentTimeEnabled = signal(false);
+
   // Expose JSON to template for object editing
   readonly JSON = JSON;
 
   readonly environments = computed(() => this.store.currentEnvironments());
   readonly hasEnvironments = computed(() => this.environments().length > 0);
-  readonly isEnvironmentMode = computed(() => this.editorMode() === 'environments');
-  readonly environmentModeAvailable = computed(() => {
-    if (!this.hasEnvironments()) return false;
-    const flagType = this.form?.get('flagType')?.value as FlagType | undefined;
-    return flagType !== undefined;
+  readonly hasDefinitionTargeting = computed(() => {
+    const flag = this.flag();
+    if (!flag?.targeting) return false;
+    return Object.keys(flag.targeting).length > 0;
   });
+  readonly showGlobalEnvironmentValueOnly = computed(() => !this.hasDefinitionTargeting());
 
   // JSON editor state
   rawJson = '';
@@ -110,6 +129,8 @@ export class FlagEditorComponent implements OnInit, OnChanges {
   );
 
   readonly easyModeAvailable = computed(() => {
+    if (this.hasEnvironments()) return true;
+
     const variants = this.variants();
     const targeting = this.targeting();
     const flagType = this.form?.get('flagType')?.value as FlagType | undefined;
@@ -148,24 +169,6 @@ export class FlagEditorComponent implements OnInit, OnChanges {
     this.variants.set(initialVariants);
     this.targeting.set(f?.targeting);
     this.metadata.set(f?.metadata);
-    
-    // Initialize environment states if this is an environment-based flag
-    const envs = this.environments();
-    if (f && envs.length > 0 && isEnvironmentBasedFlag(f, envs)) {
-      const states = extractEnvironmentStates(f, envs, initialType);
-      this.environmentStates.set(states);
-      // Auto-select environment mode if flag is using it
-      if (this.editorMode() === 'easy') {
-        this.editorMode.set('environments');
-      }
-    } else if (envs.length > 0) {
-      // Initialize with default values for new flags
-      const defaultStates: Record<string, unknown> = {};
-      for (const env of envs) {
-        defaultStates[env.name.toLowerCase()] = this.getDefaultValueForType(initialType);
-      }
-      this.environmentStates.set(defaultStates);
-    }
 
     this.form = new FormGroup({
       key: new FormControl(f?.key ?? '', [
@@ -220,7 +223,42 @@ export class FlagEditorComponent implements OnInit, OnChanges {
     this.targeting.set(f?.targeting);
     this.metadata.set(f?.metadata);
 
+    const envs = this.environments();
+    const isEnvironmentFlag = !!f && envs.length > 0 && isEnvironmentBasedFlag(f, envs);
+
+    if (envs.length > 0) {
+      if (isEnvironmentFlag) {
+        this.environmentStates.set(extractEnvironmentStates(f!, envs, nextType));
+      } else {
+        const defaultStates: Record<string, unknown> = {};
+        for (const env of envs) {
+          defaultStates[env.name.toLowerCase()] = this.getDefaultValueForType(nextType);
+        }
+        this.environmentStates.set(defaultStates);
+      }
+    }
+
     const parsedEasyTimeTargeting = this.parseEasyTimeTargeting(f?.targeting);
+    const parsedEnvironmentTiming = this.parseEnvironmentTimingTargeting(f?.targeting);
+
+    const globalTimeBounds = isEnvironmentFlag
+      ? parsedEnvironmentTiming.global
+      : parsedEasyTimeTargeting;
+
+    this.globalEnvironmentTimeEnabled.set(
+      !!globalTimeBounds &&
+        (globalTimeBounds.start !== undefined || globalTimeBounds.end !== undefined),
+    );
+
+    const environmentTimeWindows: Record<string, TimeWindowFormState> = {};
+    for (const env of envs) {
+      const envName = env.name.toLowerCase();
+      const bounds = parsedEnvironmentTiming.perEnvironment[envName];
+      if (bounds && (bounds.start !== undefined || bounds.end !== undefined)) {
+        environmentTimeWindows[envName] = this.timeWindowStateFromBounds(bounds);
+      }
+    }
+    this.environmentTimeWindows.set(environmentTimeWindows);
 
     this.form.patchValue(
       {
@@ -241,10 +279,10 @@ export class FlagEditorComponent implements OnInit, OnChanges {
           nextType === 'string'
             ? String(nextVariants.find((variant) => variant.name === 'off')?.value ?? '')
             : '',
-        easyStartDate: this.parseTimestampDate(parsedEasyTimeTargeting?.start),
-        easyStartTime: this.parseTimestampDate(parsedEasyTimeTargeting?.start),
-        easyEndDate: this.parseTimestampDate(parsedEasyTimeTargeting?.end),
-        easyEndTime: this.parseTimestampDate(parsedEasyTimeTargeting?.end),
+        easyStartDate: this.parseTimestampDate(globalTimeBounds?.start),
+        easyStartTime: this.parseTimestampDate(globalTimeBounds?.start),
+        easyEndDate: this.parseTimestampDate(globalTimeBounds?.end),
+        easyEndTime: this.parseTimestampDate(globalTimeBounds?.end),
       },
       { emitEvent: false },
     );
@@ -255,17 +293,21 @@ export class FlagEditorComponent implements OnInit, OnChanges {
 
     // Determine editor mode
     if (f) {
-      const isSimpleType = nextType === 'boolean' || nextType === 'string';
-      const hasUnsupportedTargeting =
-        !!f.targeting &&
-        Object.keys(f.targeting).length > 0 &&
-        !this.isEasyTimeTargeting(f.targeting);
-      const isSimpleVariants = this.isSimpleFlagStructure(nextType, nextVariants);
-
-      if (isSimpleType && !hasUnsupportedTargeting && isSimpleVariants) {
+      if (isEnvironmentFlag) {
         this.editorMode.set('easy');
       } else {
-        this.editorMode.set('advanced');
+        const isSimpleType = nextType === 'boolean' || nextType === 'string';
+        const hasUnsupportedTargeting =
+          !!f.targeting &&
+          Object.keys(f.targeting).length > 0 &&
+          !this.isEasyTimeTargeting(f.targeting);
+        const isSimpleVariants = this.isSimpleFlagStructure(nextType, nextVariants);
+
+        if (isSimpleType && !hasUnsupportedTargeting && isSimpleVariants) {
+          this.editorMode.set('easy');
+        } else {
+          this.editorMode.set('advanced');
+        }
       }
     } else {
       this.editorMode.set('easy');
@@ -298,12 +340,20 @@ export class FlagEditorComponent implements OnInit, OnChanges {
     }
 
     if (previousMode === 'easy' && mode === 'advanced') {
-      this.syncEasyToAdvanced();
+      if (this.hasEnvironments()) {
+        this.syncEnvironmentEasyToAdvanced();
+      } else {
+        this.syncEasyToAdvanced();
+      }
     }
 
     if (mode === 'json') {
       if (previousMode === 'easy') {
-        this.syncEasyToAdvanced();
+        if (this.hasEnvironments()) {
+          this.syncEnvironmentEasyToAdvanced();
+        } else {
+          this.syncEasyToAdvanced();
+        }
       }
       this.syncToJson();
     }
@@ -360,6 +410,69 @@ export class FlagEditorComponent implements OnInit, OnChanges {
     this.form.get('easyStartTime')!.setValue(null);
     this.form.get('easyEndDate')!.setValue(null);
     this.form.get('easyEndTime')!.setValue(null);
+  }
+
+  addGlobalEnvironmentTimeWindow(): void {
+    this.globalEnvironmentTimeEnabled.set(true);
+  }
+
+  removeGlobalEnvironmentTimeWindow(): void {
+    this.globalEnvironmentTimeEnabled.set(false);
+    this.resetEasyTimeWindow();
+  }
+
+  hasEnvironmentTimeWindow(envName: string): boolean {
+    return !!this.environmentTimeWindows()[envName.toLowerCase()];
+  }
+
+  getEnvironmentTimeWindow(envName: string): TimeWindowFormState {
+    return (
+      this.environmentTimeWindows()[envName.toLowerCase()] ?? {
+        startDate: null,
+        startTime: null,
+        endDate: null,
+        endTime: null,
+      }
+    );
+  }
+
+  addEnvironmentTimeWindow(envName: string): void {
+    const key = envName.toLowerCase();
+    const windows = { ...this.environmentTimeWindows() };
+    windows[key] = windows[key] ?? {
+      startDate: null,
+      startTime: null,
+      endDate: null,
+      endTime: null,
+    };
+    this.environmentTimeWindows.set(windows);
+  }
+
+  removeEnvironmentTimeWindow(envName: string): void {
+    const key = envName.toLowerCase();
+    const windows = { ...this.environmentTimeWindows() };
+    delete windows[key];
+    this.environmentTimeWindows.set(windows);
+  }
+
+  onEnvironmentTimeWindowChange(
+    envName: string,
+    field: keyof TimeWindowFormState,
+    value: Date | null,
+  ): void {
+    const key = envName.toLowerCase();
+    const windows = { ...this.environmentTimeWindows() };
+    const current = windows[key] ?? {
+      startDate: null,
+      startTime: null,
+      endDate: null,
+      endTime: null,
+    };
+    windows[key] = {
+      ...current,
+      [field]: value,
+    };
+    this.environmentTimeWindows.set(windows);
   }
 
   // --- Advanced mode ---
@@ -420,21 +533,20 @@ export class FlagEditorComponent implements OnInit, OnChanges {
       return;
     }
 
-    // Handle environment mode separately
-    if (mode === 'environments') {
-      if (!this.isCurrentModeFormValid() || this.keyAlreadyExists() || !key) return;
-
-      const flag = this.buildEnvironmentBasedFlag();
-
-      this.save.emit({
-        key,
-        flag,
-        originalKey: this.flag()?.key,
-      });
-      return;
-    }
-
     if (mode === 'easy') {
+      if (this.hasEnvironments()) {
+        if (!this.isCurrentModeFormValid() || this.keyAlreadyExists() || !key) return;
+
+        const flag = this.buildEnvironmentBasedFlag();
+
+        this.save.emit({
+          key,
+          flag,
+          originalKey: this.flag()?.key,
+        });
+        return;
+      }
+
       this.syncEasyToAdvanced();
     }
 
@@ -556,6 +668,17 @@ export class FlagEditorComponent implements OnInit, OnChanges {
     this.form.get('easyStartDate')!.setValue(this.parseTimestampDate(parsedTimeTargeting?.start));
     this.form.get('easyEndTime')!.setValue(this.parseTimestampDate(parsedTimeTargeting?.end));
     this.form.get('easyEndDate')!.setValue(this.parseTimestampDate(parsedTimeTargeting?.end));
+  }
+
+  private syncEnvironmentEasyToAdvanced(): void {
+    const envFlag = this.buildEnvironmentBasedFlag();
+    const nextVariants: VariantRow[] = Object.entries(envFlag.variants).map(([name, value]) => ({
+      name,
+      value,
+    }));
+    this.variants.set(nextVariants);
+    this.form.get('defaultVariant')!.setValue(envFlag.defaultVariant ?? '');
+    this.targeting.set(envFlag.targeting);
   }
 
   private syncToJson(): void {
@@ -732,6 +855,10 @@ export class FlagEditorComponent implements OnInit, OnChanges {
       easyStartTime,
       easyEndTime,
       editorMode: this.editorMode(),
+      hasEnvironments: this.hasEnvironments(),
+      globalEnvironmentTimeEnabled: this.globalEnvironmentTimeEnabled(),
+      environmentStates: this.environmentStates(),
+      environmentTimeWindows: this.serializeEnvironmentTimeWindows(),
       variants: this.variants(),
       targeting: this.targeting() ?? null,
       metadata: this.metadata() ?? null,
@@ -796,7 +923,11 @@ export class FlagEditorComponent implements OnInit, OnChanges {
     if (!keyControl || keyControl.invalid) return false;
 
     const mode = this.editorMode();
-    if (mode === 'easy' && this.form.get('easyType')!.value === 'string') {
+    if (
+      mode === 'easy' &&
+      !this.hasEnvironments() &&
+      this.form.get('easyType')!.value === 'string'
+    ) {
       const onValueControl = this.form.get('easyStringOnValue');
       return !!onValueControl && onValueControl.valid;
     }
@@ -980,6 +1111,29 @@ export class FlagEditorComponent implements OnInit, OnChanges {
     this.environmentStates.set(states);
   }
 
+  getGlobalEnvironmentValue(): unknown {
+    const environments = this.environments();
+    if (environments.length === 0) {
+      const flagType = this.form.get('flagType')?.value as FlagType;
+      return this.getDefaultValueForType(flagType ?? 'boolean');
+    }
+
+    const firstEnvironment = environments[0].name.toLowerCase();
+    const firstValue = this.environmentStates()[firstEnvironment];
+    if (firstValue !== undefined) return firstValue;
+
+    const flagType = this.form.get('flagType')?.value as FlagType;
+    return this.getDefaultValueForType(flagType ?? 'boolean');
+  }
+
+  onGlobalEnvironmentValueChange(value: unknown): void {
+    const nextStates: Record<string, unknown> = {};
+    for (const env of this.environments()) {
+      nextStates[env.name.toLowerCase()] = value;
+    }
+    this.environmentStates.set(nextStates);
+  }
+
   onEnvironmentTypeChange(): void {
     const flagType = this.form.get('flagType')?.value as FlagType;
     // Reset all environment values to defaults for the new type
@@ -999,43 +1153,216 @@ export class FlagEditorComponent implements OnInit, OnChanges {
     const variants = generateEnvironmentVariants(envs, flagType, states);
 
     // Generate targeting
-    const targeting = generateEnvironmentTargeting(envs, this.getEnvironmentBooleanStates(), 'off');
+    const targeting = this.buildEnvironmentTimeAwareTargeting();
 
     return {
       state: this.form.get('state')!.value as FlagState,
       variants,
       defaultVariant: 'off',
       targeting: Object.keys(targeting).length > 0 ? targeting : undefined,
-      metadata: this.metadata() && Object.keys(this.metadata()!).length > 0 ? this.metadata() : undefined,
+      metadata:
+        this.metadata() && Object.keys(this.metadata()!).length > 0 ? this.metadata() : undefined,
     };
   }
 
-  private getEnvironmentBooleanStates(): Record<string, boolean> {
-    const flagType = this.form.get('flagType')?.value as FlagType;
-    const states = this.environmentStates();
-    const boolStates: Record<string, boolean> = {};
+  private buildEnvironmentTimeAwareTargeting(): Record<string, unknown> {
+    const environments = this.environments();
+    if (environments.length === 0) {
+      return {};
+    }
 
-    for (const env of this.environments()) {
+    const buildChain = (index: number): unknown => {
+      if (index >= environments.length) {
+        return 'off';
+      }
+
+      const env = environments[index];
       const envName = env.name.toLowerCase();
-      const value = states[envName];
+      const envRef = { $ref: `is${env.name.charAt(0).toUpperCase()}${env.name.slice(1)}` };
+      const envTimeBounds = this.getEnvironmentTimeWindowBounds(envName);
+      const envTimeCondition = this.buildTimestampConditionFromBounds(envTimeBounds);
+      const envCondition =
+        envTimeCondition !== null ? { and: [envRef, envTimeCondition] } : envRef;
 
-      // Determine if this environment is "enabled" based on flag type
-      switch (flagType) {
-        case 'boolean':
-          boolStates[envName] = value === true;
-          break;
-        case 'string':
-          boolStates[envName] = typeof value === 'string' && value.length > 0;
-          break;
-        case 'number':
-          boolStates[envName] = typeof value === 'number' && value !== 0;
-          break;
-        case 'object':
-          boolStates[envName] = typeof value === 'object' && value !== null && Object.keys(value).length > 0;
-          break;
+      return {
+        if: [envCondition, envName, buildChain(index + 1)],
+      };
+    };
+
+    const environmentChain = buildChain(0);
+    const globalTimeCondition = this.buildTimestampConditionFromBounds(this.getGlobalTimeWindowBounds());
+
+    if (globalTimeCondition !== null) {
+      return {
+        if: [globalTimeCondition, environmentChain, 'off'],
+      };
+    }
+
+    return (environmentChain as Record<string, unknown>) ?? {};
+  }
+
+  private buildTimestampConditionFromBounds(bounds: TimeWindowBounds | null): Record<string, unknown> | null {
+    if (!bounds) return null;
+
+    const conditions: Record<string, unknown>[] = [];
+    const varRef = { var: FlagEditorComponent.TIMESTAMP_CONTEXT_VAR };
+
+    if (bounds.start !== undefined) {
+      conditions.push({ '>=': [varRef, bounds.start] });
+    }
+
+    if (bounds.end !== undefined) {
+      conditions.push({ '<=': [varRef, bounds.end] });
+    }
+
+    if (conditions.length === 0) return null;
+    return conditions.length === 1 ? conditions[0] : { and: conditions };
+  }
+
+  private getGlobalTimeWindowBounds(): TimeWindowBounds | null {
+    if (!this.globalEnvironmentTimeEnabled()) return null;
+
+    const startDate = this.form.get('easyStartDate')?.value ?? null;
+    const startTime = this.form.get('easyStartTime')?.value ?? null;
+    const endDate = this.form.get('easyEndDate')?.value ?? null;
+    const endTime = this.form.get('easyEndTime')?.value ?? null;
+
+    const start = this.toUnixEpochSeconds(this.combineDateAndTime(startDate, startTime));
+    const end = this.toUnixEpochSeconds(this.combineDateAndTime(endDate, endTime));
+
+    if (start === null && end === null) return null;
+
+    const bounds: TimeWindowBounds = {};
+    if (start !== null) bounds.start = start;
+    if (end !== null) bounds.end = end;
+    return bounds;
+  }
+
+  private getEnvironmentTimeWindowBounds(envName: string): TimeWindowBounds | null {
+    const state = this.environmentTimeWindows()[envName.toLowerCase()];
+    if (!state) return null;
+
+    const start = this.toUnixEpochSeconds(this.combineDateAndTime(state.startDate, state.startTime));
+    const end = this.toUnixEpochSeconds(this.combineDateAndTime(state.endDate, state.endTime));
+
+    if (start === null && end === null) return null;
+
+    const bounds: TimeWindowBounds = {};
+    if (start !== null) bounds.start = start;
+    if (end !== null) bounds.end = end;
+    return bounds;
+  }
+
+  private parseEnvironmentTimingTargeting(targeting: Record<string, unknown> | undefined): {
+    global?: TimeWindowBounds;
+    perEnvironment: Record<string, TimeWindowBounds>;
+  } {
+    const result: { global?: TimeWindowBounds; perEnvironment: Record<string, TimeWindowBounds> } = {
+      perEnvironment: {},
+    };
+
+    if (!targeting) return result;
+
+    let cursor: unknown = targeting;
+    const maybeIf = this.asIfClause(cursor);
+    if (maybeIf) {
+      const maybeGlobal = this.extractTimestampBounds(maybeIf[0]);
+      if (maybeGlobal && maybeIf[2] === 'off') {
+        result.global = maybeGlobal;
+        cursor = maybeIf[1];
       }
     }
 
-    return boolStates;
+    this.parseEnvironmentChainTimeWindows(cursor, result.perEnvironment);
+    return result;
+  }
+
+  private parseEnvironmentChainTimeWindows(
+    node: unknown,
+    perEnvironment: Record<string, TimeWindowBounds>,
+  ): void {
+    const ifClause = this.asIfClause(node);
+    if (!ifClause) return;
+
+    const parsedCondition = this.extractEnvironmentCondition(ifClause[0]);
+    if (parsedCondition?.environmentName) {
+      const envName = parsedCondition.environmentName.toLowerCase();
+      if (parsedCondition.timeBounds) {
+        perEnvironment[envName] = parsedCondition.timeBounds;
+      }
+    }
+
+    this.parseEnvironmentChainTimeWindows(ifClause[2], perEnvironment);
+  }
+
+  private asIfClause(node: unknown): [unknown, unknown, unknown] | null {
+    if (!node || typeof node !== 'object') return null;
+    const ifValue = (node as Record<string, unknown>)['if'];
+    if (!Array.isArray(ifValue) || ifValue.length < 3) return null;
+    return [ifValue[0], ifValue[1], ifValue[2]];
+  }
+
+  private extractEnvironmentCondition(
+    condition: unknown,
+  ): { environmentName?: string; timeBounds?: TimeWindowBounds } | null {
+    if (!condition || typeof condition !== 'object') return null;
+
+    const conditionRecord = condition as Record<string, unknown>;
+    if (typeof conditionRecord['$ref'] === 'string') {
+      return { environmentName: this.environmentNameFromRef(conditionRecord['$ref']) };
+    }
+
+    if (Array.isArray(conditionRecord['and'])) {
+      const parts = conditionRecord['and'] as unknown[];
+      let environmentName: string | undefined;
+      let timeBounds: TimeWindowBounds | undefined;
+
+      for (const part of parts) {
+        if (part && typeof part === 'object') {
+          const partRecord = part as Record<string, unknown>;
+          if (typeof partRecord['$ref'] === 'string') {
+            environmentName = this.environmentNameFromRef(partRecord['$ref']);
+            continue;
+          }
+        }
+
+        const parsedTime = this.extractTimestampBounds(part);
+        if (parsedTime) {
+          timeBounds = parsedTime;
+        }
+      }
+
+      if (environmentName) {
+        return { environmentName, timeBounds };
+      }
+    }
+
+    return null;
+  }
+
+  private environmentNameFromRef(value: unknown): string | undefined {
+    if (typeof value !== 'string' || !value.startsWith('is') || value.length <= 2) {
+      return undefined;
+    }
+
+    return value.charAt(2).toLowerCase() + value.slice(3);
+  }
+
+  private timeWindowStateFromBounds(bounds: TimeWindowBounds): TimeWindowFormState {
+    return {
+      startDate: this.parseTimestampDate(bounds.start),
+      startTime: this.parseTimestampDate(bounds.start),
+      endDate: this.parseTimestampDate(bounds.end),
+      endTime: this.parseTimestampDate(bounds.end),
+    };
+  }
+
+  private serializeEnvironmentTimeWindows(): Record<string, TimeWindowBounds | null> {
+    const serialized: Record<string, TimeWindowBounds | null> = {};
+    for (const env of this.environments()) {
+      const envName = env.name.toLowerCase();
+      serialized[envName] = this.getEnvironmentTimeWindowBounds(envName);
+    }
+    return serialized;
   }
 }

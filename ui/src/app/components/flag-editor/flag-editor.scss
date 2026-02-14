@@ -209,6 +209,16 @@
   color: var(--color-text-secondary);
 }
 
+.environment-info-message {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  font-size: 0.82rem;
+}
+
 /* Actions */
 
 .panel-actions {
@@ -224,20 +234,51 @@
 .environment-mode {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 16px;
+
+  .global-time-window-section {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .global-environment-value-section {
+    padding: 12px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    background: var(--color-surface);
+
+    h3 {
+      margin: 0 0 8px 0;
+      font-size: 16px;
+      font-weight: 500;
+      color: var(--color-text);
+    }
+
+    .hint-text {
+      margin: 0 0 12px 0;
+      font-size: 14px;
+      color: var(--color-text-secondary);
+    }
+  }
+
+  mat-expansion-panel {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+  }
 
   .environment-values-section {
     h3 {
       margin: 0 0 8px 0;
       font-size: 16px;
       font-weight: 500;
-      color: rgba(0, 0, 0, 0.87);
+      color: var(--color-text);
     }
 
     .hint-text {
       margin: 0 0 16px 0;
       font-size: 14px;
-      color: rgba(0, 0, 0, 0.6);
+      color: var(--color-text-secondary);
     }
 
     .environment-value-item {
@@ -245,15 +286,22 @@
       flex-direction: column;
       gap: 8px;
       padding: 16px;
-      border: 1px solid rgba(0, 0, 0, 0.12);
+      border: 1px solid var(--color-border);
       border-radius: 4px;
       margin-bottom: 12px;
-      background: #fafafa;
+      background: var(--color-surface);
+
+      .environment-header-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 8px;
+      }
 
       .environment-label {
         font-weight: 500;
         font-size: 15px;
-        color: rgba(0, 0, 0, 0.87);
+        color: var(--color-text);
         margin-bottom: 8px;
       }
 

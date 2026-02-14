@@ -13,6 +13,7 @@ This is a web UI for the OpenFeature flagd service. It provides a web interface 
 Full-stack application with a Rust backend and Angular frontend.
 
 ### Backend (Rust/Axum)
+
 - **Web Framework**: Axum 0.7
 - **Async Runtime**: Tokio
 - **Middleware**: Tower (compression, tracing, static file serving)
@@ -21,6 +22,7 @@ Full-stack application with a Rust backend and Angular frontend.
 - **Port**: 3000 (configurable via `SERVER_PORT` env var)
 
 ### Frontend (Angular 21)
+
 - **Framework**: Angular 21 with standalone components
 - **State Management**: Signal-based `FlagStore` service (`ui/src/app/services/flag-store.ts`)
 - **API Client**: Auto-generated from OpenAPI spec via `npm run generate:api-client`
@@ -31,6 +33,7 @@ Full-stack application with a Rust backend and Angular frontend.
 ## Backend Key Components
 
 ### API Endpoints (`src/handlers/api/flags.rs`)
+
 - `GET /api/flags` - List all flag definition files
 - `POST /api/flags` - Create a new flag file (project)
 - `GET /api/flags/:name` - Get a flag file's contents
@@ -38,16 +41,19 @@ Full-stack application with a Rust backend and Angular frontend.
 - `DELETE /api/flags/:name` - Delete a flag file
 
 ### Health (`src/handlers/health.rs`)
+
 - `GET /health` - Liveness check
 - `GET /ready` - Readiness check
 
 ### Configuration (`src/config.rs`)
+
 - `SERVER_PORT` (default: 3000)
 - `STATIC_DIR` (default: `./public`)
 - `FLAGS_DIR` (default: `./flags`)
 - `FLAGD_SCHEMA_FILE` (default: `./schema/flagd-schema.json`)
 
 ### Error Handling (`src/error.rs`)
+
 - `AppError` enum: NotFound, BadRequest, InternalServerError
 - Returns JSON `{ error, status }`
 
@@ -56,10 +62,12 @@ Full-stack application with a Rust backend and Angular frontend.
 The UI treats each flag definition file as a "project" containing multiple feature flags.
 
 ### Project Management
+
 - **Sidebar** (`ui/src/app/components/project-list/`) - Lists all projects, create new, delete
 - **Project Detail** (`ui/src/app/components/project-detail/`) - Shows flags within a selected project
 
 ### Flag Management
+
 - **Flag Cards** (`ui/src/app/components/flag-card/`) - Summary view per flag showing type, state, variants, targeting badge
 - **Flag Editor** (`ui/src/app/components/flag-editor/`) - Modal form for creating/editing flags
   - Supports 4 flag types: boolean, string, number, object
@@ -68,6 +76,7 @@ The UI treats each flag definition file as a "project" containing multiple featu
   - Default variant selection
 
 ### Variant Editor (`ui/src/app/components/variants-editor/`)
+
 - Dynamic rows for adding/removing variants
 - Boolean: true/false select
 - String: text input
@@ -75,21 +84,25 @@ The UI treats each flag definition file as a "project" containing multiple featu
 - Object: JSON textarea with validation
 
 ### Targeting Rules Editor (`ui/src/app/components/targeting-editor/`)
+
 - **None mode**: No targeting rules
 - **Simple mode**: If / property / operator / value / then-variant / else-variant builder
   - Operators: equals, not equals, in list, starts with, ends with
 - **JSON mode**: Raw JSONLogic editor with templates (condition, fractional)
 
 ### Routing (`ui/src/app/app.routes.ts`)
+
 - `/` - Welcome page
 - `/projects/:name` - Project detail view
 
 ### Data Flow
+
 - `FlagStore` (`ui/src/app/services/flag-store.ts`) centralizes all state via Angular signals
 - API operates at file level; editing a single flag does read-modify-write of the full flags map
 - `FlagsService` (`ui/src/app/api-client/api/flags.service.ts`) is auto-generated from OpenAPI spec
 
 ### Models (`ui/src/app/models/flag.models.ts`)
+
 - `FlagDefinition`: state, variants, defaultVariant, targeting, metadata
 - `FlagEntry`: FlagDefinition + key
 - `FlagFileContent`: $schema + flags map
@@ -116,6 +129,7 @@ The UI treats each flag definition file as a "project" containing multiple featu
 ## Development
 
 ### Backend
+
 ```
 cargo check    # Compile check
 cargo test     # Run tests
@@ -125,6 +139,7 @@ cargo run      # Start server on port 3000
 ```
 
 ### Frontend
+
 ```
 cd ui
 npm install          # Install dependencies
@@ -153,6 +168,25 @@ For minimal diffs, format only changed files:
 cd ui && npx prettier --write <changed-files>
 ```
 
+### Frontend theming requirements (for Claude agents)
+
+The UI supports both light and dark themes. New or updated frontend components must be theme-aware.
+
+1. Never hard-code semantic UI colors in component styles (for example `#fafafa`, `#f5f5f5`, `#e0e0e0`, or `rgba(0, 0, 0, ...)`) for text, borders, surfaces, or state colors.
+2. Use the shared CSS theme variables from `ui/src/styles.scss`, especially:
+
+- `--color-bg`
+- `--color-surface`
+- `--color-border`
+- `--color-text`
+- `--color-text-secondary`
+- `--color-primary`, `--color-danger`, etc. for semantic states
+
+3. Keep Angular Material-driven colors coming from Material theme tokens in `ui/src/material-theme.scss`; avoid overriding Material internals with fixed colors.
+4. For dialogs/cards/rows in new features (including environment management UIs), ensure backgrounds, borders, labels, and helper text all use the shared theme variables so they render correctly in both `html` and `html[data-theme='dark']` modes.
+5. During review, grep changed SCSS for hard-coded color literals and replace them with theme tokens unless the value is intentionally non-theme semantic (for example translucent overlay/backdrop effects).
+
 ### Full stack dev
+
 1. Terminal 1: `cargo run` (API on :3000)
 2. Terminal 2: `cd ui && npm start` (UI on :4200 with proxy)

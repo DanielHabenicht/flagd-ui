@@ -1,4 +1,26 @@
 {
+  "$evaluators": {
+    "isAnother": {
+      "in": [
+        {
+          "var": "environment"
+        },
+        [
+          "prod"
+        ]
+      ]
+    },
+    "isTest": {
+      "in": [
+        {
+          "var": "environment"
+        },
+        [
+          "aloas"
+        ]
+      ]
+    }
+  },
   "$schema": "https://flagd.dev/schema/v0/flags.json",
   "flags": {
     "background-color": {
@@ -14,9 +36,27 @@
     "show-welcome-banner": {
       "defaultVariant": "off",
       "state": "ENABLED",
+      "targeting": {
+        "if": [
+          {
+            "$ref": "isTest"
+          },
+          "test",
+          {
+            "if": [
+              {
+                "$ref": "isAnother"
+              },
+              "another",
+              "off"
+            ]
+          }
+        ]
+      },
       "variants": {
+        "another": false,
         "off": false,
-        "on": true
+        "test": true
       }
     },
     "test": {
@@ -42,6 +82,23 @@
       "variants": {
         "off": false,
         "on": true
+      }
+    },
+    "testa": {
+      "defaultVariant": "off",
+      "state": "ENABLED",
+      "targeting": {
+        "if": [
+          {
+            "$ref": "isTest"
+          },
+          "test",
+          "off"
+        ]
+      },
+      "variants": {
+        "off": false,
+        "test": true
       }
     }
   },
