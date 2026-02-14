@@ -27,11 +27,16 @@
   display: grid;
   grid-template-columns: minmax(0, 2fr) minmax(320px, 1fr);
   gap: 24px;
-  align-items: start;
+  align-items: stretch;
+  height: 100%;
+  min-height: 0;
 }
 
 .project-detail-layout.with-inline-editor .project-detail {
   max-width: none;
+  height: 100%;
+  min-height: 0;
+  overflow: auto;
 }
 
 .project-detail {
@@ -40,9 +45,16 @@
 }
 
 .inline-editor {
-  position: sticky;
-  top: 24px;
+  display: flex;
+  flex-direction: column;
   min-width: 0;
+  min-height: 0;
+  height: 100%;
+
+  app-flag-editor {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
 }
 
 .detail-header {

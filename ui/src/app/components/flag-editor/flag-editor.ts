@@ -106,11 +106,25 @@ export class FlagEditorComponent implements OnInit, OnChanges {
   environmentStates = signal<Record<string, unknown>>({});
   environmentTimeWindows = signal<Record<string, TimeWindowFormState>>({});
   globalEnvironmentTimeEnabled = signal(false);
+  environmentFilter = signal('');
 
   // Expose JSON to template for object editing
   readonly JSON = JSON;
 
   readonly environments = computed(() => this.store.currentEnvironments());
+  readonly filteredEnvironments = computed(() => {
+    const filterValue = this.environmentFilter().trim().toLowerCase();
+    const allEnvironments = this.environments();
+    if (!filterValue) return allEnvironments;
+
+    return allEnvironments.filter((environment) => {
+      const aliases = Array.isArray(environment.aliases) ? environment.aliases : [];
+      const haystack = [environment.displayName, environment.name, ...aliases]
+        .filter((value): value is string => typeof value === 'string')
+        .map((value) => value.toLowerCase());
+      return haystack.some((value) => value.includes(filterValue));
+    });
+  });
   readonly hasEnvironments = computed(() => this.environments().length > 0);
   readonly hasDefinitionTargeting = computed(() => {
     const flag = this.flag();
@@ -979,6 +993,11 @@ export class FlagEditorComponent implements OnInit, OnChanges {
       states[env.name.toLowerCase()] = this.getDefaultValueForType(flagType);
     }
     this.environmentStates.set(states);
+  }
+
+  onEnvironmentFilterInput(event: Event): void {
+    const target = event.target as HTMLInputElement | null;
+    this.environmentFilter.set(target?.value ?? '');
   }
 
   buildEnvironmentBasedFlag(): FlagDefinition {

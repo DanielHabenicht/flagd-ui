@@ -40,6 +40,7 @@ export class EnvironmentManagerComponent {
   });
 
   readonly environments = signal<Environment[]>([]);
+  readonly environmentFilter = signal('');
   readonly editingIndex = signal<number | null>(null);
   readonly aliasesInputValue = signal('');
   readonly separatorKeysCodes: readonly number[] = [ENTER, COMMA];
@@ -51,6 +52,21 @@ export class EnvironmentManagerComponent {
   readonly isEditing = computed(() => this.editingIndex() !== null);
   readonly isDialogMode = computed(() => !!this.dialogRef && !this.embedded());
   readonly hasLocalChanges = signal(false);
+  readonly saveDisabled = computed(() => !this.hasLocalChanges() || this.store.loading());
+  readonly filteredEnvironments = computed(() => {
+    const query = this.environmentFilter().trim().toLowerCase();
+    const entries = this.environments().map((env, index) => ({ env, index }));
+
+    if (!query) {
+      return entries;
+    }
+
+    return entries.filter(({ env }) => {
+      if (env.name.toLowerCase().includes(query)) return true;
+      if (env.displayName.toLowerCase().includes(query)) return true;
+      return env.aliases.some((alias) => alias.toLowerCase().includes(query));
+    });
+  });
 
   private readonly syncEnvironmentsFromStore = effect(() => {
     const currentEnvs = this.store.currentEnvironments();
@@ -168,6 +184,11 @@ export class EnvironmentManagerComponent {
   onAliasesInput(event: Event): void {
     const target = event.target as HTMLInputElement;
     this.aliasesInputValue.set(target.value);
+  }
+
+  onEnvironmentFilterInput(event: Event): void {
+    const target = event.target as HTMLInputElement;
+    this.environmentFilter.set(target.value);
   }
 
   save(): void {
