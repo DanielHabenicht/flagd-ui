@@ -1,0 +1,5 @@
+node_modules
+dist
+.angular
+test-results
+src/app/api-client

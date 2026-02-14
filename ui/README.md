@@ -44,6 +44,20 @@ To execute unit tests with the [Vitest](https://vitest.dev/) test runner, use th
 ng test
 ```
 
+## Formatting
+
+Use Prettier to format code in this project:
+
+```bash
+npm run format
+```
+
+To check formatting without modifying files:
+
+```bash
+npm run format:check
+```
+
 ## Running end-to-end tests
 
 For end-to-end (e2e) testing, run:
