@@ -30,13 +30,20 @@ STORAGE_URI=file:///path/to/flags cargo run
 ### Azure Blob Storage
 
 ```bash
-# Using Azure Blob Storage
+# Using Azure Blob Storage with connection string (recommended)
+export AZURE_STORAGE_CONNECTION_STRING="DefaultEndpointsProtocol=https;AccountName=myaccount;AccountKey=...;EndpointSuffix=core.windows.net"
+cargo run -- --storage-uri https://myaccount.blob.core.windows.net/feature-flags
+
+# Or include container in connection string
+cargo run -- --storage-uri "DefaultEndpointsProtocol=https;AccountName=myaccount;AccountKey=...;EndpointSuffix=core.windows.net;Container=feature-flags"
+
+# Using URL with account key (legacy)
 export AZURE_STORAGE_ACCOUNT_KEY="your-account-key-here"
 cargo run -- --storage-uri https://myaccount.blob.core.windows.net/feature-flags
 
 # Or via environment variable
 export STORAGE_URI=https://myaccount.blob.core.windows.net/feature-flags
-export AZURE_STORAGE_ACCOUNT_KEY="your-account-key-here"
+export AZURE_STORAGE_CONNECTION_STRING="DefaultEndpointsProtocol=https;AccountName=myaccount;AccountKey=...;EndpointSuffix=core.windows.net"
 cargo run
 ```
 
@@ -47,6 +54,13 @@ For local development and testing with Azure Blob Storage, you can use [Azurite]
 ```bash
 # Start Azurite using Docker Compose
 docker compose up -d azurite
+
+# Use Azurite with connection string (recommended)
+export AZURE_STORAGE_CONNECTION_STRING="DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://127.0.0.1:10000/devstoreaccount1"
+cargo run -- --storage-uri http://127.0.0.1:10000/devstoreaccount1/feature-flags
+
+# Or use connection string directly in storage URI
+cargo run -- --storage-uri "DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://127.0.0.1:10000/devstoreaccount1;Container=feature-flags"
 
 # Use Azurite endpoint (uses well-known devstoreaccount1 credentials automatically)
 cargo run -- --storage-uri http://127.0.0.1:10000/devstoreaccount1/feature-flags
@@ -62,7 +76,8 @@ cargo run -- --storage-uri http://127.0.0.1:10000/devstoreaccount1/feature-flags
     
     Supported formats:
     - Local filesystem: file:///path/to/flags or /path/to/flags or ./flags
-    - Azure Blob Storage: https://<account>.blob.core.windows.net/<container>
+    - Azure Blob Storage URL: https://<account>.blob.core.windows.net/<container>
+    - Azure connection string: DefaultEndpointsProtocol=https;AccountName=...;AccountKey=...;Container=<container>
     - Azurite (local): http://127.0.0.1:10000/devstoreaccount1/<container>
     
     [env: STORAGE_URI=]
@@ -90,7 +105,8 @@ cargo run -- --storage-uri http://127.0.0.1:10000/devstoreaccount1/feature-flags
 - `SERVER_PORT`: HTTP server port (default: 3000)
 - `STATIC_DIR`: Directory for static files (default: ./public)
 - `FLAGD_SCHEMA_FILE`: Path to flagd JSON schema (default: ./schema/flagd-schema.json)
-- `AZURE_STORAGE_ACCOUNT_KEY` or `AZURE_STORAGE_KEY`: Azure Storage account key (required for Azure Blob Storage)
+- `AZURE_STORAGE_CONNECTION_STRING`: Azure Storage connection string (recommended for Azure Blob Storage)
+- `AZURE_STORAGE_ACCOUNT_KEY` or `AZURE_STORAGE_KEY`: Azure Storage account key (legacy, use connection string instead)
 
 ## Architecture
 

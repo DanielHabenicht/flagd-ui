@@ -26,6 +26,12 @@ impl AzureStorage {
     fn parse_uri(uri: &str) -> AppResult<ContainerClient> {
         // Expected format: https://<account>.blob.core.windows.net/<container>
         // Or for Azurite: http://127.0.0.1:10000/<account>/<container>
+        // Or connection string format
+        
+        // Check if it's a connection string
+        if uri.contains("AccountName=") && uri.contains("AccountKey=") {
+            return Self::parse_connection_string(uri);
+        }
         
         // Check if it's a full blob URL
         if uri.starts_with("http://") || uri.starts_with("https://") {
@@ -51,6 +57,11 @@ impl AzureStorage {
                     "devstoreaccount1"
                 };
                 
+                // Check for connection string in environment variable
+                if let Ok(conn_str) = std::env::var("AZURE_STORAGE_CONNECTION_STRING") {
+                    return Self::parse_connection_string_with_container(&conn_str, container_name);
+                }
+                
                 // Use Azurite's default account key
                 let account_key = "Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==";
                 
@@ -71,12 +82,17 @@ impl AzureStorage {
                     AppError::BadRequest("Could not extract account name from URI".to_string())
                 })?;
 
-                // Try to get credentials from environment
+                // Check for connection string in environment variable first
+                if let Ok(conn_str) = std::env::var("AZURE_STORAGE_CONNECTION_STRING") {
+                    return Self::parse_connection_string_with_container(&conn_str, container_name);
+                }
+
+                // Fall back to account key from environment
                 let account_key = std::env::var("AZURE_STORAGE_ACCOUNT_KEY")
                     .or_else(|_| std::env::var("AZURE_STORAGE_KEY"))
                     .map_err(|_| {
                         AppError::BadRequest(
-                            "Azure Storage account key not found. Set AZURE_STORAGE_ACCOUNT_KEY or AZURE_STORAGE_KEY environment variable".to_string()
+                            "Azure Storage credentials not found. Set AZURE_STORAGE_CONNECTION_STRING or AZURE_STORAGE_ACCOUNT_KEY environment variable".to_string()
                         )
                     })?;
 
@@ -90,9 +106,83 @@ impl AzureStorage {
             }
         } else {
             Err(AppError::BadRequest(
-                "URI must start with http:// or https://".to_string()
+                "URI must start with http:// or https:// or be a connection string".to_string()
             ))
         }
+    }
+
+    /// Parse connection string and extract container name from URI
+    fn parse_connection_string_with_container(connection_string: &str, container_name: &str) -> AppResult<ContainerClient> {
+        // Parse connection string manually
+        let (account_name, account_key) = Self::extract_credentials_from_connection_string(connection_string)?;
+        
+        let storage_credentials = StorageCredentials::access_key(
+            account_name.clone(),
+            account_key
+        );
+        
+        let blob_service = BlobServiceClient::new(&account_name, storage_credentials);
+        Ok(blob_service.container_client(container_name))
+    }
+
+    /// Parse connection string format (expects container name at the end after semicolon)
+    /// Format: DefaultEndpointsProtocol=https;AccountName=...;AccountKey=...;EndpointSuffix=...;Container=<container>
+    fn parse_connection_string(uri: &str) -> AppResult<ContainerClient> {
+        // Extract container name if present in the connection string
+        let mut connection_string = uri.to_string();
+        let mut container_name = None;
+        
+        // Check if Container= is specified
+        if let Some(container_idx) = uri.rfind(";Container=") {
+            container_name = Some(uri[container_idx + 11..].to_string());
+            connection_string = uri[..container_idx].to_string();
+        } else if let Some(container_idx) = uri.rfind("Container=") {
+            // Handle case where Container= is at the start
+            if container_idx == 0 || &uri[container_idx-1..container_idx] == ";" {
+                container_name = Some(uri[container_idx + 10..].to_string());
+                if container_idx > 0 {
+                    connection_string = uri[..container_idx-1].to_string();
+                } else {
+                    return Err(AppError::BadRequest(
+                        "Connection string must include AccountName and AccountKey".to_string()
+                    ));
+                }
+            }
+        }
+        
+        let container = container_name.ok_or_else(|| {
+            AppError::BadRequest(
+                "Container name not specified. Add ';Container=<name>' to connection string or use URL format".to_string()
+            )
+        })?;
+        
+        Self::parse_connection_string_with_container(&connection_string, &container)
+    }
+
+    /// Extract account name and key from connection string
+    fn extract_credentials_from_connection_string(connection_string: &str) -> AppResult<(String, String)> {
+        let mut account_name = None;
+        let mut account_key = None;
+        
+        for pair in connection_string.split(';') {
+            if let Some((key, value)) = pair.split_once('=') {
+                match key {
+                    "AccountName" => account_name = Some(value.to_string()),
+                    "AccountKey" => account_key = Some(value.to_string()),
+                    _ => {}
+                }
+            }
+        }
+        
+        let name = account_name.ok_or_else(|| {
+            AppError::BadRequest("Connection string missing AccountName".to_string())
+        })?;
+        
+        let key = account_key.ok_or_else(|| {
+            AppError::BadRequest("Connection string missing AccountKey".to_string())
+        })?;
+        
+        Ok((name, key))
     }
 
     /// Validate blob name to prevent path traversal

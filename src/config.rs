@@ -10,7 +10,8 @@ pub struct CliArgs {
     /// 
     /// Supported formats:
     /// - Local filesystem: file:///path/to/flags or /path/to/flags or ./flags
-    /// - Azure Blob Storage: https://<account>.blob.core.windows.net/<container>
+    /// - Azure Blob Storage URL: https://<account>.blob.core.windows.net/<container>
+    /// - Azure connection string: DefaultEndpointsProtocol=https;AccountName=...;AccountKey=...;Container=<container>
     /// - Azurite (local): http://127.0.0.1:10000/devstoreaccount1/<container>
     #[arg(long, env = "STORAGE_URI")]
     pub storage_uri: Option<String>,
