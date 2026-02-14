@@ -5,8 +5,8 @@ type FlagFile = {
 };
 
 async function mockFlagsApi(page: Page): Promise<void> {
-  const projectNames: string[] = ['demo.flagd.json', 'test.flagd.json'];
-  const projectData: Record<string, FlagFile> = {
+  const flagsFileNames: string[] = ['demo.flagd.json', 'test.flagd.json'];
+  const flagsFileData: Record<string, FlagFile> = {
     'demo.flagd.json': {
       flags: {
         'checkout-enabled': {
@@ -30,7 +30,7 @@ async function mockFlagsApi(page: Page): Promise<void> {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify({ files: projectNames }),
+        body: JSON.stringify({ files: flagsFileNames }),
       });
       return;
     }
@@ -40,7 +40,7 @@ async function mockFlagsApi(page: Page): Promise<void> {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify(projectData[name] ?? { flags: {} }),
+        body: JSON.stringify(flagsFileData[name] ?? { flags: {} }),
       });
       return;
     }

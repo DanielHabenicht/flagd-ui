@@ -14,7 +14,7 @@ import { RemoteApi } from '../../services/remote-api';
 import { FlagFileContent } from '../../models/flag.models';
 
 @Component({
-  selector: 'app-new-project-dialog',
+  selector: 'app-new-flags-file-dialog',
   standalone: true,
   imports: [
     FormsModule,
@@ -26,18 +26,18 @@ import { FlagFileContent } from '../../models/flag.models';
     MatTabsModule,
     MatProgressBarModule,
   ],
-  templateUrl: './new-project-dialog.html',
-  styleUrl: './new-project-dialog.scss',
+  templateUrl: './new-flags-file-dialog.html',
+  styleUrl: './new-flags-file-dialog.scss',
 })
-export class NewProjectDialogComponent {
-  private readonly dialogRef = inject(MatDialogRef<NewProjectDialogComponent>);
+export class NewFlagsFileDialogComponent {
+  private readonly dialogRef = inject(MatDialogRef<NewFlagsFileDialogComponent>);
   private readonly store = inject(FlagStore);
   private readonly http = inject(HttpClient);
   private readonly backendRegistry = inject(BackendRegistry);
   private readonly remoteApi = inject(RemoteApi);
 
-  // Empty project tab
-  projectName = '';
+  // Empty flags-file tab
+  flagsFileName = '';
 
   // From URL tab
   fileUrl = '';
@@ -51,10 +51,10 @@ export class NewProjectDialogComponent {
   backendError = '';
   discoveredFiles: string[] = [];
 
-  createEmptyProject(): void {
-    const name = this.projectName.trim();
+  createEmptyFlagsFile(): void {
+    const name = this.flagsFileName.trim();
     if (!name) return;
-    this.store.createLocalProject(name);
+    this.store.createLocalFlagsFile(name);
     this.dialogRef.close();
   }
 
@@ -80,7 +80,7 @@ export class NewProjectDialogComponent {
           name = name.replace(/\.flagd\.json$/, '').replace(/\.json$/, '');
           if (!name) name = 'imported';
 
-          this.store.importLocalProject(name, content);
+          this.store.importLocalFlagsFile(name, content);
           this.dialogRef.close();
         } catch {
           this.urlError = 'Failed to parse JSON file';
@@ -106,7 +106,7 @@ export class NewProjectDialogComponent {
     this.backendError = '';
     this.discoveredFiles = [];
 
-    this.remoteApi.listProjects(url).subscribe({
+    this.remoteApi.listFlagsFiles(url).subscribe({
       next: (files) => {
         this.discoveredFiles = files;
         this.backendLoading = false;
@@ -128,7 +128,7 @@ export class NewProjectDialogComponent {
     }
     const label = this.backendLabel.trim() || undefined;
     this.backendRegistry.addBackend(url, label);
-    this.store.loadProjects();
+    this.store.loadFlagsFiles();
     this.dialogRef.close();
   }
 

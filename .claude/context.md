@@ -24,9 +24,9 @@ Full-stack application with a Rust backend and Angular frontend.
 ### Frontend (Angular 21)
 
 - **Framework**: Angular 21 with standalone components
-- **State Management**: Signal-based `FlagStore` service (`ui/src/app/services/flag-store.ts`)
+- **State Management**: NGXS (`@ngxs/store`) with a facade service (`ui/src/app/services/flag-store.ts`)
 - **API Client**: Auto-generated from OpenAPI spec via `npm run generate:api-client`
-- **Styling**: Plain CSS with CSS custom properties (no component library)
+- **Styling**: Angular Material + CSS custom properties
 - **Dev Port**: 4200 with proxy to backend on 3000 (`ui/proxy.conf.json`)
 - **Build Output**: `public/` (served by the Rust backend in production)
 
@@ -35,7 +35,7 @@ Full-stack application with a Rust backend and Angular frontend.
 ### API Endpoints (`src/handlers/api/flags.rs`)
 
 - `GET /api/flags` - List all flag definition files
-- `POST /api/flags` - Create a new flag file (project)
+- `POST /api/flags` - Create a new flags-file
 - `GET /api/flags/:name` - Get a flag file's contents
 - `PUT /api/flags/:name` - Update a flag file
 - `DELETE /api/flags/:name` - Delete a flag file
@@ -59,21 +59,26 @@ Full-stack application with a Rust backend and Angular frontend.
 
 ## Frontend Features
 
-The UI treats each flag definition file as a "project" containing multiple feature flags.
+The UI treats each flag definition file as a "flags-file" containing multiple feature flags.
 
-### Project Management
+### Flags-File Management
 
-- **Sidebar** (`ui/src/app/components/project-list/`) - Lists all projects, create new, delete
-- **Project Detail** (`ui/src/app/components/project-detail/`) - Shows flags within a selected project
+- **Sidebar** (`ui/src/app/components/flags-file-list/`) - Lists all flags-files, create new, delete
+- **Flags-File Detail** (`ui/src/app/components/flags-file-detail/`) - Shows flags within a selected flags-file
 
 ### Flag Management
 
-- **Flag Cards** (`ui/src/app/components/flag-card/`) - Summary view per flag showing type, state, variants, targeting badge
-- **Flag Editor** (`ui/src/app/components/flag-editor/`) - Modal form for creating/editing flags
+- **Flags-File Detail Table** (`ui/src/app/components/flags-file-detail/`) - Table/list view per flag showing key, type, state, variants, and targeting
+- **Flag Editor** (`ui/src/app/components/flag-editor/`) - Form for creating/editing flags
   - Supports 4 flag types: boolean, string, number, object
   - Flag state: ENABLED / DISABLED
   - Variant management with type-appropriate inputs
   - Default variant selection
+
+### Environment & Playground
+
+- **Environment Manager** (`ui/src/app/components/environment-manager/`) - Manage `$evaluators` entries for multi-environment targeting
+- **Playground Drawer** (`ui/src/app/components/playground-drawer/`) - Evaluate selected flags locally or against configured remote evaluators
 
 ### Variant Editor (`ui/src/app/components/variants-editor/`)
 
@@ -93,21 +98,33 @@ The UI treats each flag definition file as a "project" containing multiple featu
 ### Routing (`ui/src/app/app.routes.ts`)
 
 - `/` - Welcome page
-- `/projects/:name` - Project detail view
+- `/flags-files/local/:name` - Local flags-file detail view
+- `/flags-files/remote/:backendId/:name` - Remote flags-file detail view
 
 ### Data Flow
 
-- `FlagStore` (`ui/src/app/services/flag-store.ts`) centralizes all state via Angular signals
+- `FlagStore` (`ui/src/app/services/flag-store.ts`) is an NGXS facade used by components
+- `FlagStoreState` (`ui/src/app/state/flag-store.state.ts`) owns flags-files, selected flags-file, flags, metadata, evaluators, backends, loading, and errors
+- `UiPreferencesState` (`ui/src/app/state/ui-preferences.state.ts`) stores theme mode
+- `PlaygroundPreferencesState` (`ui/src/app/state/playground-preferences.state.ts`) stores playground servers and drawer height
+- NGXS storage plugin persists selected state slices (`flagStore.localFlagsFiles`, `flagStore.backends`, `uiPreferences.themeMode`, `playgroundPreferences.*`)
 - API operates at file level; editing a single flag does read-modify-write of the full flags map
 - `FlagsService` (`ui/src/app/api-client/api/flags.service.ts`) is auto-generated from OpenAPI spec
 
 ### Models (`ui/src/app/models/flag.models.ts`)
 
+- `FlagsFileEntry`: file name + source (`local`/`remote`) + optional backend URL
 - `FlagDefinition`: state, variants, defaultVariant, targeting, metadata
 - `FlagEntry`: FlagDefinition + key
 - `FlagFileContent`: $schema + flags map
+- `Environment`/`Evaluator`: multi-environment targeting model types
 - `inferFlagType()`: determines flag type from variant values
 - `getDefaultVariants()`: returns default variants for a given type
+
+### Naming Convention Notes
+
+- Current UI terminology is `flags-file` (routes, state actions/selectors, and primary store facade methods).
+- Legacy `project` component files may still exist in `ui/src/app/components/project-list/` as unused leftovers; active UI uses `flags-file-*` components.
 
 ## Schema (`schema/`)
 
@@ -123,6 +140,8 @@ The UI treats each flag definition file as a "project" containing multiple featu
 - `ui/package.json` - Angular dependencies and scripts
 - `ui/angular.json` - Angular CLI configuration
 - `ui/src/app/app.config.ts` - Angular providers (router, HTTP, API client)
+- `ui/src/app/state/` - NGXS states and action definitions
+- `ui/src/app/services/flag-store.ts` - NGXS facade consumed by UI components
 - `ui/src/app/api-client/` - Auto-generated API client (do not edit manually)
 - `public/` - Built Angular assets (generated by `cd ui && npm run build`)
 
@@ -146,6 +165,7 @@ npm install          # Install dependencies
 npm start            # Dev server on port 4200 (proxies /api to :3000)
 npm run build        # Production build to ../public
 npm run generate:api-client  # Regenerate API client from OpenAPI spec
+npm test -- --watch=false  # Run unit tests (Vitest)
 ```
 
 ### Frontend formatting requirements (for Claude agents)

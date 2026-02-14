@@ -3,25 +3,25 @@ import { Store } from '@ngxs/store';
 import {
   FlagDefinition,
   FlagEntry,
+  FlagsFileEntry,
   FlagFileContent,
   MetadataMap,
-  ProjectEntry,
   Evaluator,
   FileGroup,
   Environment,
 } from '../models/flag.models';
 import {
-  CreateLocalProject,
-  CreateRemoteProject,
+  CreateLocalFlagsFile,
+  CreateRemoteFlagsFile,
   DeleteFlag,
-  DeleteProject,
-  ImportLocalProject,
-  LoadProjects,
+  DeleteFlagsFile,
+  ImportLocalFlagsFile,
+  LoadFlagsFiles,
   RenameFlag,
   SaveFlag,
-  SaveProjectMetadata,
-  SelectProject,
-  SelectProjectByRoute,
+  SaveFlagsFileMetadata,
+  SelectFlagsFile,
+  SelectFlagsFileByRoute,
   SetHasDefaultBackend,
   UpdateEvaluators,
 } from '../state/flag-store.actions';
@@ -31,8 +31,8 @@ import { FlagStoreState } from '../state/flag-store.state';
 export class FlagStore {
   private readonly ngxsStore = inject(Store);
 
-  readonly projects = this.ngxsStore.selectSignal(FlagStoreState.projects);
-  readonly currentProject = this.ngxsStore.selectSignal(FlagStoreState.currentProject);
+  readonly flagsFiles = this.ngxsStore.selectSignal(FlagStoreState.flagsFiles);
+  readonly currentFlagsFile = this.ngxsStore.selectSignal(FlagStoreState.currentFlagsFile);
   readonly currentFlags = this.ngxsStore.selectSignal(FlagStoreState.currentFlags);
   readonly currentEvaluators = this.ngxsStore.selectSignal(FlagStoreState.currentEvaluators);
   readonly currentMetadata = this.ngxsStore.selectSignal(FlagStoreState.currentMetadata);
@@ -43,31 +43,30 @@ export class FlagStore {
   readonly flagEntries = this.ngxsStore.selectSignal(FlagStoreState.flagEntries);
   readonly fileGroups = this.ngxsStore.selectSignal(FlagStoreState.fileGroups);
 
-  readonly currentProjectName = computed(() => this.currentProject()?.name ?? null);
+  readonly currentFlagsFileName = computed(() => this.currentFlagsFile()?.name ?? null);
 
-  loadProjects(): void {
-    this.ngxsStore.dispatch(new LoadProjects());
+  loadFlagsFiles(): void {
+    this.ngxsStore.dispatch(new LoadFlagsFiles());
   }
 
-  selectProject(entry: ProjectEntry): void {
-    this.ngxsStore.dispatch(new SelectProject(entry));
+  selectFlagsFile(entry: FlagsFileEntry): void {
+    this.ngxsStore.dispatch(new SelectFlagsFile(entry));
   }
 
-  /** Find a ProjectEntry by source parameters and select it */
-  selectProjectByRoute(source: string, name: string, backendId?: string): void {
-    this.ngxsStore.dispatch(new SelectProjectByRoute(source, name, backendId));
+  selectFlagsFileByRoute(source: string, name: string, backendId?: string): void {
+    this.ngxsStore.dispatch(new SelectFlagsFileByRoute(source, name, backendId));
   }
 
-  createLocalProject(name: string): void {
-    this.ngxsStore.dispatch(new CreateLocalProject(name));
+  createLocalFlagsFile(name: string): void {
+    this.ngxsStore.dispatch(new CreateLocalFlagsFile(name));
   }
 
-  createRemoteProject(backendUrl: string, name: string): void {
-    this.ngxsStore.dispatch(new CreateRemoteProject(backendUrl, name));
+  createRemoteFlagsFile(backendUrl: string, name: string): void {
+    this.ngxsStore.dispatch(new CreateRemoteFlagsFile(backendUrl, name));
   }
 
-  deleteProject(entry: ProjectEntry): void {
-    this.ngxsStore.dispatch(new DeleteProject(entry));
+  deleteFlagsFile(entry: FlagsFileEntry): void {
+    this.ngxsStore.dispatch(new DeleteFlagsFile(entry));
   }
 
   saveFlag(key: string, flag: FlagDefinition): void {
@@ -82,21 +81,21 @@ export class FlagStore {
     this.ngxsStore.dispatch(new RenameFlag(oldKey, newKey, flag));
   }
 
-  importLocalProject(name: string, content: FlagFileContent): void {
-    this.ngxsStore.dispatch(new ImportLocalProject(name, content));
+  importLocalFlagsFile(name: string, content: FlagFileContent): void {
+    this.ngxsStore.dispatch(new ImportLocalFlagsFile(name, content));
   }
 
-  saveProjectMetadata(metadata: MetadataMap | undefined): void {
-    this.ngxsStore.dispatch(new SaveProjectMetadata(metadata));
+  saveFlagsFileMetadata(metadata: MetadataMap | undefined): void {
+    this.ngxsStore.dispatch(new SaveFlagsFileMetadata(metadata));
   }
 
-  downloadCurrentProject(): void {
-    const project = this.currentProject();
+  downloadCurrentFlagsFile(): void {
+    const flagsFile = this.currentFlagsFile();
     const flags = this.currentFlags();
-    if (!project || !flags) return;
+    if (!flagsFile || !flags) return;
 
     const content: FlagFileContent = {
-      ...this.buildProjectContent(flags, this.currentMetadata()),
+      ...this.buildFlagsFileContent(flags, this.currentMetadata()),
     };
 
     const blob = new Blob([JSON.stringify(content, null, 2)], {
@@ -105,12 +104,12 @@ export class FlagStore {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${project.name}.flagd.json`;
+    a.download = `${flagsFile.name}.flagd.json`;
     a.click();
     URL.revokeObjectURL(url);
   }
 
-  private buildProjectContent(
+  private buildFlagsFileContent(
     flags: Record<string, FlagDefinition>,
     metadata: MetadataMap | undefined,
   ): FlagFileContent {
@@ -132,7 +131,7 @@ export class FlagStore {
     return content;
   }
 
-  /** Update evaluators for the current project */
+  /** Update evaluators for the current flags-file */
   updateEvaluators(evaluators: Record<string, Evaluator> | undefined): void {
     this.ngxsStore.dispatch(new UpdateEvaluators(evaluators));
   }

@@ -8,10 +8,10 @@ import { MatDialog } from '@angular/material/dialog';
 import { FlagStore } from '../../services/flag-store';
 import { BackendRegistry } from '../../services/backend-registry';
 import { FlagsFileEntry } from '../../models/flag.models';
-import { NewProjectDialogComponent } from '../new-project-dialog/new-project-dialog';
+import { NewFlagsFileDialogComponent } from '../new-flags-file-dialog/new-flags-file-dialog';
 
 @Component({
-  selector: 'app-project-list',
+  selector: 'app-flags-file-list',
   standalone: true,
   imports: [
     RouterLink,
@@ -21,10 +21,10 @@ import { NewProjectDialogComponent } from '../new-project-dialog/new-project-dia
     MatIconModule,
     MatDividerModule,
   ],
-  templateUrl: './project-list.html',
-  styleUrl: './project-list.scss',
+  templateUrl: './flags-file-list.html',
+  styleUrl: './flags-file-list.scss',
 })
-export class ProjectListComponent implements OnInit {
+export class FlagsFileListComponent implements OnInit {
   readonly store = inject(FlagStore);
   private readonly dialog = inject(MatDialog);
   private readonly backendRegistry = inject(BackendRegistry);
@@ -41,24 +41,28 @@ export class ProjectListComponent implements OnInit {
   }
 
   openNewFlagsFileDialog(): void {
-    this.dialog.open(NewProjectDialogComponent, {
+    this.dialog.open(NewFlagsFileDialogComponent, {
       width: '520px',
     });
   }
 
-  getFlagsFileRoute(project: FlagsFileEntry): string[] {
-    if (project.source === 'local') {
-      return ['/flags-files', 'local', project.name];
+  getFlagsFileRoute(flagsFile: FlagsFileEntry): string[] {
+    if (flagsFile.source === 'local') {
+      return ['/flags-files', 'local', flagsFile.name];
     }
-    const backend = this.backendRegistry.getBackends().find((b) => b.url === project.backendUrl);
-    return ['/flags-files', 'remote', backend?.id ?? '', project.name];
+    const backend = this.backendRegistry
+      .getBackends()
+      .find((entry) => entry.url === flagsFile.backendUrl);
+    return ['/flags-files', 'remote', backend?.id ?? '', flagsFile.name];
   }
 
-  deleteFlagsFile(event: Event, project: FlagsFileEntry): void {
+  deleteFlagsFile(event: Event, flagsFile: FlagsFileEntry): void {
     event.preventDefault();
     event.stopPropagation();
-    if (confirm(`Delete flags-file "${project.name}"? This will remove all flags in this file.`)) {
-      this.store.deleteProject(project);
+    if (
+      confirm(`Delete flags-file "${flagsFile.name}"? This will remove all flags in this file.`)
+    ) {
+      this.store.deleteFlagsFile(flagsFile);
     }
   }
 }

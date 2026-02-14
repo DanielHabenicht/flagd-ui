@@ -1,10 +1,7 @@
 import { Injectable } from '@angular/core';
 import { Action, Selector, State, StateContext } from '@ngxs/store';
 import { PlaygroundServer } from '../models/playground.models';
-import {
-  SetPlaygroundDrawerHeight,
-  SetPlaygroundServers,
-} from './playground-preferences.actions';
+import { SetPlaygroundDrawerHeight, SetPlaygroundServers } from './playground-preferences.actions';
 
 export interface PlaygroundPreferencesStateModel {
   servers: PlaygroundServer[];

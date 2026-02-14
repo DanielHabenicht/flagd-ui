@@ -10,7 +10,7 @@
           @for (entry of group.entries; track entry.name + entry.backendUrl) {
             <a
               mat-list-item
-              [routerLink]="getProjectRoute(entry)"
+              [routerLink]="getFlagsFileRoute(entry)"
               routerLinkActive="active-link"
               [routerLinkActiveOptions]="{ exact: true }"
             >
@@ -18,7 +18,7 @@
               <button
                 mat-icon-button
                 matListItemMeta
-                (click)="deleteProject($event, entry)"
+                (click)="deleteFlagsFile($event, entry)"
                 title="Delete"
                 class="btn-delete"
               >
@@ -49,11 +49,11 @@
       <button
         mat-flat-button
         class="new-flag-button"
-        (click)="openNewProjectDialog()"
+        (click)="openNewFlagsFileDialog()"
         title="Add flag file"
       >
         <mat-icon>add</mat-icon>
-        <span>Create flag file</span>
+        <span>Create flags-file</span>
       </button>
     </div>
   </div>

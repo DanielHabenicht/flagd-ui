@@ -8,14 +8,14 @@
         <p class="tab-description">Create an empty local flag file stored in your browser.</p>
         <mat-form-field appearance="outline" class="full-width">
           <mat-label>File name</mat-label>
-          <input matInput [(ngModel)]="projectName" placeholder="my-flags" />
+          <input matInput [(ngModel)]="flagsFileName" placeholder="my-flags" />
         </mat-form-field>
         <div class="tab-actions">
           <button
             mat-flat-button
             color="primary"
-            (click)="createEmptyProject()"
-            [disabled]="!projectName.trim()"
+            (click)="createEmptyFlagsFile()"
+            [disabled]="!flagsFileName.trim()"
           >
             <mat-icon>computer</mat-icon> Create Local File
           </button>
@@ -95,7 +95,7 @@
               (click)="discoverBackend()"
               [disabled]="!backendUrl.trim() || backendLoading"
             >
-              <mat-icon>search</mat-icon> Discover Files
+              <mat-icon>search</mat-icon> Discover flags-files
             </button>
           } @else {
             <button mat-flat-button color="primary" (click)="addBackend()">

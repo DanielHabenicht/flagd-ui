@@ -14,7 +14,7 @@ import { MetadataEditorComponent } from '../metadata-editor/metadata-editor';
 import { EnvironmentManagerComponent } from '../environment-manager/environment-manager';
 
 @Component({
-  selector: 'app-project-detail',
+  selector: 'app-flags-file-detail',
   standalone: true,
   imports: [
     FlagEditorComponent,
@@ -25,10 +25,10 @@ import { EnvironmentManagerComponent } from '../environment-manager/environment-
     MatIconModule,
     MatChipsModule,
   ],
-  templateUrl: './project-detail.html',
-  styleUrl: './project-detail.scss',
+  templateUrl: './flags-file-detail.html',
+  styleUrl: './flags-file-detail.scss',
 })
-export class ProjectDetailComponent implements OnInit {
+export class FlagsFileDetailComponent implements OnInit {
   readonly store = inject(FlagStore);
   private readonly backendRegistry = inject(BackendRegistry);
   private readonly route = inject(ActivatedRoute);
@@ -56,17 +56,17 @@ export class ProjectDetailComponent implements OnInit {
     'actions',
   ];
   readonly sourceBreadcrumb = computed(() => {
-    const project = this.store.currentProject();
-    if (!project) return null;
+    const flagsFile = this.store.currentFlagsFile();
+    if (!flagsFile) return null;
 
-    if (project.source === 'local') {
+    if (flagsFile.source === 'local') {
       return 'Local Files';
     }
 
     const backend = this.backendRegistry
       .getBackends()
-      .find((entry) => entry.url === project.backendUrl);
-    const backendLabel = backend?.label ?? project.backendUrl ?? 'Unknown Backend';
+      .find((entry) => entry.url === flagsFile.backendUrl);
+    const backendLabel = backend?.label ?? flagsFile.backendUrl ?? 'Unknown Backend';
     return `${backendLabel}`;
   });
   readonly projectMetadataDirty = computed(
@@ -125,10 +125,10 @@ export class ProjectDetailComponent implements OnInit {
       if (!name) return;
 
       const routePath = this.route.snapshot.routeConfig?.path ?? '';
-      if (routePath.startsWith('projects/remote')) {
-        this.store.selectProjectByRoute('remote', name, backendId ?? undefined);
+      if (routePath.startsWith('flags-files/remote')) {
+        this.store.selectFlagsFileByRoute('remote', name, backendId ?? undefined);
       } else {
-        this.store.selectProjectByRoute('local', name);
+        this.store.selectFlagsFileByRoute('local', name);
       }
     });
 
@@ -199,16 +199,16 @@ export class ProjectDetailComponent implements OnInit {
     this.store.deleteFlag(key);
   }
 
-  downloadProject(): void {
-    this.store.downloadCurrentProject();
+  downloadFlagsFile(): void {
+    this.store.downloadCurrentFlagsFile();
   }
 
   onProjectMetadataChange(metadata: MetadataMap | undefined): void {
     this.projectMetadataDraft.set(metadata);
   }
 
-  saveProjectMetadata(): void {
-    this.store.saveProjectMetadata(this.projectMetadataDraft());
+  saveFlagsFileMetadata(): void {
+    this.store.saveFlagsFileMetadata(this.projectMetadataDraft());
   }
 
   private updateSelectedFlagInUrl(flagKey: string | null): void {

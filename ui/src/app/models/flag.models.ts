@@ -1,11 +1,11 @@
 export type FlagState = 'ENABLED' | 'DISABLED';
 export type FlagType = 'boolean' | 'string' | 'number' | 'object';
-export type ProjectSource = 'local' | 'remote';
+export type FlagsFileSource = 'local' | 'remote';
 export type MetadataMap = Record<string, string | number | boolean>;
 
-export interface ProjectEntry {
+export interface FlagsFileEntry {
   name: string;
-  source: ProjectSource;
+  source: FlagsFileSource;
   backendUrl?: string;
 }
 
@@ -19,7 +19,7 @@ export interface FileGroup {
   label: string;
   icon: string;
   backendId?: string;
-  entries: ProjectEntry[];
+  entries: FlagsFileEntry[];
 }
 
 export interface FlagDefinition {
@@ -94,9 +94,9 @@ export function getDefaultVariants(flagType: FlagType): { name: string; value: u
  */
 export function extractEnvironments(evaluators?: Record<string, Evaluator>): Environment[] {
   if (!evaluators) return [];
-  
+
   const environments: Environment[] = [];
-  
+
   for (const [key, evaluator] of Object.entries(evaluators)) {
     // Check if this is an environment evaluator (pattern: "isXxx")
     if (key.startsWith('is') && typeof evaluator === 'object' && evaluator !== null) {
@@ -104,7 +104,7 @@ export function extractEnvironments(evaluators?: Record<string, Evaluator>): Env
       if (Array.isArray(inOperator) && inOperator.length === 2) {
         const varCheck = inOperator[0];
         const aliases = inOperator[1];
-        
+
         // Verify it's checking the "environment" variable
         if (
           typeof varCheck === 'object' &&
@@ -123,7 +123,7 @@ export function extractEnvironments(evaluators?: Record<string, Evaluator>): Env
       }
     }
   }
-  
+
   return environments;
 }
 
@@ -142,7 +142,7 @@ export function createEnvironmentEvaluator(aliases: string[]): Evaluator {
 export function generateEnvironmentTargeting(
   environments: Environment[],
   environmentStates: Record<string, boolean>,
-  fallbackVariant: string = 'off'
+  fallbackVariant: string = 'off',
 ): Record<string, unknown> {
   if (environments.length === 0) {
     return {};
@@ -176,7 +176,7 @@ export function generateEnvironmentTargeting(
 export function generateEnvironmentVariants(
   environments: Environment[],
   flagType: FlagType,
-  environmentValues: Record<string, unknown>
+  environmentValues: Record<string, unknown>,
 ): Record<string, unknown> {
   const variants: Record<string, unknown> = {};
 
@@ -211,10 +211,7 @@ function getDefaultValueForType(flagType: FlagType, enabled: boolean = true): un
 /**
  * Checks if a flag is using environment-based targeting
  */
-export function isEnvironmentBasedFlag(
-  flag: FlagDefinition,
-  environments: Environment[]
-): boolean {
+export function isEnvironmentBasedFlag(flag: FlagDefinition, environments: Environment[]): boolean {
   if (!flag.targeting || environments.length === 0) {
     return false;
   }
@@ -222,7 +219,7 @@ export function isEnvironmentBasedFlag(
   // Check if variants include environment names
   const variantNames = Object.keys(flag.variants);
   const envNames = environments.map((e) => e.name.toLowerCase());
-  
+
   return envNames.some((envName) => variantNames.includes(envName));
 }
 
@@ -232,14 +229,14 @@ export function isEnvironmentBasedFlag(
 export function extractEnvironmentStates(
   flag: FlagDefinition,
   environments: Environment[],
-  flagType: FlagType
+  flagType: FlagType,
 ): Record<string, unknown> {
   const states: Record<string, unknown> = {};
 
   for (const env of environments) {
     const envName = env.name.toLowerCase();
     const value = flag.variants[envName];
-    
+
     if (value !== undefined) {
       states[envName] = value;
     } else {

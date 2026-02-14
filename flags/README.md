@@ -5,13 +5,17 @@ This directory contains example flag definition files demonstrating different pa
 ## Files
 
 ### `demo.flagd.json`
+
 Basic demonstration of flagd features including:
+
 - Simple boolean and string flags
 - Time-based targeting
 - Metadata usage
 
 ### `multi-environment-example.flagd.json` ⭐ NEW
+
 Demonstrates the recommended approach for managing flags across multiple environments:
+
 - **Environment definitions** using `$evaluators`
 - **Per-environment flag states** using variants and targeting
 - **Different value types** (boolean, number, string)
@@ -24,14 +28,17 @@ Demonstrates the recommended approach for managing flags across multiple environ
 ## Using the Multi-Environment Example
 
 ### 1. View in flagd-ui
+
 ```bash
 docker compose up --build
 ```
-Then open http://localhost:3000 and navigate to the "multi-environment-example" project.
+
+Then open http://localhost:3000 and navigate to the "multi-environment-example" flags-file.
 
 ### 2. Evaluate Flags with Environment Context
 
 #### Using curl with flagd:
+
 ```bash
 # Production environment
 curl -X POST http://localhost:8013/flagd.evaluation.v1.Service/ResolveBoolean \
@@ -55,24 +62,17 @@ curl -X POST http://localhost:8013/flagd.evaluation.v1.Service/ResolveBoolean \
 ```
 
 #### Using OpenFeature SDK:
+
 ```typescript
 import { OpenFeature } from '@openfeature/web-sdk';
 
 const client = OpenFeature.getClient();
 
 // Production
-const prodValue = await client.getBooleanValue(
-  'new-checkout-flow',
-  false,
-  { environment: 'production' }
-);
+const prodValue = await client.getBooleanValue('new-checkout-flow', false, { environment: 'production' });
 
 // Development
-const devValue = await client.getBooleanValue(
-  'new-checkout-flow',
-  false,
-  { environment: 'development' }
-);
+const devValue = await client.getBooleanValue('new-checkout-flow', false, { environment: 'development' });
 ```
 
 ## Environment Definitions
@@ -86,6 +86,7 @@ The multi-environment example defines these environments in `$evaluators`:
 ## Flag Examples
 
 ### `new-checkout-flow`
+
 - **Type**: Boolean
 - **Production**: ✅ Enabled (true)
 - **Staging**: ✅ Enabled (true)
@@ -94,6 +95,7 @@ The multi-environment example defines these environments in `$evaluators`:
 Use case: New feature being rolled out to production and staging for testing.
 
 ### `experimental-ai-features`
+
 - **Type**: Boolean
 - **Production**: ❌ Disabled (false)
 - **Staging**: ✅ Enabled (true)
@@ -102,6 +104,7 @@ Use case: New feature being rolled out to production and staging for testing.
 Use case: Experimental feature being tested in non-production environments.
 
 ### `api-timeout-ms`
+
 - **Type**: Number
 - **Production**: 5000ms
 - **Staging**: 3000ms
@@ -110,6 +113,7 @@ Use case: Experimental feature being tested in non-production environments.
 Use case: Different timeout values per environment for testing and debugging.
 
 ### `background-color`
+
 - **Type**: String (color hex)
 - **Production**: Red (#FF0000)
 - **Staging**: Yellow (#FFFF00)

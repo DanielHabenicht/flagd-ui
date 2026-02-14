@@ -7,13 +7,13 @@
             @if (sourceBreadcrumb()) {
               <div class="source-breadcrumb">{{ sourceBreadcrumb() }}</div>
             }
-            <h2>{{ store.currentProjectName() }}</h2>
+            <h2>{{ store.currentFlagsFileName() }}</h2>
           </div>
           <div class="header-actions">
             <button mat-icon-button (click)="openEnvironmentManager()" title="Manage Environments">
               <mat-icon>layers</mat-icon>
             </button>
-            <button mat-icon-button (click)="downloadProject()" title="Download JSON">
+            <button mat-icon-button (click)="downloadFlagsFile()" title="Download JSON">
               <mat-icon>download</mat-icon>
             </button>
             <button mat-flat-button color="primary" (click)="openNewFlagEditor()">
@@ -28,11 +28,11 @@
 
         <section class="project-metadata-section">
           <div class="project-metadata-header">
-            <h3>Project Metadata</h3>
+            <h3>Flags-File Metadata</h3>
             <button
               mat-stroked-button
               type="button"
-              (click)="saveProjectMetadata()"
+              (click)="saveFlagsFileMetadata()"
               [disabled]="metadataSaveDisabled()"
             >
               Save Metadata

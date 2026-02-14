@@ -7,60 +7,60 @@ import {
   Environment,
   Evaluator,
   extractEnvironments,
+  FlagsFileEntry,
   FlagDefinition,
   FlagEntry,
   FlagFileContent,
   FileGroup,
   MetadataMap,
-  ProjectEntry,
 } from '../models/flag.models';
 import { RemoteApi } from '../services/remote-api';
 import {
   AddBackend,
-  CreateLocalProject,
-  CreateLocalProjectEntry,
-  CreateRemoteProject,
+  CreateLocalFlagsFile,
+  CreateLocalFlagsFileEntry,
+  CreateRemoteFlagsFile,
   DeleteFlag,
-  DeleteLocalProjectEntry,
-  DeleteProject,
-  ImportLocalProject,
-  LoadProjects,
+  DeleteLocalFlagsFileEntry,
+  DeleteFlagsFile,
+  ImportLocalFlagsFile,
+  LoadFlagsFiles,
   RemoveBackend,
   RenameFlag,
   SaveFlag,
-  SaveLocalProjectContent,
-  SaveProjectMetadata,
-  SelectProject,
-  SelectProjectByRoute,
+  SaveLocalFlagsFileContent,
+  SaveFlagsFileMetadata,
+  SelectFlagsFile,
+  SelectFlagsFileByRoute,
   SetHasDefaultBackend,
   UpdateEvaluators,
 } from './flag-store.actions';
 
 export interface FlagStoreStateModel {
-  projects: ProjectEntry[];
-  currentProject: ProjectEntry | null;
+  flagsFiles: FlagsFileEntry[];
+  currentFlagsFile: FlagsFileEntry | null;
   currentFlags: Record<string, FlagDefinition> | null;
   currentEvaluators: Record<string, Evaluator> | undefined;
   currentMetadata: MetadataMap | undefined;
   loading: boolean;
   error: string | null;
   hasDefaultBackend: boolean;
-  localProjects: Record<string, FlagFileContent>;
+  localFlagsFiles: Record<string, FlagFileContent>;
   backends: BackendInstance[];
 }
 
 @State<FlagStoreStateModel>({
   name: 'flagStore',
   defaults: {
-    projects: [],
-    currentProject: null,
+    flagsFiles: [],
+    currentFlagsFile: null,
     currentFlags: null,
     currentEvaluators: undefined,
     currentMetadata: undefined,
     loading: false,
     error: null,
     hasDefaultBackend: false,
-    localProjects: {},
+    localFlagsFiles: {},
     backends: [],
   },
 })
@@ -70,13 +70,13 @@ export class FlagStoreState {
   private readonly router = inject(Router);
 
   @Selector()
-  static projects(state: FlagStoreStateModel): ProjectEntry[] {
-    return state.projects;
+  static flagsFiles(state: FlagStoreStateModel): FlagsFileEntry[] {
+    return state.flagsFiles;
   }
 
   @Selector()
-  static currentProject(state: FlagStoreStateModel): ProjectEntry | null {
-    return state.currentProject;
+  static currentFlagsFile(state: FlagStoreStateModel): FlagsFileEntry | null {
+    return state.currentFlagsFile;
   }
 
   @Selector()
@@ -130,8 +130,8 @@ export class FlagStoreState {
     const groups: FileGroup[] = [];
 
     for (const backend of state.backends) {
-      const entries = state.projects.filter(
-        (project) => project.source === 'remote' && project.backendUrl === backend.url,
+      const entries = state.flagsFiles.filter(
+        (flagsFile) => flagsFile.source === 'remote' && flagsFile.backendUrl === backend.url,
       );
       if (entries.length > 0) {
         groups.push({
@@ -143,7 +143,7 @@ export class FlagStoreState {
       }
     }
 
-    const localEntries = state.projects.filter((project) => project.source === 'local');
+    const localEntries = state.flagsFiles.filter((flagsFile) => flagsFile.source === 'local');
     if (localEntries.length > 0) {
       groups.push({ label: 'Local Files', icon: 'computer', entries: localEntries });
     }
@@ -152,8 +152,8 @@ export class FlagStoreState {
   }
 
   @Selector()
-  static localProjects(state: FlagStoreStateModel): Record<string, FlagFileContent> {
-    return state.localProjects;
+  static localFlagsFiles(state: FlagStoreStateModel): Record<string, FlagFileContent> {
+    return state.localFlagsFiles;
   }
 
   @Action(SetHasDefaultBackend)
@@ -185,72 +185,72 @@ export class FlagStoreState {
     });
   }
 
-  @Action(SaveLocalProjectContent)
-  saveLocalProjectContent(
+  @Action(SaveLocalFlagsFileContent)
+  saveLocalFlagsFileContent(
     ctx: StateContext<FlagStoreStateModel>,
-    action: SaveLocalProjectContent,
+    action: SaveLocalFlagsFileContent,
   ): void {
     const state = ctx.getState();
     ctx.patchState({
-      localProjects: {
-        ...state.localProjects,
+      localFlagsFiles: {
+        ...state.localFlagsFiles,
         [action.name]: action.content,
       },
     });
   }
 
-  @Action(CreateLocalProjectEntry)
-  createLocalProjectEntry(
+  @Action(CreateLocalFlagsFileEntry)
+  createLocalFlagsFileEntry(
     ctx: StateContext<FlagStoreStateModel>,
-    action: CreateLocalProjectEntry,
+    action: CreateLocalFlagsFileEntry,
   ): void {
     const state = ctx.getState();
-    if (state.localProjects[action.name]) {
-      throw new Error(`Project "${action.name}" already exists`);
+    if (state.localFlagsFiles[action.name]) {
+      throw new Error(`Flags-file "${action.name}" already exists`);
     }
 
     ctx.patchState({
-      localProjects: {
-        ...state.localProjects,
+      localFlagsFiles: {
+        ...state.localFlagsFiles,
         [action.name]: { flags: {} },
       },
     });
   }
 
-  @Action(DeleteLocalProjectEntry)
-  deleteLocalProjectEntry(
+  @Action(DeleteLocalFlagsFileEntry)
+  deleteLocalFlagsFileEntry(
     ctx: StateContext<FlagStoreStateModel>,
-    action: DeleteLocalProjectEntry,
+    action: DeleteLocalFlagsFileEntry,
   ): void {
     const state = ctx.getState();
-    const existing = state.localProjects[action.name];
+    const existing = state.localFlagsFiles[action.name];
     if (!existing) {
-      throw new Error(`Project "${action.name}" not found`);
+      throw new Error(`Flags-file "${action.name}" not found`);
     }
 
-    const nextLocalProjects = { ...state.localProjects };
-    delete nextLocalProjects[action.name];
-    ctx.patchState({ localProjects: nextLocalProjects });
+    const nextLocalFlagsFiles = { ...state.localFlagsFiles };
+    delete nextLocalFlagsFiles[action.name];
+    ctx.patchState({ localFlagsFiles: nextLocalFlagsFiles });
   }
 
-  @Action(LoadProjects)
-  loadProjects(ctx: StateContext<FlagStoreStateModel>): Observable<unknown> | void {
+  @Action(LoadFlagsFiles)
+  loadFlagsFiles(ctx: StateContext<FlagStoreStateModel>): Observable<unknown> | void {
     const state = ctx.getState();
     ctx.patchState({ loading: true, error: null });
 
-    const localEntries: ProjectEntry[] = Object.keys(state.localProjects)
+    const localEntries: FlagsFileEntry[] = Object.keys(state.localFlagsFiles)
       .sort()
       .map((name) => ({ name, source: 'local' as const }));
 
     if (state.backends.length === 0) {
-      ctx.patchState({ projects: localEntries, loading: false });
+      ctx.patchState({ flagsFiles: localEntries, loading: false });
       return;
     }
 
     const remoteRequests = state.backends.map((backend) =>
-      this.remoteApi.listProjects(backend.url).pipe(
+      this.remoteApi.listFlagsFiles(backend.url).pipe(
         catchError((err) => {
-          console.error(`Failed to load projects from ${backend.url}`, err);
+          console.error(`Failed to load flags-files from ${backend.url}`, err);
           return of([] as string[]);
         }),
       ),
@@ -258,7 +258,7 @@ export class FlagStoreState {
 
     return forkJoin(remoteRequests).pipe(
       tap((results) => {
-        const remoteEntries: ProjectEntry[] = [];
+        const remoteEntries: FlagsFileEntry[] = [];
         results.forEach((names, index) => {
           const backend = state.backends[index];
           names.forEach((name) => {
@@ -271,47 +271,47 @@ export class FlagStoreState {
         });
 
         ctx.patchState({
-          projects: [...localEntries, ...remoteEntries],
+          flagsFiles: [...localEntries, ...remoteEntries],
           loading: false,
         });
       }),
       catchError((err) => {
         ctx.patchState({
-          projects: localEntries,
-          error: 'Failed to load remote projects',
+          flagsFiles: localEntries,
+          error: 'Failed to load remote flags-files',
           loading: false,
         });
-        console.error('Failed to load remote projects', err);
+        console.error('Failed to load remote flags-files', err);
         return of(void 0);
       }),
     );
   }
 
-  @Action(SelectProject)
-  selectProject(
+  @Action(SelectFlagsFile)
+  selectFlagsFile(
     ctx: StateContext<FlagStoreStateModel>,
-    action: SelectProject,
+    action: SelectFlagsFile,
   ): Observable<unknown> | void {
     const state = ctx.getState();
-    const current = state.currentProject;
+    const current = state.currentFlagsFile;
 
-    const isSameProject =
+    const isSameFlagsFile =
       current?.name === action.entry.name &&
       current?.source === action.entry.source &&
       (current?.backendUrl ?? '') === (action.entry.backendUrl ?? '');
 
-    if (isSameProject && (state.loading || state.currentFlags !== null)) {
+    if (isSameFlagsFile && (state.loading || state.currentFlags !== null)) {
       return;
     }
 
     ctx.patchState({
-      currentProject: action.entry,
+      currentFlagsFile: action.entry,
       loading: true,
       error: null,
     });
 
     if (action.entry.source === 'local') {
-      const content = state.localProjects[action.entry.name];
+      const content = state.localFlagsFiles[action.entry.name];
       ctx.patchState({
         currentFlags: content?.flags ?? {},
         currentEvaluators: content?.$evaluators,
@@ -321,7 +321,7 @@ export class FlagStoreState {
       return;
     }
 
-    return this.remoteApi.getProject(action.entry.backendUrl!, action.entry.name).pipe(
+    return this.remoteApi.getFlagsFile(action.entry.backendUrl!, action.entry.name).pipe(
       tap((res) => {
         ctx.patchState({
           currentFlags: res.flags ?? {},
@@ -332,25 +332,25 @@ export class FlagStoreState {
       }),
       catchError((err) => {
         ctx.patchState({
-          error: `Failed to load project "${action.entry.name}"`,
+          error: `Failed to load flags-file "${action.entry.name}"`,
           currentFlags: null,
           currentEvaluators: undefined,
           currentMetadata: undefined,
           loading: false,
         });
-        console.error('Failed to load project', err);
+        console.error('Failed to load flags-file', err);
         return of(void 0);
       }),
     );
   }
 
-  @Action(SelectProjectByRoute)
-  selectProjectByRoute(
+  @Action(SelectFlagsFileByRoute)
+  selectFlagsFileByRoute(
     ctx: StateContext<FlagStoreStateModel>,
-    action: SelectProjectByRoute,
+    action: SelectFlagsFileByRoute,
   ): Observable<unknown> | void {
     if (action.source === 'local') {
-      return ctx.dispatch(new SelectProject({ name: action.name, source: 'local' }));
+      return ctx.dispatch(new SelectFlagsFile({ name: action.name, source: 'local' }));
     }
 
     if (!action.backendId) {
@@ -364,7 +364,7 @@ export class FlagStoreState {
     }
 
     return ctx.dispatch(
-      new SelectProject({
+      new SelectFlagsFile({
         name: action.name,
         source: 'remote',
         backendUrl: backend.url,
@@ -372,83 +372,83 @@ export class FlagStoreState {
     );
   }
 
-  @Action(CreateLocalProject)
-  createLocalProject(
+  @Action(CreateLocalFlagsFile)
+  createLocalFlagsFile(
     ctx: StateContext<FlagStoreStateModel>,
-    action: CreateLocalProject,
+    action: CreateLocalFlagsFile,
   ): Observable<unknown> {
     const state = ctx.getState();
 
-    if (state.localProjects[action.name]) {
-      ctx.patchState({ error: `Project "${action.name}" already exists` });
+    if (state.localFlagsFiles[action.name]) {
+      ctx.patchState({ error: `Flags-file "${action.name}" already exists` });
       return of(void 0);
     }
 
     ctx.patchState({
       error: null,
-      localProjects: {
-        ...state.localProjects,
+      localFlagsFiles: {
+        ...state.localFlagsFiles,
         [action.name]: { flags: {} },
       },
     });
 
-    return ctx.dispatch(new LoadProjects()).pipe(
+    return ctx.dispatch(new LoadFlagsFiles()).pipe(
       tap(() => {
-        void this.router.navigate(['/projects', 'local', action.name]);
+        void this.router.navigate(['/flags-files', 'local', action.name]);
       }),
       switchMap(() => of(void 0)),
     );
   }
 
-  @Action(CreateRemoteProject)
-  createRemoteProject(
+  @Action(CreateRemoteFlagsFile)
+  createRemoteFlagsFile(
     ctx: StateContext<FlagStoreStateModel>,
-    action: CreateRemoteProject,
+    action: CreateRemoteFlagsFile,
   ): Observable<unknown> {
     const state = ctx.getState();
     ctx.patchState({ loading: true, error: null });
 
-    return this.remoteApi.createProject(action.backendUrl, action.name, { flags: {} }).pipe(
-      switchMap(() => ctx.dispatch(new LoadProjects())),
+    return this.remoteApi.createFlagsFile(action.backendUrl, action.name, { flags: {} }).pipe(
+      switchMap(() => ctx.dispatch(new LoadFlagsFiles())),
       tap(() => {
         const backend = state.backends.find((entry) => entry.url === action.backendUrl);
         if (backend) {
-          void this.router.navigate(['/projects', 'remote', backend.id, action.name]);
+          void this.router.navigate(['/flags-files', 'remote', backend.id, action.name]);
         }
       }),
       switchMap(() => of(void 0)),
       catchError((err) => {
         ctx.patchState({
-          error: `Failed to create project "${action.name}"`,
+          error: `Failed to create flags-file "${action.name}"`,
           loading: false,
         });
-        console.error('Failed to create project', err);
+        console.error('Failed to create flags-file', err);
         return of(void 0);
       }),
     );
   }
 
-  @Action(DeleteProject)
-  deleteProject(
+  @Action(DeleteFlagsFile)
+  deleteFlagsFile(
     ctx: StateContext<FlagStoreStateModel>,
-    action: DeleteProject,
+    action: DeleteFlagsFile,
   ): Observable<unknown> | void {
     const state = ctx.getState();
     ctx.patchState({ loading: true, error: null });
 
     const isCurrent =
-      state.currentProject?.name === action.entry.name &&
-      state.currentProject?.source === action.entry.source;
+      state.currentFlagsFile?.name === action.entry.name &&
+      state.currentFlagsFile?.source === action.entry.source;
 
     if (action.entry.source === 'local') {
-      const nextLocalProjects = { ...state.localProjects };
-      delete nextLocalProjects[action.entry.name];
+      const nextLocalFlagsFiles = { ...state.localFlagsFiles };
+      delete nextLocalFlagsFiles[action.entry.name];
 
       ctx.patchState({
-        localProjects: nextLocalProjects,
+        localFlagsFiles: nextLocalFlagsFiles,
         ...(isCurrent
           ? {
-              currentProject: null,
+              currentFlagsFile: null,
               currentFlags: null,
               currentMetadata: undefined,
               currentEvaluators: undefined,
@@ -460,29 +460,29 @@ export class FlagStoreState {
         void this.router.navigate(['/']);
       }
 
-      return ctx.dispatch(new LoadProjects()).pipe(switchMap(() => of(void 0)));
+      return ctx.dispatch(new LoadFlagsFiles()).pipe(switchMap(() => of(void 0)));
     }
 
-    return this.remoteApi.deleteProject(action.entry.backendUrl!, action.entry.name).pipe(
+    return this.remoteApi.deleteFlagsFile(action.entry.backendUrl!, action.entry.name).pipe(
       switchMap(() => {
         if (isCurrent) {
           ctx.patchState({
-            currentProject: null,
+            currentFlagsFile: null,
             currentFlags: null,
             currentMetadata: undefined,
             currentEvaluators: undefined,
           });
           void this.router.navigate(['/']);
         }
-        return ctx.dispatch(new LoadProjects());
+        return ctx.dispatch(new LoadFlagsFiles());
       }),
       switchMap(() => of(void 0)),
       catchError((err) => {
         ctx.patchState({
-          error: `Failed to delete project "${action.entry.name}"`,
+          error: `Failed to delete flags-file "${action.entry.name}"`,
           loading: false,
         });
-        console.error('Failed to delete project', err);
+        console.error('Failed to delete flags-file', err);
         return of(void 0);
       }),
     );
@@ -491,19 +491,19 @@ export class FlagStoreState {
   @Action(SaveFlag)
   saveFlag(ctx: StateContext<FlagStoreStateModel>, action: SaveFlag): Observable<unknown> | void {
     const state = ctx.getState();
-    const project = state.currentProject;
-    if (!project) return;
+    const flagsFile = state.currentFlagsFile;
+    if (!flagsFile) return;
 
     const updatedFlags = {
       ...(state.currentFlags ?? {}),
       [action.key]: action.flag,
     };
     const metadata = state.currentMetadata;
-    const content = this.buildProjectContent(updatedFlags, metadata, state.currentEvaluators);
+    const content = this.buildFlagsFileContent(updatedFlags, metadata, state.currentEvaluators);
 
-    return this.persistCurrentProjectContent(
+    return this.persistCurrentFlagsFileContent(
       ctx,
-      project,
+      flagsFile,
       content,
       {
         currentFlags: updatedFlags,
@@ -519,18 +519,18 @@ export class FlagStoreState {
     action: DeleteFlag,
   ): Observable<unknown> | void {
     const state = ctx.getState();
-    const project = state.currentProject;
-    if (!project || !state.currentFlags) return;
+    const flagsFile = state.currentFlagsFile;
+    if (!flagsFile || !state.currentFlags) return;
 
     const updatedFlags = { ...state.currentFlags };
     delete updatedFlags[action.key];
 
     const metadata = state.currentMetadata;
-    const content = this.buildProjectContent(updatedFlags, metadata, state.currentEvaluators);
+    const content = this.buildFlagsFileContent(updatedFlags, metadata, state.currentEvaluators);
 
-    return this.persistCurrentProjectContent(
+    return this.persistCurrentFlagsFileContent(
       ctx,
-      project,
+      flagsFile,
       content,
       {
         currentFlags: updatedFlags,
@@ -546,19 +546,19 @@ export class FlagStoreState {
     action: RenameFlag,
   ): Observable<unknown> | void {
     const state = ctx.getState();
-    const project = state.currentProject;
-    if (!project) return;
+    const flagsFile = state.currentFlagsFile;
+    if (!flagsFile) return;
 
     const updatedFlags = { ...(state.currentFlags ?? {}) };
     delete updatedFlags[action.oldKey];
     updatedFlags[action.newKey] = action.flag;
 
     const metadata = state.currentMetadata;
-    const content = this.buildProjectContent(updatedFlags, metadata, state.currentEvaluators);
+    const content = this.buildFlagsFileContent(updatedFlags, metadata, state.currentEvaluators);
 
-    return this.persistCurrentProjectContent(
+    return this.persistCurrentFlagsFileContent(
       ctx,
-      project,
+      flagsFile,
       content,
       {
         currentFlags: updatedFlags,
@@ -568,47 +568,47 @@ export class FlagStoreState {
     );
   }
 
-  @Action(ImportLocalProject)
-  importLocalProject(
+  @Action(ImportLocalFlagsFile)
+  importLocalFlagsFile(
     ctx: StateContext<FlagStoreStateModel>,
-    action: ImportLocalProject,
+    action: ImportLocalFlagsFile,
   ): Observable<unknown> {
     const state = ctx.getState();
     ctx.patchState({
-      localProjects: {
-        ...state.localProjects,
+      localFlagsFiles: {
+        ...state.localFlagsFiles,
         [action.name]: action.content,
       },
     });
 
-    return ctx.dispatch(new LoadProjects()).pipe(
+    return ctx.dispatch(new LoadFlagsFiles()).pipe(
       tap(() => {
-        void this.router.navigate(['/projects', 'local', action.name]);
+        void this.router.navigate(['/flags-files', 'local', action.name]);
       }),
       switchMap(() => of(void 0)),
     );
   }
 
-  @Action(SaveProjectMetadata)
-  saveProjectMetadata(
+  @Action(SaveFlagsFileMetadata)
+  saveFlagsFileMetadata(
     ctx: StateContext<FlagStoreStateModel>,
-    action: SaveProjectMetadata,
+    action: SaveFlagsFileMetadata,
   ): Observable<unknown> | void {
     const state = ctx.getState();
-    const project = state.currentProject;
+    const flagsFile = state.currentFlagsFile;
     const flags = state.currentFlags;
-    if (!project || !flags) return;
+    if (!flagsFile || !flags) return;
 
-    const content = this.buildProjectContent(flags, action.metadata, state.currentEvaluators);
+    const content = this.buildFlagsFileContent(flags, action.metadata, state.currentEvaluators);
 
-    return this.persistCurrentProjectContent(
+    return this.persistCurrentFlagsFileContent(
       ctx,
-      project,
+      flagsFile,
       content,
       {
         currentMetadata: action.metadata,
       },
-      'Failed to save project metadata',
+      'Failed to save flags-file metadata',
     );
   }
 
@@ -618,16 +618,16 @@ export class FlagStoreState {
     action: UpdateEvaluators,
   ): Observable<unknown> | void {
     const state = ctx.getState();
-    const project = state.currentProject;
-    if (!project) return;
+    const flagsFile = state.currentFlagsFile;
+    if (!flagsFile) return;
 
     const flags = state.currentFlags ?? {};
     const metadata = state.currentMetadata;
-    const content = this.buildProjectContent(flags, metadata, action.evaluators);
+    const content = this.buildFlagsFileContent(flags, metadata, action.evaluators);
 
-    return this.persistCurrentProjectContent(
+    return this.persistCurrentFlagsFileContent(
       ctx,
-      project,
+      flagsFile,
       content,
       {
         currentEvaluators: action.evaluators,
@@ -636,9 +636,9 @@ export class FlagStoreState {
     );
   }
 
-  private persistCurrentProjectContent(
+  private persistCurrentFlagsFileContent(
     ctx: StateContext<FlagStoreStateModel>,
-    project: ProjectEntry,
+    flagsFile: FlagsFileEntry,
     content: FlagFileContent,
     patch: Partial<FlagStoreStateModel>,
     errorMessage: string,
@@ -646,19 +646,19 @@ export class FlagStoreState {
     const state = ctx.getState();
     ctx.patchState({ loading: true, error: null });
 
-    if (project.source === 'local') {
+    if (flagsFile.source === 'local') {
       ctx.patchState({
         ...patch,
-        localProjects: {
-          ...state.localProjects,
-          [project.name]: content,
+        localFlagsFiles: {
+          ...state.localFlagsFiles,
+          [flagsFile.name]: content,
         },
         loading: false,
       });
       return;
     }
 
-    return this.remoteApi.updateProject(project.backendUrl!, project.name, content).pipe(
+    return this.remoteApi.updateFlagsFile(flagsFile.backendUrl!, flagsFile.name, content).pipe(
       tap(() => {
         ctx.patchState({
           ...patch,
@@ -676,7 +676,7 @@ export class FlagStoreState {
     );
   }
 
-  private buildProjectContent(
+  private buildFlagsFileContent(
     flags: Record<string, FlagDefinition>,
     metadata: MetadataMap | undefined,
     evaluators: Record<string, Evaluator> | undefined,

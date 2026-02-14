@@ -1,23 +1,23 @@
 import {
   Evaluator,
+  FlagsFileEntry,
   FlagDefinition,
   FlagFileContent,
   MetadataMap,
-  ProjectEntry,
 } from '../models/flag.models';
 
-export class LoadProjects {
-  static readonly type = '[FlagStore] Load Projects';
+export class LoadFlagsFiles {
+  static readonly type = '[FlagStore] Load Flags-Files';
 }
 
-export class SelectProject {
-  static readonly type = '[FlagStore] Select Project';
+export class SelectFlagsFile {
+  static readonly type = '[FlagStore] Select Flags-File';
 
-  constructor(readonly entry: ProjectEntry) {}
+  constructor(readonly entry: FlagsFileEntry) {}
 }
 
-export class SelectProjectByRoute {
-  static readonly type = '[FlagStore] Select Project By Route';
+export class SelectFlagsFileByRoute {
+  static readonly type = '[FlagStore] Select Flags-File By Route';
 
   constructor(
     readonly source: string,
@@ -26,14 +26,14 @@ export class SelectProjectByRoute {
   ) {}
 }
 
-export class CreateLocalProject {
-  static readonly type = '[FlagStore] Create Local Project';
+export class CreateLocalFlagsFile {
+  static readonly type = '[FlagStore] Create Local Flags-File';
 
   constructor(readonly name: string) {}
 }
 
-export class CreateRemoteProject {
-  static readonly type = '[FlagStore] Create Remote Project';
+export class CreateRemoteFlagsFile {
+  static readonly type = '[FlagStore] Create Remote Flags-File';
 
   constructor(
     readonly backendUrl: string,
@@ -41,10 +41,10 @@ export class CreateRemoteProject {
   ) {}
 }
 
-export class DeleteProject {
-  static readonly type = '[FlagStore] Delete Project';
+export class DeleteFlagsFile {
+  static readonly type = '[FlagStore] Delete Flags-File';
 
-  constructor(readonly entry: ProjectEntry) {}
+  constructor(readonly entry: FlagsFileEntry) {}
 }
 
 export class SaveFlag {
@@ -72,8 +72,8 @@ export class RenameFlag {
   ) {}
 }
 
-export class ImportLocalProject {
-  static readonly type = '[FlagStore] Import Local Project';
+export class ImportLocalFlagsFile {
+  static readonly type = '[FlagStore] Import Local Flags-File';
 
   constructor(
     readonly name: string,
@@ -81,8 +81,8 @@ export class ImportLocalProject {
   ) {}
 }
 
-export class SaveProjectMetadata {
-  static readonly type = '[FlagStore] Save Project Metadata';
+export class SaveFlagsFileMetadata {
+  static readonly type = '[FlagStore] Save Flags-File Metadata';
 
   constructor(readonly metadata: MetadataMap | undefined) {}
 }
@@ -114,8 +114,8 @@ export class RemoveBackend {
   constructor(readonly id: string) {}
 }
 
-export class SaveLocalProjectContent {
-  static readonly type = '[FlagStore] Save Local Project Content';
+export class SaveLocalFlagsFileContent {
+  static readonly type = '[FlagStore] Save Local Flags-File Content';
 
   constructor(
     readonly name: string,
@@ -123,14 +123,14 @@ export class SaveLocalProjectContent {
   ) {}
 }
 
-export class CreateLocalProjectEntry {
-  static readonly type = '[FlagStore] Create Local Project Entry';
+export class CreateLocalFlagsFileEntry {
+  static readonly type = '[FlagStore] Create Local Flags-File Entry';
 
   constructor(readonly name: string) {}
 }
 
-export class DeleteLocalProjectEntry {
-  static readonly type = '[FlagStore] Delete Local Project Entry';
+export class DeleteLocalFlagsFileEntry {
+  static readonly type = '[FlagStore] Delete Local Flags-File Entry';
 
   constructor(readonly name: string) {}
 }

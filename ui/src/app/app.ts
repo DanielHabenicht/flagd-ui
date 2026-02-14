@@ -1,4 +1,12 @@
-import { Component, HostListener, OnDestroy, computed, effect, inject, signal } from '@angular/core';
+import {
+  Component,
+  HostListener,
+  OnDestroy,
+  computed,
+  effect,
+  inject,
+  signal,
+} from '@angular/core';
 import { RouterLink, RouterOutlet } from '@angular/router';
 import { Store } from '@ngxs/store';
 import { MatSidenavModule } from '@angular/material/sidenav';
@@ -6,7 +14,7 @@ import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { ProjectListComponent } from './components/project-list/project-list';
+import { FlagsFileListComponent } from './components/flags-file-list/flags-file-list';
 import { FlagStore } from './services/flag-store';
 import { FlagFileContent } from './models/flag.models';
 import { GlobalLoadingService } from './services/global-loading.service';
@@ -21,7 +29,7 @@ type AppTheme = 'light' | 'dark';
   imports: [
     RouterOutlet,
     RouterLink,
-    ProjectListComponent,
+    FlagsFileListComponent,
     MatSidenavModule,
     MatToolbarModule,
     MatProgressBarModule,
@@ -136,7 +144,7 @@ export class App implements OnDestroy {
           if (!content.flags || typeof content.flags !== 'object') return;
           let name = file.name.replace(/\.flagd\.json$/, '').replace(/\.json$/, '');
           if (!name) name = 'imported';
-          this.store.importLocalProject(name, content);
+          this.store.importLocalFlagsFile(name, content);
         } catch {
           console.error(`Failed to parse ${file.name}`);
         }

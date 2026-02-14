@@ -2,9 +2,9 @@ import { inject, Injectable } from '@angular/core';
 import { Store } from '@ngxs/store';
 import { FlagDefinition, FlagFileContent } from '../models/flag.models';
 import {
-  CreateLocalProjectEntry,
-  DeleteLocalProjectEntry,
-  SaveLocalProjectContent,
+  CreateLocalFlagsFileEntry,
+  DeleteLocalFlagsFileEntry,
+  SaveLocalFlagsFileContent,
 } from '../state/flag-store.actions';
 import { FlagStoreState } from '../state/flag-store.state';
 
@@ -13,43 +13,43 @@ export class LocalStore {
   private readonly store = inject(Store);
 
   private getAll(): Record<string, FlagFileContent> {
-    return this.store.selectSnapshot(FlagStoreState.localProjects);
+    return this.store.selectSnapshot(FlagStoreState.localFlagsFiles);
   }
 
-  listProjects(): string[] {
+  listFlagsFiles(): string[] {
     return Object.keys(this.getAll()).sort();
   }
 
-  getProject(name: string): FlagFileContent | null {
+  getFlagsFile(name: string): FlagFileContent | null {
     return this.getAll()[name] ?? null;
   }
 
-  saveProject(name: string, content: FlagFileContent): void {
-    this.store.dispatch(new SaveLocalProjectContent(name, content));
+  saveFlagsFile(name: string, content: FlagFileContent): void {
+    this.store.dispatch(new SaveLocalFlagsFileContent(name, content));
   }
 
-  createProject(name: string): void {
-    this.store.dispatch(new CreateLocalProjectEntry(name));
+  createFlagsFile(name: string): void {
+    this.store.dispatch(new CreateLocalFlagsFileEntry(name));
   }
 
   updateFlags(name: string, flags: Record<string, FlagDefinition>): void {
     const all = this.getAll();
     const existing = all[name];
-    if (!existing) throw new Error(`Project "${name}" not found`);
-    this.store.dispatch(new SaveLocalProjectContent(name, { ...existing, flags }));
+    if (!existing) throw new Error(`Flags-file "${name}" not found`);
+    this.store.dispatch(new SaveLocalFlagsFileContent(name, { ...existing, flags }));
   }
 
-  updateProjectContent(name: string, content: FlagFileContent): void {
+  updateFlagsFileContent(name: string, content: FlagFileContent): void {
     const all = this.getAll();
-    if (!all[name]) throw new Error(`Project "${name}" not found`);
-    this.store.dispatch(new SaveLocalProjectContent(name, content));
+    if (!all[name]) throw new Error(`Flags-file "${name}" not found`);
+    this.store.dispatch(new SaveLocalFlagsFileContent(name, content));
   }
 
-  deleteProject(name: string): void {
-    this.store.dispatch(new DeleteLocalProjectEntry(name));
+  deleteFlagsFile(name: string): void {
+    this.store.dispatch(new DeleteLocalFlagsFileEntry(name));
   }
 
   importFile(name: string, content: FlagFileContent): void {
-    this.store.dispatch(new SaveLocalProjectContent(name, content));
+    this.store.dispatch(new SaveLocalFlagsFileContent(name, content));
   }
 }
