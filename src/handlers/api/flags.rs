@@ -11,6 +11,7 @@ use utoipa::ToSchema;
 use crate::{
     config::ServerConfig,
     error::{AppError, AppResult},
+    storage::{create_storage_backend, StorageBackend},
 };
 
 struct LocalSchemaRetriever {
@@ -47,6 +48,7 @@ impl jsonschema::Retrieve for LocalSchemaRetriever {
 pub struct AppState {
     pub config: Arc<ServerConfig>,
     pub schema: Arc<jsonschema::Validator>,
+    pub storage: Arc<dyn StorageBackend>,
 }
 
 /// Request payload for creating a new flag definition file
@@ -115,9 +117,13 @@ pub async fn init_app_state(config: ServerConfig) -> AppResult<AppState> {
         .build(&schema_json)
         .map_err(|e| AppError::InternalServerError(format!("Invalid schema: {}", e)))?;
 
+    // Create storage backend based on URI
+    let storage = create_storage_backend(&config.storage_uri)?;
+
     Ok(AppState {
         config: Arc::new(config),
         schema: Arc::new(schema),
+        storage,
     })
 }
 
@@ -131,22 +137,6 @@ fn validate_flags(
         .map_err(|error| AppError::BadRequest(format!("Schema validation failed: {}", error)))
 }
 
-/// Build the file path for a flag definition file
-fn get_flag_file_path(flags_dir: &str, name: &str) -> AppResult<PathBuf> {
-    // Validate filename to prevent path traversal attacks
-    if name.contains("..") || name.contains('/') || name.contains('\\') {
-        return Err(AppError::BadRequest(
-            "Invalid filename: cannot contain path separators or '..'".to_string(),
-        ));
-    }
-
-    if name.is_empty() {
-        return Err(AppError::BadRequest("Filename cannot be empty".to_string()));
-    }
-
-    Ok(PathBuf::from(flags_dir).join(format!("{}.flagd.json", name)))
-}
-
 /// List all flag definition files
 #[utoipa::path(
     get,
@@ -158,41 +148,7 @@ fn get_flag_file_path(flags_dir: &str, name: &str) -> AppResult<PathBuf> {
     tag = "flags"
 )]
 pub async fn list_flags(State(state): State<AppState>) -> AppResult<impl IntoResponse> {
-    let flags_dir = PathBuf::from(&state.config.flags_dir);
-
-    // Create directory if it doesn't exist
-    if !flags_dir.exists() {
-        fs::create_dir_all(&flags_dir).map_err(|e| {
-            AppError::InternalServerError(format!("Failed to create flags directory: {}", e))
-        })?;
-    }
-
-    let entries = fs::read_dir(&flags_dir).map_err(|e| {
-        AppError::InternalServerError(format!("Failed to read flags directory: {}", e))
-    })?;
-
-    let mut files = Vec::new();
-    for entry in entries {
-        let entry = entry.map_err(|e| {
-            AppError::InternalServerError(format!("Failed to read directory entry: {}", e))
-        })?;
-        let path = entry.path();
-
-        if path.is_file() {
-            if let Some(filename) = path.file_name() {
-                if let Some(name_str) = filename.to_str() {
-                    if name_str.ends_with(".flagd.json") {
-                        // Remove the .flagd.json extension
-                        let name = name_str.trim_end_matches(".flagd.json").to_string();
-                        files.push(name);
-                    }
-                }
-            }
-        }
-    }
-
-    files.sort();
-
+    let files = state.storage.list_flags().await?;
     Ok(Json(ListFlagsResponse { files }))
 }
 
@@ -215,21 +171,7 @@ pub async fn get_flag(
     State(state): State<AppState>,
     Path(name): Path<String>,
 ) -> AppResult<impl IntoResponse> {
-    let file_path = get_flag_file_path(&state.config.flags_dir, &name)?;
-
-    if !file_path.exists() {
-        return Err(AppError::NotFound(format!(
-            "Flag definition '{}' not found",
-            name
-        )));
-    }
-
-    let content = fs::read_to_string(&file_path)
-        .map_err(|e| AppError::InternalServerError(format!("Failed to read file: {}", e)))?;
-
-    let json: serde_json::Value = serde_json::from_str(&content)
-        .map_err(|e| AppError::InternalServerError(format!("Failed to parse JSON: {}", e)))?;
-
+    let json = state.storage.read_flag(&name).await?;
     Ok(Json(json))
 }
 
@@ -249,10 +191,8 @@ pub async fn create_flag(
     State(state): State<AppState>,
     Json(payload): Json<CreateFlagRequest>,
 ) -> AppResult<impl IntoResponse> {
-    let file_path = get_flag_file_path(&state.config.flags_dir, &payload.name)?;
-
     // Check if file already exists
-    if file_path.exists() {
+    if state.storage.flag_exists(&payload.name).await? {
         return Err(AppError::BadRequest(format!(
             "Flag definition '{}' already exists",
             payload.name
@@ -271,19 +211,8 @@ pub async fn create_flag(
     // Validate the full document against the schema
     validate_flags(&state.schema, &complete_doc)?;
 
-    // Create the directory if it doesn't exist
-    if let Some(parent) = file_path.parent() {
-        fs::create_dir_all(parent).map_err(|e| {
-            AppError::InternalServerError(format!("Failed to create directory: {}", e))
-        })?;
-    }
-
     // Write the file
-    let json_string = serde_json::to_string_pretty(&complete_doc)
-        .map_err(|e| AppError::InternalServerError(format!("Failed to serialize JSON: {}", e)))?;
-
-    fs::write(&file_path, json_string)
-        .map_err(|e| AppError::InternalServerError(format!("Failed to write file: {}", e)))?;
+    state.storage.write_flag(&payload.name, &complete_doc).await?;
 
     Ok((
         StatusCode::CREATED,
@@ -315,10 +244,8 @@ pub async fn update_flag(
     Path(name): Path<String>,
     Json(payload): Json<UpdateFlagRequest>,
 ) -> AppResult<impl IntoResponse> {
-    let file_path = get_flag_file_path(&state.config.flags_dir, &name)?;
-
     // Check if file exists
-    if !file_path.exists() {
+    if !state.storage.flag_exists(&name).await? {
         return Err(AppError::NotFound(format!(
             "Flag definition '{}' not found",
             name
@@ -326,11 +253,7 @@ pub async fn update_flag(
     }
 
     // Preserve existing metadata if the client does not send it.
-    let existing_content = fs::read_to_string(&file_path)
-        .map_err(|e| AppError::InternalServerError(format!("Failed to read file: {}", e)))?;
-
-    let existing_json: serde_json::Value = serde_json::from_str(&existing_content)
-        .map_err(|e| AppError::InternalServerError(format!("Failed to parse JSON: {}", e)))?;
+    let existing_json = state.storage.read_flag(&name).await?;
 
     let existing_metadata = existing_json
         .get("metadata")
@@ -352,11 +275,7 @@ pub async fn update_flag(
     validate_flags(&state.schema, &complete_doc)?;
 
     // Write the file
-    let json_string = serde_json::to_string_pretty(&complete_doc)
-        .map_err(|e| AppError::InternalServerError(format!("Failed to serialize JSON: {}", e)))?;
-
-    fs::write(&file_path, json_string)
-        .map_err(|e| AppError::InternalServerError(format!("Failed to write file: {}", e)))?;
+    state.storage.write_flag(&name, &complete_doc).await?;
 
     Ok(Json(FlagDefinitionResponse {
         name,
@@ -383,19 +302,6 @@ pub async fn delete_flag(
     State(state): State<AppState>,
     Path(name): Path<String>,
 ) -> AppResult<impl IntoResponse> {
-    let file_path = get_flag_file_path(&state.config.flags_dir, &name)?;
-
-    // Check if file exists
-    if !file_path.exists() {
-        return Err(AppError::NotFound(format!(
-            "Flag definition '{}' not found",
-            name
-        )));
-    }
-
-    // Delete the file
-    fs::remove_file(&file_path)
-        .map_err(|e| AppError::InternalServerError(format!("Failed to delete file: {}", e)))?;
-
+    state.storage.delete_flag(&name).await?;
     Ok(StatusCode::NO_CONTENT)
 }

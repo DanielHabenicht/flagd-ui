@@ -5,6 +5,30 @@ use utoipa::OpenApi;
 mod config;
 #[path = "src/error.rs"]
 mod error;
+
+// Stub storage module for build script
+mod storage {
+    pub use crate::error::AppResult;
+    use async_trait::async_trait;
+    use std::sync::Arc;
+
+    #[async_trait]
+    pub trait StorageBackend: Send + Sync {
+        async fn list_flags(&self) -> AppResult<Vec<String>>;
+        async fn read_flag(&self, name: &str) -> AppResult<serde_json::Value>;
+        async fn write_flag(&self, name: &str, content: &serde_json::Value) -> AppResult<()>;
+        async fn delete_flag(&self, name: &str) -> AppResult<()>;
+        async fn flag_exists(&self, name: &str) -> AppResult<bool>;
+    }
+
+    pub struct LocalStorage;
+    pub struct AzureStorage;
+    
+    pub fn create_storage_backend(_uri: &str) -> AppResult<Arc<dyn StorageBackend>> {
+        panic!("Storage backend should not be used in build script")
+    }
+}
+
 #[path = "src/handlers/api/flags.rs"]
 pub mod flags_impl;
 
