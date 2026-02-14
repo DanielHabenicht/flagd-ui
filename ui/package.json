@@ -2,10 +2,9 @@
   "name": "ui",
   "version": "0.0.0",
   "scripts": {
+    "postinstall": "npm run generate:api-client",
     "ng": "ng",
-    "prestart": "npm run generate:api-client",
     "start": "ng serve",
-    "prebuild": "npm run generate:api-client",
     "build": "ng build",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
