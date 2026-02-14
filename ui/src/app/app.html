@@ -1,4 +1,8 @@
-<mat-sidenav-container class="app-shell">
+<mat-sidenav-container class="app-shell"
+    (dragover)="onDragOver($event)"
+    (dragleave)="onDragLeave($event)"
+    (drop)="onDrop($event)"
+    [class.drag-active]="dragOver">
   <mat-sidenav mode="side" opened class="sidebar">
     <mat-toolbar>
       <h1>flagd-ui</h1>

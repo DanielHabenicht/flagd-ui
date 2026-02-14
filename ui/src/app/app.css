@@ -4,6 +4,24 @@
 
 .sidebar {
     width: 260px;
+    display: flex;
+    flex-direction: column;
+}
+
+::ng-deep .sidebar .mat-drawer-inner-container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.sidebar mat-toolbar {
+    flex: 0 0 auto;
+}
+
+.sidebar app-project-list {
+    display: block;
+    flex: 1 1 auto;
+    min-height: 0;
 }
 
 h1 {
@@ -15,4 +33,9 @@ h1 {
 
 .main-content {
     padding: 24px 32px;
+}
+
+.app-shell.drag-active {
+    outline: 3px dashed var(--color-primary);
+    outline-offset: -3px;
 }

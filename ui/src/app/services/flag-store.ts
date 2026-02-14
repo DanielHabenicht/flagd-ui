@@ -40,14 +40,9 @@ export class FlagStore {
     const all = this.projects();
     const groups: FileGroup[] = [];
 
-    // Local files group
-    const localEntries = all.filter((p) => p.source === 'local');
-    if (localEntries.length > 0) {
-      groups.push({ label: 'Local Files', icon: 'computer', entries: localEntries });
-    }
-
-    // Group remote files by backend
     const backends = this.backendRegistry.getBackends();
+
+    // Group remote files first
     for (const backend of backends) {
       const entries = all.filter(
         (p) => p.source === 'remote' && p.backendUrl === backend.url,
@@ -60,6 +55,12 @@ export class FlagStore {
           entries,
         });
       }
+    }
+
+    // Local files group
+    const localEntries = all.filter((p) => p.source === 'local');
+    if (localEntries.length > 0) {
+      groups.push({ label: 'Local Files', icon: 'computer', entries: localEntries });
     }
 
     return groups;
