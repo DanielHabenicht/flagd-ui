@@ -16,7 +16,13 @@
 
   "customizations": {
     "vscode": {
-      "extensions": ["GitHub.copilot", "GitHub.copilot-chat", "GitHub.copilot-labs", "esbenp.prettier-vscode"],
+      "extensions": [
+        "GitHub.copilot",
+        "GitHub.copilot-chat",
+        "GitHub.copilot-labs",
+        "esbenp.prettier-vscode",
+        "ms-playwright.playwright"
+      ],
       "settings": {}
     }
   },

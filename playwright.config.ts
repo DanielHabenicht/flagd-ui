@@ -26,10 +26,10 @@ export default defineConfig({
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
     /* Base URL to use in actions like `await page.goto('')`. */
-    baseURL: 'http://127.0.0.1:4200',
+    baseURL: 'http://127.0.0.1:3000',
 
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
-    trace: 'on-first-retry',
+    trace: 'retain-on-failure',
   },
 
   /* Configure projects for major browsers */
@@ -72,9 +72,10 @@ export default defineConfig({
 
   /* Run your local dev server before starting the tests */
   webServer: {
-    command: 'cd ui && npx ng serve --host 127.0.0.1 --port 4200 --configuration development',
-    url: 'http://127.0.0.1:4200',
+    command: 'docker compose up --build',
+    url: 'http://127.0.0.1:3000',
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
+    gracefulShutdown: { signal: 'SIGTERM', timeout: 1000 },
   },
 });
