@@ -83,6 +83,9 @@ export class FlagEditorComponent implements OnInit, OnChanges {
   
   // Environment mode state
   environmentStates = signal<Record<string, unknown>>({});
+  
+  // Expose JSON to template for object editing
+  readonly JSON = JSON;
 
   readonly environments = computed(() => this.store.currentEnvironments());
   readonly hasEnvironments = computed(() => this.environments().length > 0);
@@ -92,9 +95,6 @@ export class FlagEditorComponent implements OnInit, OnChanges {
     const flagType = this.form?.get('flagType')?.value as FlagType | undefined;
     return flagType !== undefined;
   });
-  targeting = signal<Record<string, unknown> | undefined>(undefined);
-  metadata = signal<MetadataMap | undefined>(undefined);
-  editorMode = signal<EditorMode>('easy');
 
   // JSON editor state
   rawJson = '';
