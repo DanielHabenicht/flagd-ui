@@ -12,6 +12,9 @@ services:
 
   flagd:
     image: ghcr.io/open-feature/flagd:latest
+    depends_on:
+      azurite-init:
+        condition: service_completed_successfully
     volumes:
       - ./flags:/flags
     command: [ 'start', '--uri', 'file:./flags/demo.flagd.json' ]
@@ -20,26 +23,11 @@ services:
       - '8016:8016'
       - '8014:8014'
 
-  # Flagd with Azure Blob Storage configuration
-  flagd-azurite:
-    image: ghcr.io/open-feature/flagd:latest
-    depends_on:
-      azurite-init:
-        condition: service_completed_successfully
-    command:
-      - 'start'
-      - '--uri'
-      - 'https://devstoreaccount1:Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==@azurite:10000/devstoreaccount1/feature-flags/demo.flagd.json'
-    ports:
-      - '8023:8013'
-      - '8026:8016'
-      - '8024:8014'
-
   azurite:
     image: local-azurite:latest
     build:
-      context: .
-      dockerfile: services/azurite/Dockerfile
+      context: services/azurite
+      dockerfile: Dockerfile
     ports:
       - 10000:10000
       - 10001:10001
@@ -47,10 +35,11 @@ services:
     volumes:
       - azurite-data:/data
     healthcheck:
-      test: ["CMD", "nc", "-z", "localhost", "10000"]
+      test: ["CMD", "sh", "-c", "pgrep -f azurite > /dev/null"]
       interval: 5s
       timeout: 3s
       retries: 10
+      start_period: 10s
 
   azurite-init:
     build:

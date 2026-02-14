@@ -7,7 +7,7 @@ CONNECTION_STRING="DefaultEndpointsProtocol=https;AccountName=devstoreaccount1;A
 echo "Waiting for Azurite to be ready..."
 # Wait for Azurite to be available (retry for up to 60 seconds)
 for i in $(seq 1 30); do
-  if curl -k -s https://azurite:10000/devstoreaccount1?restype=account > /dev/null 2>&1; then
+  if az storage container list --connection-string "$CONNECTION_STRING" > /dev/null 2>&1; then
     echo "Azurite is ready!"
     break
   fi

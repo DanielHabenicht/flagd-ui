@@ -1,8 +1,5 @@
 FROM mcr.microsoft.com/azure-cli:latest
 
-# Install curl for healthcheck
-RUN apk add --no-cache curl
-
 # Copy the demo flag file
 COPY flags/demo.flagd.json /tmp/demo.flagd.json
 
