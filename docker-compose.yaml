@@ -20,18 +20,46 @@ services:
       - '8016:8016'
       - '8014:8014'
 
+  # Flagd with Azure Blob Storage configuration
+  flagd-azurite:
+    image: ghcr.io/open-feature/flagd:latest
+    depends_on:
+      azurite-init:
+        condition: service_completed_successfully
+    command:
+      - 'start'
+      - '--uri'
+      - 'https://devstoreaccount1:Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==@azurite:10000/devstoreaccount1/feature-flags/demo.flagd.json'
+    ports:
+      - '8023:8013'
+      - '8026:8016'
+      - '8024:8014'
 
-  # azurite:
-  #   image: local-azurite:latest
-  #   build:
-  #     context: services/azurite
-  #   ports:
-  #     - 10000:10000
-  #     - 10001:10001
-  #     - 10002:10002
-  #   volumes:
-  #     - ./services/azurite/azurite-store:/data
-  #     - ./services/azurite/azurite-logs:/logs
+  azurite:
+    image: local-azurite:latest
+    build:
+      context: .
+      dockerfile: services/azurite/Dockerfile
+    ports:
+      - 10000:10000
+      - 10001:10001
+      - 10002:10002
+    volumes:
+      - azurite-data:/data
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "10000"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  azurite-init:
+    build:
+      context: .
+      dockerfile: services/azurite-init/Dockerfile
+    depends_on:
+      azurite:
+        condition: service_healthy
+    restart: "no"
 
   # auth:
   #   image: local-keycloak:latest
@@ -44,3 +72,7 @@ services:
   #   command:
   #     - start-dev
   #     - --import-realm
+
+volumes:
+  azurite-data:
+
