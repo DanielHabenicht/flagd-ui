@@ -1,15 +1,15 @@
 services:
-  flagd-ui:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    image: flagd-ui:local
-    user: "${UID:-1000}:${GID:-1000}"
-    ports:
-      # Attention: This exposes the UI to the network, which is unsecure! 
-      - '0.0.0.0:3000:3000'
-    volumes:
-      - ./flags:/app/flags
+  # flagd-ui:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile
+  #   image: flagd-ui:local
+  #   user: "${UID:-1000}:${GID:-1000}"
+  #   ports:
+  #     # Attention: This exposes the UI to the network, which is unsecure! 
+  #     - '0.0.0.0:3000:3000'
+  #   volumes:
+  #     - ./flags:/app/flags
 
   flagd:
     image: ghcr.io/open-feature/flagd:latest
@@ -18,5 +18,7 @@ services:
     command: [ 'start', '--uri', 'file:./flags/demo.flagd.json' ]
     ports:
       - '8013:8013'
-    depends_on:
-      - flagd-ui
+      - '8016:8016'
+      - '8014:8014'
+    # depends_on:
+    #   - flagd-ui
