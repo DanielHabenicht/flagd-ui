@@ -2,26 +2,6 @@
   <div class="project-workspace">
     <div class="project-detail-layout" [class.with-inline-editor]="showInlineEditor()">
       <div class="project-detail">
-        <div class="detail-header">
-          <div>
-            @if (sourceBreadcrumb()) {
-              <div class="source-breadcrumb">{{ sourceBreadcrumb() }}</div>
-            }
-            <h2>{{ store.currentFlagsFileName() }}</h2>
-          </div>
-          <div class="header-actions">
-            <button mat-icon-button (click)="openEnvironmentManager()" title="Manage Environments">
-              <mat-icon>layers</mat-icon>
-            </button>
-            <button mat-icon-button (click)="downloadFlagsFile()" title="Download JSON">
-              <mat-icon>download</mat-icon>
-            </button>
-            <button mat-flat-button color="primary" (click)="openNewFlagEditor()">
-              <mat-icon>add</mat-icon> Add Flag
-            </button>
-          </div>
-        </div>
-
         @if (store.error()) {
           <div class="error-banner">{{ store.error() }}</div>
         }
@@ -140,23 +120,16 @@
         <div class="inline-editor">
           <app-flag-editor
             [inline]="true"
+            [allowMaximize]="true"
             [flag]="editingFlag()"
             [existingKeys]="existingFlagKeys()"
+            (maximize)="openPageEditor()"
             (save)="onSaveFlag($event)"
             (cancel)="closeEditor()"
           />
         </div>
       }
     </div>
-
-    @if (showSidePanelEditor()) {
-      <app-flag-editor
-        [flag]="editingFlag()"
-        [existingKeys]="existingFlagKeys()"
-        (save)="onSaveFlag($event)"
-        (cancel)="closeEditor()"
-      />
-    }
   </div>
 
   <app-playground-drawer

@@ -19,6 +19,11 @@
         <mat-button-toggle value="advanced">Advanced</mat-button-toggle>
         <mat-button-toggle value="json">JSON</mat-button-toggle>
       </mat-button-toggle-group>
+      @if (inline() && allowMaximize()) {
+        <button mat-icon-button (click)="onMaximize()" [title]="maximizeTitle()">
+          <mat-icon>{{ maximizeIcon() }}</mat-icon>
+        </button>
+      }
       @if (!inline()) {
         <button mat-icon-button (click)="onCancel()">
           <mat-icon>close</mat-icon>

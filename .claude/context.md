@@ -210,3 +210,19 @@ The UI supports both light and dark themes. New or updated frontend components m
 
 1. Terminal 1: `cargo run` (API on :3000)
 2. Terminal 2: `cd ui && npm start` (UI on :4200 with proxy)
+
+## Persisted UI requirements (flag editing)
+
+These are required behaviors from recent UI changes and should be preserved unless explicitly redefined.
+
+1. Use route-based edit pages so the selected flag is in the URL path.
+
+- Local: `/flags-files/local/:name/edit/new` and `/flags-files/local/:name/edit/:flagKey`
+- Remote: `/flags-files/remote/:backendId/:name/edit/new` and `/flags-files/remote/:backendId/:name/edit/:flagKey`
+
+2. Below `1280px`, create/edit must navigate to routed edit page (no side panel behavior).
+3. At/above `1280px`, keep inline detail editing; provide expand action to open routed edit page.
+4. In routed edit page (large screens), show an unexpand action to return to detail view.
+5. Below `1920px`, save/create closes editing; at/above `1920px`, keep editor open.
+6. Playground drawer must be available in routed edit page as well as detail view.
+7. Routed edit page layout must be full-width, have a scrollable workspace above playground, and include padding so card borders are visible and actions are not overlapped by expanded playground.

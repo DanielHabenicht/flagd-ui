@@ -6,7 +6,6 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatDialog } from '@angular/material/dialog';
 import { FlagStore } from '../../services/flag-store';
-import { BackendRegistry } from '../../services/backend-registry';
 import { FlagEditorComponent } from '../flag-editor/flag-editor';
 import { FlagDefinition, FlagEntry, MetadataMap, inferFlagType } from '../../models/flag.models';
 import { PlaygroundDrawerComponent } from '../playground-drawer/playground-drawer';
@@ -30,14 +29,14 @@ import { EnvironmentManagerComponent } from '../environment-manager/environment-
 })
 export class FlagsFileDetailComponent implements OnInit {
   readonly store = inject(FlagStore);
-  private readonly backendRegistry = inject(BackendRegistry);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly dialog = inject(MatDialog);
   private readonly inlineEditorMinWidth = 1280;
+  private readonly keepEditorOpenAfterSaveMinWidth = 1920;
   private readonly initialWideLayout =
-    typeof window !== 'undefined' && window.innerWidth > this.inlineEditorMinWidth;
-  private readonly routeFlagKey = signal<string | null>(null);
+    typeof window !== 'undefined' && window.innerWidth >= this.inlineEditorMinWidth;
+  private readonly routeSelectedFlagKey = signal<string | null>(null);
 
   showEditor = signal(this.initialWideLayout);
   editingFlag = signal<FlagEntry | null>(null);
@@ -45,7 +44,6 @@ export class FlagsFileDetailComponent implements OnInit {
   readonly selectedFlagKey = computed(() => this.editingFlag()?.key ?? null);
   readonly existingFlagKeys = computed(() => this.store.flagEntries().map((f) => f.key));
   readonly showInlineEditor = computed(() => this.showEditor() && this.isWideLayout());
-  readonly showSidePanelEditor = computed(() => this.showEditor() && !this.isWideLayout());
   readonly displayedColumns = [
     'key',
     'type',
@@ -55,20 +53,6 @@ export class FlagsFileDetailComponent implements OnInit {
     'targeting',
     'actions',
   ];
-  readonly sourceBreadcrumb = computed(() => {
-    const flagsFile = this.store.currentFlagsFile();
-    if (!flagsFile) return null;
-
-    if (flagsFile.source === 'local') {
-      return 'Local Files';
-    }
-
-    const backend = this.backendRegistry
-      .getBackends()
-      .find((entry) => entry.url === flagsFile.backendUrl);
-    const backendLabel = backend?.label ?? flagsFile.backendUrl ?? 'Unknown Backend';
-    return `${backendLabel}`;
-  });
   readonly projectMetadataDirty = computed(
     () =>
       this.metadataSnapshot(this.projectMetadataDraft()) !==
@@ -80,19 +64,14 @@ export class FlagsFileDetailComponent implements OnInit {
 
   readonly projectMetadataDraft = signal<MetadataMap | undefined>(undefined);
 
-  private readonly syncEditorWithRoute = effect(() => {
-    const selectedKey = this.routeFlagKey();
-    if (!selectedKey) {
-      this.editingFlag.set(null);
-      return;
-    }
+  private readonly syncSelectedFlagFromRoute = effect(() => {
+    const selectedFlagKey = this.routeSelectedFlagKey();
+    if (!selectedFlagKey) return;
 
-    const match = this.store.flagEntries().find((entry) => entry.key === selectedKey);
+    const match = this.store.flagEntries().find((entry) => entry.key === selectedFlagKey);
     if (!match) return;
 
-    if (this.editingFlag()?.key !== match.key) {
-      this.editingFlag.set(match);
-    }
+    this.editingFlag.set(match);
     this.showEditor.set(true);
   });
 
@@ -133,13 +112,13 @@ export class FlagsFileDetailComponent implements OnInit {
     });
 
     this.route.queryParamMap.subscribe((params) => {
-      this.routeFlagKey.set(params.get('flag'));
+      this.routeSelectedFlagKey.set(params.get('flag'));
     });
   }
 
   @HostListener('window:resize')
   onWindowResize(): void {
-    const isWide = window.innerWidth > this.inlineEditorMinWidth;
+    const isWide = window.innerWidth >= this.inlineEditorMinWidth;
     this.isWideLayout.set(isWide);
     if (isWide) {
       this.showEditor.set(true);
@@ -147,7 +126,11 @@ export class FlagsFileDetailComponent implements OnInit {
   }
 
   openNewFlagEditor(): void {
-    this.updateSelectedFlagInUrl(null);
+    if (!this.isWideLayout()) {
+      this.navigateToEditRoute(null);
+      return;
+    }
+
     this.editingFlag.set(null);
     this.showEditor.set(true);
   }
@@ -161,13 +144,20 @@ export class FlagsFileDetailComponent implements OnInit {
   }
 
   openEditFlagEditor(flag: FlagEntry): void {
-    this.updateSelectedFlagInUrl(flag.key);
+    if (!this.isWideLayout()) {
+      this.navigateToEditRoute(flag.key);
+      return;
+    }
+
     this.editingFlag.set(flag);
     this.showEditor.set(true);
   }
 
+  openPageEditor(): void {
+    this.navigateToEditRoute(this.selectedFlagKey());
+  }
+
   closeEditor(): void {
-    this.updateSelectedFlagInUrl(null);
     this.showEditor.set(this.isWideLayout());
     this.editingFlag.set(null);
   }
@@ -179,8 +169,7 @@ export class FlagsFileDetailComponent implements OnInit {
       this.store.saveFlag(event.key, event.flag);
     }
 
-    if (this.isWideLayout()) {
-      this.updateSelectedFlagInUrl(event.key);
+    if (window.innerWidth >= this.keepEditorOpenAfterSaveMinWidth) {
       this.editingFlag.set({
         key: event.key,
         ...event.flag,
@@ -211,13 +200,19 @@ export class FlagsFileDetailComponent implements OnInit {
     this.store.saveFlagsFileMetadata(this.projectMetadataDraft());
   }
 
-  private updateSelectedFlagInUrl(flagKey: string | null): void {
-    this.router.navigate([], {
-      relativeTo: this.route,
-      queryParams: { flag: flagKey },
-      queryParamsHandling: 'merge',
-      replaceUrl: true,
-    });
+  private navigateToEditRoute(flagKey: string | null): void {
+    const name = this.route.snapshot.paramMap.get('name');
+    if (!name) return;
+
+    const backendId = this.route.snapshot.paramMap.get('backendId');
+    const targetFlagKey = flagKey ?? 'new';
+
+    if (backendId) {
+      this.router.navigate(['/flags-files', 'remote', backendId, name, 'edit', targetFlagKey]);
+      return;
+    }
+
+    this.router.navigate(['/flags-files', 'local', name, 'edit', targetFlagKey]);
   }
 
   private metadataSnapshot(metadata: MetadataMap | undefined): string {

@@ -87,10 +87,14 @@ export class FlagEditorComponent implements OnInit, OnChanges {
   private readonly schemaAdapter = new FlagSchemaAdapter();
 
   readonly inline = input(false);
+  readonly allowMaximize = input(false);
+  readonly maximizeIcon = input('open_in_full');
+  readonly maximizeTitle = input('Open editor as page');
   readonly flag = input<FlagEntry | null>(null);
   readonly existingKeys = input<string[]>([]);
   readonly save = output<{ key: string; flag: FlagDefinition; originalKey?: string }>();
   readonly cancel = output<void>();
+  readonly maximize = output<void>();
 
   form!: FormGroup;
   variants = signal<VariantRow[]>([]);
@@ -589,6 +593,10 @@ export class FlagEditorComponent implements OnInit, OnChanges {
 
   onCancel(): void {
     this.cancel.emit();
+  }
+
+  onMaximize(): void {
+    this.maximize.emit();
   }
 
   // --- Private helpers ---

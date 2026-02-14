@@ -33,20 +33,52 @@
     <app-flags-file-list />
   </mat-sidenav>
   <mat-sidenav-content class="main-content">
-    @if (isCompactLayout()) {
-      <div class="page-header-nav">
-        <button
-          mat-icon-button
-          class="nav-toggle-button"
-          type="button"
-          (click)="toggleNavigation()"
-          title="Toggle navigation"
-          aria-label="Toggle navigation"
-        >
-          <mat-icon>menu</mat-icon>
-        </button>
+    @if (showPageHeader()) {
+      <div class="page-header">
+        @if (isCompactLayout()) {
+          <button
+            mat-icon-button
+            class="nav-toggle-button"
+            type="button"
+            (click)="toggleNavigation()"
+            title="Toggle navigation"
+            aria-label="Toggle navigation"
+          >
+            <mat-icon>menu</mat-icon>
+          </button>
+        }
+
+        @if (showFlagsContextHeader()) {
+          <div class="flags-context-header">
+            <div class="flags-title-row">
+              @if (sourceBreadcrumb()) {
+                <span class="source-breadcrumb">{{ sourceBreadcrumb() }}</span>
+                <span class="source-separator" aria-hidden="true">›</span>
+              }
+              <h2>{{ store.currentFlagsFileName() }}</h2>
+              @if (isEditComponentActive() && editedFlagBreadcrumb()) {
+                <span class="source-separator" aria-hidden="true">›</span>
+                <span class="edit-breadcrumb">{{ editedFlagBreadcrumb() }}</span>
+              }
+            </div>
+
+            @if (isOverviewComponentActive()) {
+              <div class="header-actions">
+                <button mat-icon-button (click)="openEnvironmentManager()" title="Manage Environments">
+                  <mat-icon>layers</mat-icon>
+                </button>
+                <button mat-icon-button (click)="downloadFlagsFile()" title="Download JSON">
+                  <mat-icon>download</mat-icon>
+                </button>
+                <button mat-flat-button color="primary" (click)="openNewFlagEditor()">
+                  <mat-icon>add</mat-icon> Add Flag
+                </button>
+              </div>
+            }
+          </div>
+        }
       </div>
     }
-    <router-outlet />
+    <router-outlet (activate)="onRouteActivate($event)" (deactivate)="onRouteDeactivate()" />
   </mat-sidenav-content>
 </mat-sidenav-container>
