@@ -1,6 +1,6 @@
 # flagd-ui
 
-`flagd-ui` is a web UI for managing feature flags in OpenFeature `flagd`.
+`flagd-ui` is a web UI for managing feature flags for OpenFeature's `flagd` [schema](https://flagd.dev/reference/schema/).
 
 ## What is included
 
