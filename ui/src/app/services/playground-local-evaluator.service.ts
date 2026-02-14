@@ -1,12 +1,14 @@
 import { Injectable } from '@angular/core';
 import { EvaluationContext } from '@openfeature/web-sdk';
-import * as jsonLogic from 'json-logic-js';
+import { LogicEngine } from 'json-logic-engine';
 import { Evaluator, FlagEntry, inferFlagType } from '../models/flag.models';
 import {
   EvaluationResult,
   PlaygroundEvaluationRequest,
   PlaygroundEvaluator,
 } from './playground-evaluation.types';
+
+const jsonLogicEngine = new LogicEngine();
 
 @Injectable({ providedIn: 'root' })
 export class PlaygroundLocalEvaluatorService implements PlaygroundEvaluator {
@@ -34,7 +36,7 @@ export class PlaygroundLocalEvaluatorService implements PlaygroundEvaluator {
     try {
       const expandedTargeting = this.expandRefs(targeting, request.evaluators ?? {}, []);
       const evaluationContext = this.withFlagdBuiltIns(context);
-      const outcome = jsonLogic.apply(expandedTargeting as any, evaluationContext as any);
+      const outcome = jsonLogicEngine.run(expandedTargeting as any, evaluationContext as any);
 
       if (typeof outcome === 'string' && this.hasVariant(flag, outcome)) {
         return {
