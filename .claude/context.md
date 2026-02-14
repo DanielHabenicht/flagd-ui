@@ -133,6 +133,26 @@ npm run build        # Production build to ../public
 npm run generate:api-client  # Regenerate API client from OpenAPI spec
 ```
 
+### Frontend formatting requirements (for Claude agents)
+
+When changing frontend files in `ui/` (especially `ui/src/**/*.ts`, `ui/src/**/*.html`, `ui/src/**/*.scss`, and `ui/**/*.json`):
+
+1. Follow the project's Prettier config in `ui/package.json`.
+2. Run Prettier before finishing work.
+
+Commands:
+
+```bash
+cd ui && npm run format:check
+cd ui && npm run format
+```
+
+For minimal diffs, format only changed files:
+
+```bash
+cd ui && npx prettier --write <changed-files>
+```
+
 ### Full stack dev
 1. Terminal 1: `cargo run` (API on :3000)
 2. Terminal 2: `cd ui && npm start` (UI on :4200 with proxy)

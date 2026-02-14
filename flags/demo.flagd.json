@@ -21,19 +21,22 @@
     },
     "test": {
       "defaultVariant": "on",
+      "metadata": {
+        "test": "123"
+      },
       "state": "ENABLED",
       "targeting": {
         "if": [
           {
-            ">=": [
+            "<=": [
               {
                 "var": "$flagd.timestamp"
               },
-              "2026-02-11T23:30:00.000Z"
+              1770854400
             ]
           },
-          "off",
-          "on"
+          "on",
+          "off"
         ]
       },
       "variants": {
@@ -41,5 +44,8 @@
         "on": true
       }
     }
+  },
+  "metadata": {
+    "asdasd": "asdasdasdasdasdasd"
   }
 }

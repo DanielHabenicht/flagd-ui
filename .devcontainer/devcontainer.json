@@ -16,7 +16,7 @@
 
   "customizations": {
     "vscode": {
-      "extensions": ["GitHub.copilot", "GitHub.copilot-chat", "GitHub.copilot-labs"],
+      "extensions": ["GitHub.copilot", "GitHub.copilot-chat", "GitHub.copilot-labs", "esbenp.prettier-vscode"],
       "settings": {}
     }
   },
