@@ -28,3 +28,7 @@ node_modules/
 /blob-report/
 /playwright/.cache/
 /playwright/.auth/
+
+# Azurite storage data
+services/azurite/azurite-store/
+services/azurite/azurite-logs/
