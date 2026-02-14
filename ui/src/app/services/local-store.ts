@@ -48,6 +48,13 @@ export class LocalStore {
     this.saveAll(all);
   }
 
+  updateProjectContent(name: string, content: FlagFileContent): void {
+    const all = this.getAll();
+    if (!all[name]) throw new Error(`Project "${name}" not found`);
+    all[name] = content;
+    this.saveAll(all);
+  }
+
   deleteProject(name: string): void {
     const all = this.getAll();
     delete all[name];

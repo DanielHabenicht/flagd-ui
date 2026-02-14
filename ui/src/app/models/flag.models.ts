@@ -1,6 +1,7 @@
 export type FlagState = 'ENABLED' | 'DISABLED';
 export type FlagType = 'boolean' | 'string' | 'number' | 'object';
 export type ProjectSource = 'local' | 'remote';
+export type MetadataMap = Record<string, string | number | boolean>;
 
 export interface ProjectEntry {
   name: string;
@@ -26,7 +27,7 @@ export interface FlagDefinition {
   variants: Record<string, unknown>;
   defaultVariant?: string | null;
   targeting?: Record<string, unknown>;
-  metadata?: Record<string, string | number | boolean>;
+  metadata?: MetadataMap;
 }
 
 export interface FlagEntry extends FlagDefinition {
@@ -36,6 +37,7 @@ export interface FlagEntry extends FlagDefinition {
 export interface FlagFileContent {
   $schema?: string;
   flags: Record<string, FlagDefinition>;
+  metadata?: MetadataMap;
 }
 
 export function inferFlagType(variants: Record<string, unknown>): FlagType {

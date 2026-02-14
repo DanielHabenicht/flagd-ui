@@ -11,9 +11,10 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule } from '@angular/material/core';
 import { MatTimepickerModule } from '@angular/material/timepicker';
-import { FlagDefinition, FlagEntry, FlagState, FlagType, inferFlagType, getDefaultVariants } from '../../models/flag.models';
+import { FlagDefinition, FlagEntry, FlagState, FlagType, MetadataMap, inferFlagType, getDefaultVariants } from '../../models/flag.models';
 import { VariantsEditorComponent, VariantRow } from '../variants-editor/variants-editor';
 import { TargetingEditorComponent } from '../targeting-editor/targeting-editor';
+import { MetadataEditorComponent } from '../metadata-editor/metadata-editor';
 
 export type EditorMode = 'easy' | 'advanced' | 'json';
 
@@ -25,6 +26,7 @@ export type EditorMode = 'easy' | 'advanced' | 'json';
     FormsModule,
     VariantsEditorComponent,
     TargetingEditorComponent,
+    MetadataEditorComponent,
     MatButtonToggleModule,
     MatSlideToggleModule,
     MatFormFieldModule,
@@ -51,7 +53,7 @@ export class FlagEditorComponent implements OnInit, OnChanges {
   form!: FormGroup;
   variants = signal<VariantRow[]>([]);
   targeting = signal<Record<string, unknown> | undefined>(undefined);
-  metadata = signal<Record<string, string | number | boolean> | undefined>(undefined);
+  metadata = signal<MetadataMap | undefined>(undefined);
   editorMode = signal<EditorMode>('easy');
 
   // JSON editor state
@@ -318,6 +320,10 @@ export class FlagEditorComponent implements OnInit, OnChanges {
     this.targeting.set(t);
   }
 
+  onMetadataChange(metadata: MetadataMap | undefined): void {
+    this.metadata.set(metadata);
+  }
+
   // --- JSON mode ---
 
   onJsonInput(value: string): void {
@@ -543,7 +549,7 @@ export class FlagEditorComponent implements OnInit, OnChanges {
       }
 
       if (parsed.metadata && typeof parsed.metadata === 'object') {
-        this.metadata.set(parsed.metadata as Record<string, string | number | boolean>);
+        this.metadata.set(parsed.metadata as MetadataMap);
       } else {
         this.metadata.set(undefined);
       }

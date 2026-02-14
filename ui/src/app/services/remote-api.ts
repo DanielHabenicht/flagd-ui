@@ -18,14 +18,14 @@ export class RemoteApi {
       .get<FlagFileContent>(`${backendUrl}/api/flags/${encodeURIComponent(name)}`);
   }
 
-  createProject(backendUrl: string, name: string, flags: object): Observable<unknown> {
+  createProject(backendUrl: string, name: string, content: FlagFileContent): Observable<unknown> {
     return this.http
-      .post(`${backendUrl}/api/flags`, { name, flags });
+      .post(`${backendUrl}/api/flags`, { name, ...content });
   }
 
-  updateProject(backendUrl: string, name: string, flags: object): Observable<unknown> {
+  updateProject(backendUrl: string, name: string, content: FlagFileContent): Observable<unknown> {
     return this.http
-      .put(`${backendUrl}/api/flags/${encodeURIComponent(name)}`, { flags });
+      .put(`${backendUrl}/api/flags/${encodeURIComponent(name)}`, content);
   }
 
   deleteProject(backendUrl: string, name: string): Observable<unknown> {

@@ -132,6 +132,11 @@
             </mat-form-field>
           </div>
         }
+
+        <app-metadata-editor
+          [metadata]="metadata()"
+          (metadataChange)="onMetadataChange($event)"
+        />
       </div>
     }
 
@@ -168,6 +173,11 @@
           [targeting]="targeting()"
           [variantKeys]="variantNames()"
           (targetingChange)="onTargetingChange($event)"
+        />
+
+        <app-metadata-editor
+          [metadata]="metadata()"
+          (metadataChange)="onMetadataChange($event)"
         />
       </div>
     }

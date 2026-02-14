@@ -10,6 +10,7 @@ import {
   FlagEntry,
   FlagFileContent,
   FileGroup,
+  MetadataMap,
   ProjectEntry,
 } from '../models/flag.models';
 
@@ -23,6 +24,7 @@ export class FlagStore {
   readonly projects = signal<ProjectEntry[]>([]);
   readonly currentProject = signal<ProjectEntry | null>(null);
   readonly currentFlags = signal<Record<string, FlagDefinition> | null>(null);
+  readonly currentMetadata = signal<MetadataMap | undefined>(undefined);
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
   /** Tracks whether same-origin backend is available */
@@ -137,16 +139,19 @@ export class FlagStore {
     if (entry.source === 'local') {
       const content = this.localStore.getProject(entry.name);
       this.currentFlags.set(content?.flags ?? {});
+      this.currentMetadata.set(content?.metadata);
       this.loading.set(false);
     } else {
       this.remoteApi.getProject(entry.backendUrl!, entry.name).subscribe({
         next: (res) => {
           this.currentFlags.set(res.flags ?? {});
+          this.currentMetadata.set(res.metadata);
           this.loading.set(false);
         },
         error: (err) => {
           this.error.set(`Failed to load project "${entry.name}"`);
           this.currentFlags.set(null);
+          this.currentMetadata.set(undefined);
           this.loading.set(false);
           console.error('Failed to load project', err);
         },
@@ -182,7 +187,7 @@ export class FlagStore {
   createRemoteProject(backendUrl: string, name: string): void {
     this.loading.set(true);
     this.error.set(null);
-    this.remoteApi.createProject(backendUrl, name, {}).subscribe({
+    this.remoteApi.createProject(backendUrl, name, { flags: {} }).subscribe({
       next: () => {
         this.loadProjects();
         const backend = this.backendRegistry
@@ -213,6 +218,7 @@ export class FlagStore {
       if (isCurrent) {
         this.currentProject.set(null);
         this.currentFlags.set(null);
+        this.currentMetadata.set(undefined);
         this.router.navigate(['/']);
       }
       this.loadProjects();
@@ -222,6 +228,7 @@ export class FlagStore {
           if (isCurrent) {
             this.currentProject.set(null);
             this.currentFlags.set(null);
+            this.currentMetadata.set(undefined);
             this.router.navigate(['/']);
           }
           this.loadProjects();
@@ -241,24 +248,28 @@ export class FlagStore {
 
     const current = this.currentFlags() ?? {};
     const updated = { ...current, [key]: flag };
+    const metadata = this.currentMetadata();
+    const content = this.buildProjectContent(updated, metadata);
 
     this.loading.set(true);
     this.error.set(null);
 
     if (project.source === 'local') {
       try {
-        this.localStore.updateFlags(project.name, updated);
+        this.localStore.updateProjectContent(project.name, content);
         this.currentFlags.set(updated);
+        this.currentMetadata.set(metadata);
       } catch (err: any) {
         this.error.set(`Failed to save flag "${key}"`);
       }
       this.loading.set(false);
     } else {
       this.remoteApi
-        .updateProject(project.backendUrl!, project.name, updated)
+        .updateProject(project.backendUrl!, project.name, content)
         .subscribe({
           next: () => {
             this.currentFlags.set(updated);
+            this.currentMetadata.set(metadata);
             this.loading.set(false);
           },
           error: (err) => {
@@ -279,24 +290,28 @@ export class FlagStore {
 
     const updated = { ...current };
     delete updated[key];
+    const metadata = this.currentMetadata();
+    const content = this.buildProjectContent(updated, metadata);
 
     this.loading.set(true);
     this.error.set(null);
 
     if (project.source === 'local') {
       try {
-        this.localStore.updateFlags(project.name, updated);
+        this.localStore.updateProjectContent(project.name, content);
         this.currentFlags.set(updated);
+        this.currentMetadata.set(metadata);
       } catch (err: any) {
         this.error.set(`Failed to delete flag "${key}"`);
       }
       this.loading.set(false);
     } else {
       this.remoteApi
-        .updateProject(project.backendUrl!, project.name, updated)
+        .updateProject(project.backendUrl!, project.name, content)
         .subscribe({
           next: () => {
             this.currentFlags.set(updated);
+            this.currentMetadata.set(metadata);
             this.loading.set(false);
           },
           error: (err) => {
@@ -316,24 +331,28 @@ export class FlagStore {
     const updated = { ...current };
     delete updated[oldKey];
     updated[newKey] = flag;
+    const metadata = this.currentMetadata();
+    const content = this.buildProjectContent(updated, metadata);
 
     this.loading.set(true);
     this.error.set(null);
 
     if (project.source === 'local') {
       try {
-        this.localStore.updateFlags(project.name, updated);
+        this.localStore.updateProjectContent(project.name, content);
         this.currentFlags.set(updated);
+        this.currentMetadata.set(metadata);
       } catch (err: any) {
         this.error.set(`Failed to rename flag "${oldKey}"`);
       }
       this.loading.set(false);
     } else {
       this.remoteApi
-        .updateProject(project.backendUrl!, project.name, updated)
+        .updateProject(project.backendUrl!, project.name, content)
         .subscribe({
           next: () => {
             this.currentFlags.set(updated);
+            this.currentMetadata.set(metadata);
             this.loading.set(false);
           },
           error: (err) => {
@@ -351,14 +370,47 @@ export class FlagStore {
     this.router.navigate(['/projects', 'local', name]);
   }
 
+  saveProjectMetadata(metadata: MetadataMap | undefined): void {
+    const project = this.currentProject();
+    const flags = this.currentFlags();
+    if (!project || !flags) return;
+
+    const content = this.buildProjectContent(flags, metadata);
+
+    this.loading.set(true);
+    this.error.set(null);
+
+    if (project.source === 'local') {
+      try {
+        this.localStore.updateProjectContent(project.name, content);
+        this.currentMetadata.set(metadata);
+      } catch {
+        this.error.set('Failed to save project metadata');
+      }
+      this.loading.set(false);
+      return;
+    }
+
+    this.remoteApi.updateProject(project.backendUrl!, project.name, content).subscribe({
+      next: () => {
+        this.currentMetadata.set(metadata);
+        this.loading.set(false);
+      },
+      error: (err) => {
+        this.error.set('Failed to save project metadata');
+        this.loading.set(false);
+        console.error('Failed to save project metadata', err);
+      },
+    });
+  }
+
   downloadCurrentProject(): void {
     const project = this.currentProject();
     const flags = this.currentFlags();
     if (!project || !flags) return;
 
     const content: FlagFileContent = {
-      $schema: 'https://flagd.dev/schema/v0/flags.json',
-      flags,
+      ...this.buildProjectContent(flags, this.currentMetadata()),
     };
 
     const blob = new Blob([JSON.stringify(content, null, 2)], {
@@ -370,5 +422,21 @@ export class FlagStore {
     a.download = `${project.name}.flagd.json`;
     a.click();
     URL.revokeObjectURL(url);
+  }
+
+  private buildProjectContent(
+    flags: Record<string, FlagDefinition>,
+    metadata: MetadataMap | undefined,
+  ): FlagFileContent {
+    const content: FlagFileContent = {
+      $schema: 'https://flagd.dev/schema/v0/flags.json',
+      flags,
+    };
+
+    if (metadata && Object.keys(metadata).length > 0) {
+      content.metadata = metadata;
+    }
+
+    return content;
   }
 }

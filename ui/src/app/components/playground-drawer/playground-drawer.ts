@@ -241,7 +241,7 @@ export class PlaygroundDrawerComponent implements OnInit, OnDestroy {
       } else {
         details = client.getObjectDetails(flag.key, fallback as JsonValue);
       }
-
+      debugger;
       this.evaluation.set({
         value: details.value,
         variant: details.variant,

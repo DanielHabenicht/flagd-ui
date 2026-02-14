@@ -1,0 +1,72 @@
+<div class="metadata-editor">
+  <div class="metadata-header">
+    <label class="section-label">Metadata</label>
+    <button mat-stroked-button type="button" (click)="addRow()">
+      <mat-icon>add</mat-icon>
+      Add Metadata
+    </button>
+  </div>
+
+  @if (!rows.length) {
+    <p class="metadata-empty">No metadata entries.</p>
+  }
+
+  @for (row of rows; track $index) {
+    <div class="metadata-row">
+      <mat-form-field appearance="outline" class="metadata-key-field">
+        <mat-label>Key</mat-label>
+        <input
+          matInput
+          [value]="row.key"
+          (input)="onKeyChange($index, $any($event.target).value)"
+          placeholder="key"
+        />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="metadata-type-field">
+        <mat-label>Type</mat-label>
+        <mat-select [value]="row.type" (selectionChange)="onTypeChange($index, $event.value)">
+          <mat-option value="string">string</mat-option>
+          <mat-option value="number">number</mat-option>
+          <mat-option value="boolean">boolean</mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      @if (row.type === 'string') {
+        <mat-form-field appearance="outline" class="metadata-value-field">
+          <mat-label>Value</mat-label>
+          <input
+            matInput
+            type="text"
+            [value]="row.value"
+            (input)="onStringChange($index, $any($event.target).value)"
+            placeholder="text"
+          />
+        </mat-form-field>
+      } @else if (row.type === 'number') {
+        <mat-form-field appearance="outline" class="metadata-value-field">
+          <mat-label>Value</mat-label>
+          <input
+            matInput
+            type="number"
+            [value]="row.value"
+            (input)="onNumberChange($index, $any($event.target).value)"
+            placeholder="0"
+          />
+        </mat-form-field>
+      } @else {
+        <mat-form-field appearance="outline" class="metadata-value-field">
+          <mat-label>Value</mat-label>
+          <mat-select [value]="'' + row.value" (selectionChange)="onBooleanChange($index, $event.value)">
+            <mat-option value="true">true</mat-option>
+            <mat-option value="false">false</mat-option>
+          </mat-select>
+        </mat-form-field>
+      }
+
+      <button mat-icon-button color="warn" type="button" (click)="removeRow($index)" title="Remove metadata">
+        <mat-icon>close</mat-icon>
+      </button>
+    </div>
+  }
+</div>

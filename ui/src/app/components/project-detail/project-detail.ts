@@ -7,14 +7,16 @@ import { MatChipsModule } from '@angular/material/chips';
 import { FlagStore } from '../../services/flag-store';
 import { BackendRegistry } from '../../services/backend-registry';
 import { FlagEditorComponent } from '../flag-editor/flag-editor';
-import { FlagDefinition, FlagEntry, inferFlagType } from '../../models/flag.models';
+import { FlagDefinition, FlagEntry, MetadataMap, inferFlagType } from '../../models/flag.models';
 import { PlaygroundDrawerComponent } from '../playground-drawer/playground-drawer';
+import { MetadataEditorComponent } from '../metadata-editor/metadata-editor';
 
 @Component({
   selector: 'app-project-detail',
   standalone: true,
   imports: [
     FlagEditorComponent,
+    MetadataEditorComponent,
     PlaygroundDrawerComponent,
     MatTableModule,
     MatButtonModule,
@@ -55,6 +57,12 @@ export class ProjectDetailComponent implements OnInit {
     const backendLabel = backend?.label ?? project.backendUrl ?? 'Unknown Backend';
     return `${backendLabel}`;
   });
+  readonly projectMetadataDirty = computed(
+    () => this.metadataSnapshot(this.projectMetadataDraft()) !== this.metadataSnapshot(this.store.currentMetadata()),
+  );
+  readonly metadataSaveDisabled = computed(() => this.store.loading() || !this.projectMetadataDirty());
+
+  readonly projectMetadataDraft = signal<MetadataMap | undefined>(undefined);
 
   private readonly syncEditorWithRoute = effect(() => {
     const selectedKey = this.routeFlagKey();
@@ -70,6 +78,10 @@ export class ProjectDetailComponent implements OnInit {
       this.editingFlag.set(match);
     }
     this.showEditor.set(true);
+  });
+
+  private readonly syncProjectMetadataDraft = effect(() => {
+    this.projectMetadataDraft.set(this.store.currentMetadata());
   });
 
   getFlagType(flag: FlagEntry): string {
@@ -167,6 +179,14 @@ export class ProjectDetailComponent implements OnInit {
     this.store.downloadCurrentProject();
   }
 
+  onProjectMetadataChange(metadata: MetadataMap | undefined): void {
+    this.projectMetadataDraft.set(metadata);
+  }
+
+  saveProjectMetadata(): void {
+    this.store.saveProjectMetadata(this.projectMetadataDraft());
+  }
+
   private updateSelectedFlagInUrl(flagKey: string | null): void {
     this.router.navigate([], {
       relativeTo: this.route,
@@ -174,5 +194,11 @@ export class ProjectDetailComponent implements OnInit {
       queryParamsHandling: 'merge',
       replaceUrl: true,
     });
+  }
+
+  private metadataSnapshot(metadata: MetadataMap | undefined): string {
+    if (!metadata || Object.keys(metadata).length === 0) return '';
+    const sorted = Object.entries(metadata).sort(([a], [b]) => a.localeCompare(b));
+    return JSON.stringify(sorted);
   }
 }

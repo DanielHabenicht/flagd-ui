@@ -58,6 +58,9 @@ pub struct CreateFlagRequest {
     /// Flag definitions (without $schema property)
     #[schema(value_type = Object)]
     pub flags: serde_json::Value,
+    /// Optional metadata for the full flag set
+    #[schema(value_type = Object)]
+    pub metadata: Option<serde_json::Map<String, serde_json::Value>>,
 }
 
 /// Request payload for updating a flag definition file
@@ -66,6 +69,9 @@ pub struct UpdateFlagRequest {
     /// Flag definitions (without $schema property)
     #[schema(value_type = Object)]
     pub flags: serde_json::Value,
+    /// Optional metadata for the full flag set
+    #[schema(value_type = Object)]
+    pub metadata: Option<serde_json::Map<String, serde_json::Value>>,
 }
 
 /// Response for a single flag definition file
@@ -116,15 +122,12 @@ pub async fn init_app_state(config: ServerConfig) -> AppResult<AppState> {
 }
 
 /// Validate flag definition against the schema
-fn validate_flags(schema: &jsonschema::Validator, flags: &serde_json::Value) -> AppResult<()> {
-    // Create a complete document with the schema URL for validation
-    let complete_doc = serde_json::json!({
-        "$schema": "https://flagd.dev/schema/v0/flags.json",
-        "flags": flags
-    });
-
+fn validate_flags(
+    schema: &jsonschema::Validator,
+    complete_doc: &serde_json::Value,
+) -> AppResult<()> {
     schema
-        .validate(&complete_doc)
+        .validate(complete_doc)
         .map_err(|error| AppError::BadRequest(format!("Schema validation failed: {}", error)))
 }
 
@@ -256,8 +259,17 @@ pub async fn create_flag(
         )));
     }
 
-    // Validate the flags against the schema
-    validate_flags(&state.schema, &payload.flags)?;
+    let mut complete_doc = serde_json::json!({
+        "$schema": "https://flagd.dev/schema/v0/flags.json",
+        "flags": payload.flags
+    });
+
+    if let Some(metadata) = payload.metadata {
+        complete_doc["metadata"] = serde_json::Value::Object(metadata);
+    }
+
+    // Validate the full document against the schema
+    validate_flags(&state.schema, &complete_doc)?;
 
     // Create the directory if it doesn't exist
     if let Some(parent) = file_path.parent() {
@@ -265,12 +277,6 @@ pub async fn create_flag(
             AppError::InternalServerError(format!("Failed to create directory: {}", e))
         })?;
     }
-
-    // Create the complete document with schema URL (uses the official flagd schema URL)
-    let complete_doc = serde_json::json!({
-        "$schema": "https://flagd.dev/schema/v0/flags.json",
-        "flags": payload.flags
-    });
 
     // Write the file
     let json_string = serde_json::to_string_pretty(&complete_doc)
@@ -319,14 +325,31 @@ pub async fn update_flag(
         )));
     }
 
-    // Validate the flags against the schema
-    validate_flags(&state.schema, &payload.flags)?;
+    // Preserve existing metadata if the client does not send it.
+    let existing_content = fs::read_to_string(&file_path)
+        .map_err(|e| AppError::InternalServerError(format!("Failed to read file: {}", e)))?;
 
-    // Create the complete document with schema URL (uses the official flagd schema URL)
-    let complete_doc = serde_json::json!({
+    let existing_json: serde_json::Value = serde_json::from_str(&existing_content)
+        .map_err(|e| AppError::InternalServerError(format!("Failed to parse JSON: {}", e)))?;
+
+    let existing_metadata = existing_json
+        .get("metadata")
+        .and_then(|value| value.as_object())
+        .cloned();
+
+    let metadata_to_write = payload.metadata.or(existing_metadata);
+
+    let mut complete_doc = serde_json::json!({
         "$schema": "https://flagd.dev/schema/v0/flags.json",
         "flags": payload.flags
     });
+
+    if let Some(metadata) = metadata_to_write {
+        complete_doc["metadata"] = serde_json::Value::Object(metadata);
+    }
+
+    // Validate the full document against the schema
+    validate_flags(&state.schema, &complete_doc)?;
 
     // Write the file
     let json_string = serde_json::to_string_pretty(&complete_doc)

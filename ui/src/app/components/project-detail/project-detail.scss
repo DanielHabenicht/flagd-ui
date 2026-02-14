@@ -80,6 +80,26 @@
   font-size: 0.875rem;
 }
 
+.project-metadata-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.project-metadata-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.project-metadata-header h3 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
 .loading {
   text-align: center;
   padding: 48px;
