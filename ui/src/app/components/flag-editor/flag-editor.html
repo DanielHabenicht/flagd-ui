@@ -74,7 +74,11 @@
               <div class="easy-time-window-header">
                 <label>Global Active Time Window</label>
                 @if (!globalEnvironmentTimeEnabled()) {
-                  <button mat-stroked-button type="button" (click)="addGlobalEnvironmentTimeWindow()">
+                  <button
+                    mat-stroked-button
+                    type="button"
+                    (click)="addGlobalEnvironmentTimeWindow()"
+                  >
                     Add Time Window
                   </button>
                 } @else {
@@ -94,7 +98,11 @@
                   <div class="form-row">
                     <mat-form-field appearance="outline" class="full-width">
                       <mat-label>From Date</mat-label>
-                      <input matInput [matDatepicker]="startDatePicker" formControlName="easyStartDate" />
+                      <input
+                        matInput
+                        [matDatepicker]="startDatePicker"
+                        formControlName="easyStartDate"
+                      />
                       <mat-datepicker-toggle
                         matIconSuffix
                         [for]="startDatePicker"
@@ -104,7 +112,11 @@
 
                     <mat-form-field appearance="outline" class="full-width">
                       <mat-label>From Time</mat-label>
-                      <input matInput [matTimepicker]="startTimePicker" formControlName="easyStartTime" />
+                      <input
+                        matInput
+                        [matTimepicker]="startTimePicker"
+                        formControlName="easyStartTime"
+                      />
                       <mat-timepicker-toggle
                         matIconSuffix
                         [for]="startTimePicker"
@@ -117,7 +129,11 @@
                   <div class="form-row">
                     <mat-form-field appearance="outline" class="full-width">
                       <mat-label>Till Date</mat-label>
-                      <input matInput [matDatepicker]="endDatePicker" formControlName="easyEndDate" />
+                      <input
+                        matInput
+                        [matDatepicker]="endDatePicker"
+                        formControlName="easyEndDate"
+                      />
                       <mat-datepicker-toggle
                         matIconSuffix
                         [for]="endDatePicker"
@@ -127,8 +143,15 @@
 
                     <mat-form-field appearance="outline" class="full-width">
                       <mat-label>Till Time</mat-label>
-                      <input matInput [matTimepicker]="endTimePicker" formControlName="easyEndTime" />
-                      <mat-timepicker-toggle matIconSuffix [for]="endTimePicker"></mat-timepicker-toggle>
+                      <input
+                        matInput
+                        [matTimepicker]="endTimePicker"
+                        formControlName="easyEndTime"
+                      />
+                      <mat-timepicker-toggle
+                        matIconSuffix
+                        [for]="endTimePicker"
+                      ></mat-timepicker-toggle>
                       <mat-timepicker #endTimePicker></mat-timepicker>
                     </mat-form-field>
                   </div>
@@ -200,7 +223,11 @@
                     <textarea
                       matInput
                       [value]="JSON.stringify(getGlobalEnvironmentValue() ?? {}, null, 2)"
-                      (input)="onGlobalEnvironmentValueChange(JSON.parse($any($event.target).value || '{}'))"
+                      (input)="
+                        onGlobalEnvironmentValueChange(
+                          JSON.parse($any($event.target).value || '{}')
+                        )
+                      "
                       rows="4"
                       placeholder="{}"
                     ></textarea>
@@ -250,7 +277,9 @@
                               <input
                                 matInput
                                 [matDatepicker]="envStartDatePicker"
-                                [ngModel]="getEnvironmentTimeWindow(env.name.toLowerCase()).startDate"
+                                [ngModel]="
+                                  getEnvironmentTimeWindow(env.name.toLowerCase()).startDate
+                                "
                                 [ngModelOptions]="{ standalone: true }"
                                 (ngModelChange)="
                                   onEnvironmentTimeWindowChange(
@@ -272,7 +301,9 @@
                               <input
                                 matInput
                                 [matTimepicker]="envStartTimePicker"
-                                [ngModel]="getEnvironmentTimeWindow(env.name.toLowerCase()).startTime"
+                                [ngModel]="
+                                  getEnvironmentTimeWindow(env.name.toLowerCase()).startTime
+                                "
                                 [ngModelOptions]="{ standalone: true }"
                                 (ngModelChange)="
                                   onEnvironmentTimeWindowChange(
@@ -342,7 +373,9 @@
                       @if (form.get('flagType')!.value === 'boolean') {
                         <mat-slide-toggle
                           [checked]="environmentStates()[env.name.toLowerCase()] === true"
-                          (change)="onEnvironmentValueChange(env.name.toLowerCase(), $event.checked)"
+                          (change)="
+                            onEnvironmentValueChange(env.name.toLowerCase(), $event.checked)
+                          "
                         >
                           {{ environmentStates()[env.name.toLowerCase()] === true ? 'ON' : 'OFF' }}
                         </mat-slide-toggle>
@@ -390,7 +423,11 @@
                             matInput
                             [value]="
                               environmentStates()[env.name.toLowerCase()]
-                                ? JSON.stringify(environmentStates()[env.name.toLowerCase()], null, 2)
+                                ? JSON.stringify(
+                                    environmentStates()[env.name.toLowerCase()],
+                                    null,
+                                    2
+                                  )
                                 : '{}'
                             "
                             (input)="

@@ -1181,8 +1181,7 @@ export class FlagEditorComponent implements OnInit, OnChanges {
       const envRef = { $ref: `is${env.name.charAt(0).toUpperCase()}${env.name.slice(1)}` };
       const envTimeBounds = this.getEnvironmentTimeWindowBounds(envName);
       const envTimeCondition = this.buildTimestampConditionFromBounds(envTimeBounds);
-      const envCondition =
-        envTimeCondition !== null ? { and: [envRef, envTimeCondition] } : envRef;
+      const envCondition = envTimeCondition !== null ? { and: [envRef, envTimeCondition] } : envRef;
 
       return {
         if: [envCondition, envName, buildChain(index + 1)],
@@ -1190,7 +1189,9 @@ export class FlagEditorComponent implements OnInit, OnChanges {
     };
 
     const environmentChain = buildChain(0);
-    const globalTimeCondition = this.buildTimestampConditionFromBounds(this.getGlobalTimeWindowBounds());
+    const globalTimeCondition = this.buildTimestampConditionFromBounds(
+      this.getGlobalTimeWindowBounds(),
+    );
 
     if (globalTimeCondition !== null) {
       return {
@@ -1201,7 +1202,9 @@ export class FlagEditorComponent implements OnInit, OnChanges {
     return (environmentChain as Record<string, unknown>) ?? {};
   }
 
-  private buildTimestampConditionFromBounds(bounds: TimeWindowBounds | null): Record<string, unknown> | null {
+  private buildTimestampConditionFromBounds(
+    bounds: TimeWindowBounds | null,
+  ): Record<string, unknown> | null {
     if (!bounds) return null;
 
     const conditions: Record<string, unknown>[] = [];
@@ -1242,7 +1245,9 @@ export class FlagEditorComponent implements OnInit, OnChanges {
     const state = this.environmentTimeWindows()[envName.toLowerCase()];
     if (!state) return null;
 
-    const start = this.toUnixEpochSeconds(this.combineDateAndTime(state.startDate, state.startTime));
+    const start = this.toUnixEpochSeconds(
+      this.combineDateAndTime(state.startDate, state.startTime),
+    );
     const end = this.toUnixEpochSeconds(this.combineDateAndTime(state.endDate, state.endTime));
 
     if (start === null && end === null) return null;
@@ -1257,9 +1262,10 @@ export class FlagEditorComponent implements OnInit, OnChanges {
     global?: TimeWindowBounds;
     perEnvironment: Record<string, TimeWindowBounds>;
   } {
-    const result: { global?: TimeWindowBounds; perEnvironment: Record<string, TimeWindowBounds> } = {
-      perEnvironment: {},
-    };
+    const result: { global?: TimeWindowBounds; perEnvironment: Record<string, TimeWindowBounds> } =
+      {
+        perEnvironment: {},
+      };
 
     if (!targeting) return result;
 
