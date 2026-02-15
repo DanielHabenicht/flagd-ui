@@ -542,7 +542,8 @@
                     (input)="onInteractiveStringValueChange()"
                   ></textarea>
                   @if (
-                    form.get('interactiveStringOnValue')!.invalid && form.get('interactiveStringOnValue')!.touched
+                    form.get('interactiveStringOnValue')!.invalid &&
+                    form.get('interactiveStringOnValue')!.touched
                   ) {
                     <mat-error>On value is required</mat-error>
                   }
@@ -570,8 +571,6 @@
           }
         </div>
       }
-
-
 
       <!-- ==================== JSON MODE ==================== -->
       @if (editorMode() === 'json') {

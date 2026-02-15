@@ -176,7 +176,11 @@ export class FlagEditorComponent implements OnInit, OnChanges {
     const flagType = this.form?.get('flagType')?.value as FlagType | undefined;
 
     if (!flagType || (flagType !== 'boolean' && flagType !== 'string')) return false;
-    if (targeting && Object.keys(targeting).length > 0 && !this.isInteractiveTimeTargeting(targeting))
+    if (
+      targeting &&
+      Object.keys(targeting).length > 0 &&
+      !this.isInteractiveTimeTargeting(targeting)
+    )
       return false;
     return this.isSimpleFlagStructure(flagType, variants);
   });
