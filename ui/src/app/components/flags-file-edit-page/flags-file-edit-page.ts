@@ -2,7 +2,6 @@ import { Component, computed, effect, inject, OnInit, signal } from '@angular/co
 import { ActivatedRoute, Router } from '@angular/router';
 import { Store } from '@ngxs/store';
 import { FlagEditorComponent } from '../flag-editor/flag-editor';
-import { PlaygroundDrawerComponent } from '../playground-drawer/playground-drawer';
 import { FlagDefinition, FlagEntry } from '../../models/flag.models';
 import { FlagStoreState } from '../../state/flag-store.state';
 import { SelectFlagsFileByRoute, SaveFlag, RenameFlag } from '../../state/flag-store.actions';
@@ -10,7 +9,7 @@ import { SelectFlagsFileByRoute, SaveFlag, RenameFlag } from '../../state/flag-s
 @Component({
   selector: 'app-flags-file-edit-page',
   standalone: true,
-  imports: [FlagEditorComponent, PlaygroundDrawerComponent],
+  imports: [FlagEditorComponent],
   templateUrl: './flags-file-edit-page.html',
   styleUrl: './flags-file-edit-page.scss',
 })

@@ -5,19 +5,13 @@ import { MatButtonModule } from '@angular/material/button';
 import { MetadataMap } from '../../models/flag.models';
 import { MetadataEditorComponent } from '../metadata-editor/metadata-editor';
 import { EnvironmentManagerComponent } from '../environment-manager/environment-manager';
-import { PlaygroundDrawerComponent } from '../playground-drawer/playground-drawer';
 import { FlagStoreState } from '../../state/flag-store.state';
 import { SelectFlagsFileByRoute, SaveFlagsFileMetadata } from '../../state/flag-store.actions';
 
 @Component({
   selector: 'app-flags-file-settings-page',
   standalone: true,
-  imports: [
-    MatButtonModule,
-    MetadataEditorComponent,
-    EnvironmentManagerComponent,
-    PlaygroundDrawerComponent,
-  ],
+  imports: [MatButtonModule, MetadataEditorComponent, EnvironmentManagerComponent],
   templateUrl: './flags-file-settings-page.html',
   styleUrl: './flags-file-settings-page.scss',
 })
@@ -38,9 +32,7 @@ export class FlagsFileSettingsPageComponent implements OnInit {
       this.metadataSnapshot(this.projectMetadataDraft()) !==
       this.metadataSnapshot(this.currentMetadata()),
   );
-  readonly metadataSaveDisabled = computed(
-    () => this.loading() || !this.projectMetadataDirty(),
-  );
+  readonly metadataSaveDisabled = computed(() => this.loading() || !this.projectMetadataDirty());
 
   private readonly syncProjectMetadataDraft = effect(() => {
     this.projectMetadataDraft.set(this.currentMetadata());

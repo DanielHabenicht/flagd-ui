@@ -12,16 +12,19 @@ import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { FlagEditorComponent } from '../flag-editor/flag-editor';
 import { FlagDefinition, FlagEntry, inferFlagType } from '../../models/flag.models';
-import { PlaygroundDrawerComponent } from '../playground-drawer/playground-drawer';
 import { FlagStoreState } from '../../state/flag-store.state';
-import { SelectFlagsFileByRoute, SaveFlag, RenameFlag, DeleteFlag } from '../../state/flag-store.actions';
+import {
+  SelectFlagsFileByRoute,
+  SaveFlag,
+  RenameFlag,
+  DeleteFlag,
+} from '../../state/flag-store.actions';
 
 @Component({
   selector: 'app-flags-file-detail',
   standalone: true,
   imports: [
     FlagEditorComponent,
-    PlaygroundDrawerComponent,
     MatTableModule,
     MatButtonModule,
     MatIconModule,

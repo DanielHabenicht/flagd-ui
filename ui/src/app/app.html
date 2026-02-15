@@ -90,5 +90,11 @@
       </div>
     }
     <router-outlet (activate)="onRouteActivate($event)" (deactivate)="onRouteDeactivate()" />
-  </mat-sidenav-content>
-</mat-sidenav-container>
+    @if (showPlaygroundDrawer()) {
+      <app-playground-drawer
+        [flags]="playgroundDrawerFlags()"
+        [evaluators]="playgroundDrawerEvaluators()"
+        [selectedFlagKey]="playgroundDrawerSelectedFlagKey()"
+      />
+    }</mat-sidenav-content
+></mat-sidenav-container>

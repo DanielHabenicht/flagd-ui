@@ -19,6 +19,7 @@ import { FlagsFileListComponent } from './components/flags-file-list/flags-file-
 import { FlagsFileDetailComponent } from './components/flags-file-detail/flags-file-detail';
 import { FlagsFileEditPageComponent } from './components/flags-file-edit-page/flags-file-edit-page';
 import { FlagsFileSettingsPageComponent } from './components/flags-file-settings-page/flags-file-settings-page';
+import { PlaygroundDrawerComponent } from './components/playground-drawer/playground-drawer';
 import { FlagFileContent } from './models/flag.models';
 import { GlobalLoadingService } from './services/global-loading.service';
 import { BackendRegistry } from './services/backend-registry';
@@ -36,6 +37,7 @@ type AppTheme = 'light' | 'dark';
     RouterOutlet,
     RouterLink,
     FlagsFileListComponent,
+    PlaygroundDrawerComponent,
     MatSidenavModule,
     MatToolbarModule,
     MatProgressBarModule,
@@ -146,6 +148,44 @@ export class App implements OnDestroy {
     return null;
   });
   navOpen = signal(!this.isCompactLayout());
+
+  readonly showPlaygroundDrawer = computed(() => this.currentUrl().startsWith('/flags-files/'));
+
+  readonly playgroundDrawerFlags = computed(() => {
+    const component = this.activeRouteComponent();
+    if (
+      component instanceof FlagsFileDetailComponent ||
+      component instanceof FlagsFileEditPageComponent ||
+      component instanceof FlagsFileSettingsPageComponent
+    ) {
+      return component.flagEntries();
+    }
+    return [];
+  });
+
+  readonly playgroundDrawerEvaluators = computed(() => {
+    const component = this.activeRouteComponent();
+    if (
+      component instanceof FlagsFileDetailComponent ||
+      component instanceof FlagsFileEditPageComponent ||
+      component instanceof FlagsFileSettingsPageComponent
+    ) {
+      return component.currentEvaluators();
+    }
+    return undefined;
+  });
+
+  readonly playgroundDrawerSelectedFlagKey = computed(() => {
+    const component = this.activeRouteComponent();
+    if (
+      component instanceof FlagsFileDetailComponent ||
+      component instanceof FlagsFileEditPageComponent
+    ) {
+      return component.selectedFlagKey();
+    }
+    return null;
+  });
+
   private readonly routerEventsSub: Subscription;
   private readonly mediaQuery =
     typeof window !== 'undefined' ? window.matchMedia('(prefers-color-scheme: dark)') : null;
