@@ -10,7 +10,7 @@ import {
 
 const jsonLogicEngine = new LogicEngine();
 
-@Injectable({ providedIn: 'root' })
+@Injectable()
 export class PlaygroundLocalEvaluatorService implements PlaygroundEvaluator {
   readonly type = 'local' as const;
 

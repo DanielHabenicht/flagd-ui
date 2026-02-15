@@ -4,7 +4,7 @@ import { PlaygroundEvaluationRequest, EvaluationResult } from './playground-eval
 import { PlaygroundLocalEvaluatorService } from './playground-local-evaluator.service';
 import { PlaygroundOfrepEvaluatorService } from './playground-ofrep-evaluator.service';
 
-@Injectable({ providedIn: 'root' })
+@Injectable()
 export class PlaygroundEvaluatorService {
   private readonly localEvaluator = inject(PlaygroundLocalEvaluatorService);
   private readonly flagdEvaluator = inject(PlaygroundFlagdEvaluatorService);

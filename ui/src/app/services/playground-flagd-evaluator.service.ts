@@ -11,7 +11,7 @@ import {
 const OF_DOMAIN = 'flagd-ui-playground';
 const PROVIDER_SETUP_TIMEOUT_MS = 10000;
 
-@Injectable({ providedIn: 'root' })
+@Injectable()
 export class PlaygroundFlagdEvaluatorService implements PlaygroundEvaluator {
   readonly type = 'flagd' as const;
   private connectedServerId: string | null = null;

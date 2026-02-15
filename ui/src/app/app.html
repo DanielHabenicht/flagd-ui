@@ -90,7 +90,7 @@
       </div>
     }
     <router-outlet (activate)="onRouteActivate($event)" (deactivate)="onRouteDeactivate()" />
-    @if (showPlaygroundDrawer()) {
+    @defer (when showPlaygroundDrawer()) {
       <app-playground-drawer
         [flags]="playgroundDrawerFlags()"
         [evaluators]="playgroundDrawerEvaluators()"

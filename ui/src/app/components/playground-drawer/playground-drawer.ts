@@ -21,6 +21,9 @@ import { EvaluationContext } from '@openfeature/web-sdk';
 import { Evaluator, FlagEntry } from '../../models/flag.models';
 import { PlaygroundServer } from '../../models/playground.models';
 import { PlaygroundEvaluatorService } from '../../services/playground-evaluator.service';
+import { PlaygroundFlagdEvaluatorService } from '../../services/playground-flagd-evaluator.service';
+import { PlaygroundLocalEvaluatorService } from '../../services/playground-local-evaluator.service';
+import { PlaygroundOfrepEvaluatorService } from '../../services/playground-ofrep-evaluator.service';
 import { EvaluationResult } from '../../services/playground-evaluation.types';
 import {
   PlaygroundServerDialogComponent,
@@ -49,6 +52,12 @@ const AUTO_EVALUATE_DEBOUNCE_MS = 250;
     MatIconModule,
     MatInputModule,
     MatSelectModule,
+  ],
+  providers: [
+    PlaygroundEvaluatorService,
+    PlaygroundFlagdEvaluatorService,
+    PlaygroundLocalEvaluatorService,
+    PlaygroundOfrepEvaluatorService,
   ],
   templateUrl: './playground-drawer.html',
   styleUrl: './playground-drawer.scss',
