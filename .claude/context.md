@@ -258,6 +258,30 @@ PLAYWRIGHT_HTML_OPEN=never npx playwright test e2e-tests/boolean-flag-playground
 npx playwright show-trace --host 127.0.0.1 --port 9324 /workspaces/flagd-ui/test-results/boolean-flag-playground-cr-5453b-yground-then-switches-value-chromium/trace.zip
 ```
 
+## Development Tools
+
+### Playwright CLI
+
+**Status**: Installed globally via `npm install -g @playwright/cli`
+
+The Playwright CLI is available for browser automation, testing, and UI inspection. Use it to:
+
+- Take screenshots of running components
+- Inspect UI elements and computed styles
+- Test interactive behavior
+- Generate traces and debug information
+
+**Usage**:
+
+```bash
+playwright-cli open http://localhost:4200
+playwright-cli goto http://localhost:4200/flags-files/local/test
+playwright-cli screenshot --filename=screenshot.png
+playwright-cli eval "document.querySelector('.playground-drawer').offsetHeight"
+```
+
+For more details, see `.claude/skills/playwright-cli/SKILL.md`
+
 ## Claude Agent Workflow Commitments
 
 When working on this codebase, the following practices must be followed:
