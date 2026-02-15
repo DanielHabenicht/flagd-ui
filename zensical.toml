@@ -3,9 +3,22 @@ site_name = "flagd-ui"
 language = "en"
 site_url = "https://danielhabenicht.github.io/flagd-ui/"
 repo_url = "https://github.com/DanielHabenicht/flagd-ui"
+# nav = [{ "Demo" = "./docs" }]
 
 [project.theme]
-features = ["search.highlight", "navigation.footer"]
+features = [
+    "search.highlight",
+    "navigation.footer",
+    "navigation.instant",
+    "navigation.instant.progress",
+    "navigation.tracking",
+
+    "navigation.sections",
+    "navigation.path",
+    "toc.follow",
+    "navigation.top",
+
+]
 
 [[project.extra.social]]
 icon = "fontawesome/brands/github"

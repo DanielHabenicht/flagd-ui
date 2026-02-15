@@ -2,15 +2,29 @@ FROM rust:1.93-bookworm AS backend-builder
 
 WORKDIR /app
 
-COPY Cargo.toml ./
+# Copy manifests and build script first (these rarely change)
+COPY Cargo.toml Cargo.lock* ./
+
+
+# Create dummy source and build directory
+RUN mkdir -p src ui && echo "fn main() {}" > src/main.rs
+
+# Build dependencies (this layer is cached and reused)
+RUN cargo build --release
+
+# Copy actual source code
 COPY build.rs ./
-COPY src ./src
 COPY schema ./schema
 COPY flags ./flags
+COPY src ./src
 
-RUN mkdir -p ui
-
+# Build the final release (only user code is recompiled)
 RUN cargo build --release
+
+
+FROM scratch AS artifacts
+
+COPY --from=backend-builder /app/ui/openapi.json /openapi.json
 
 
 FROM openapitools/openapi-generator-cli:v7.19.0 AS api-client-generator

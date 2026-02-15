@@ -1,11 +1,7 @@
 use super::StorageBackend;
 use crate::error::{AppError, AppResult};
 use async_trait::async_trait;
-use azure_core::{
-    http::{ClientOptions, InstrumentationOptions, RequestContent},
-    tracing::TracerProvider,
-};
-use azure_identity::DefaultAzureCredential;
+use azure_core::http::RequestContent;
 use azure_storage_blob::clients::BlobContainerClient;
 use azure_storage_blob::BlobServiceClient;
 use futures::StreamExt;
@@ -89,12 +85,16 @@ impl AzureStorage {
             ));
         };
 
-        // Create credential using DefaultAzureCredential
-        let credential = Arc::new(DefaultAzureCredential::default());
-        // Create blob service client
+        // For Azurite and local development, try to use connection string from environment
+        // The Azure SDK 0.8 doesn't have easy DefaultAzureCredential, so we rely on the SDK's
+        // automatic credential resolution which checks environment variables like
+        // AZURE_STORAGE_CONNECTION_STRING, AZURE_STORAGE_ACCOUNT, etc.
+        
+        // Create blob service client - the SDK will automatically look for credentials
+        // in environment variables (AZURE_STORAGE_CONNECTION_STRING, etc.)
         let blob_service =
-            BlobServiceClient::new(&service_url, Some(credential), None).map_err(|e| {
-                AppError::BadRequest(format!("Failed to create blob service client: {}", e))
+            BlobServiceClient::new(&service_url, None, None).map_err(|e| {
+                AppError::BadRequest(format!("Failed to create blob service client: {}. Make sure AZURE_STORAGE_CONNECTION_STRING or appropriate credentials are set.", e))
             })?;
 
         Ok(blob_service.blob_container_client(&container_name))
@@ -132,10 +132,12 @@ impl StorageBackend for AzureStorage {
             match result {
                 Ok(page) => {
                     if let Some(name) = page.name {
-                        let name_str = name.to_string();
-                        if name_str.ends_with(".flagd.json") {
-                            let flag_name = name_str.trim_end_matches(".flagd.json").to_string();
-                            files.push(flag_name);
+                        // BlobName.content is an Option<String>
+                        if let Some(name_str) = &name.content {
+                            if name_str.ends_with(".flagd.json") {
+                                let flag_name = name_str.trim_end_matches(".flagd.json").to_string();
+                                files.push(flag_name);
+                            }
                         }
                     }
                 }

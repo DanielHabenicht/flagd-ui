@@ -1,0 +1,32 @@
+<div class="settings-page-container">
+  <div class="settings-page-workspace">
+    <div class="settings-page-content">
+      @if (error()) {
+        <div class="error-banner">{{ error() }}</div>
+      }
+
+      <section class="settings-section">
+        <div class="section-header">
+          <h3>Flags-File Metadata</h3>
+          <button
+            mat-stroked-button
+            type="button"
+            (click)="saveFlagsFileMetadata()"
+            [disabled]="metadataSaveDisabled()"
+          >
+            Save Metadata
+          </button>
+        </div>
+        <app-metadata-editor
+          [metadata]="projectMetadataDraft()"
+          (metadataChange)="onProjectMetadataChange($event)"
+        />
+      </section>
+
+      <section class="settings-section">
+        <h3>Environments</h3>
+        <app-environment-manager [embedded]="true" />
+      </section>
+    </div>
+  </div>
+</div>

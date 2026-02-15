@@ -1,0 +1,159 @@
+<div class="project-page">
+  <div class="project-workspace">
+    <div class="project-detail-layout" [class.with-inline-editor]="showInlineEditor()">
+      <div class="project-detail">
+        @if (error()) {
+          <div class="error-banner">{{ error() }}</div>
+        }
+
+        @if (loading() && !flagEntries().length) {
+          <div class="loading">Loading flags...</div>
+        } @else if (flagEntries().length) {
+          <div class="table-controls">
+            <mat-form-field appearance="outline" subscriptSizing="dynamic" class="search-field">
+              <mat-label>Search flags</mat-label>
+              <mat-icon matPrefix>search</mat-icon>
+              <input
+                matInput
+                type="text"
+                [value]="searchQuery()"
+                (input)="onSearchInput($event)"
+                placeholder="Search key, type, state, default, targeting"
+              />
+              @if (searchQuery()) {
+                <button mat-icon-button matSuffix (click)="clearSearch()" aria-label="Clear search">
+                  <mat-icon>close</mat-icon>
+                </button>
+              }
+            </mat-form-field>
+          </div>
+
+          <table
+            mat-table
+            [dataSource]="visibleFlagEntries()"
+            matSort
+            matSortDisableClear
+            [matSortActive]="sortColumn()"
+            [matSortDirection]="sortDirection()"
+            (matSortChange)="onSortChange($event)"
+            class="flags-table"
+          >
+            <ng-container matColumnDef="key">
+              <th mat-header-cell *matHeaderCellDef mat-sort-header="key">Key</th>
+              <td mat-cell *matCellDef="let flag" class="col-key">{{ flag.key }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="type">
+              <th mat-header-cell *matHeaderCellDef mat-sort-header="type">Type</th>
+              <td mat-cell *matCellDef="let flag">
+                <mat-chip-set>
+                  <mat-chip class="type-chip">{{ getFlagType(flag) }}</mat-chip>
+                </mat-chip-set>
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="state">
+              <th mat-header-cell *matHeaderCellDef mat-sort-header="state">State</th>
+              <td mat-cell *matCellDef="let flag" class="col-state">
+                <mat-slide-toggle
+                  [checked]="flag.state === 'ENABLED'"
+                  [attr.aria-label]="'State: ' + flag.state"
+                  [title]="flag.state"
+                  (click)="$event.stopPropagation()"
+                  (change)="onFlagStateToggle(flag, $event.checked)"
+                ></mat-slide-toggle>
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="default">
+              <th mat-header-cell *matHeaderCellDef mat-sort-header="default">Default</th>
+              <td mat-cell *matCellDef="let flag" class="col-default">
+                {{ getDefaultValueDisplay(flag) }}
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="info">
+              <th mat-header-cell *matHeaderCellDef>Info</th>
+              <td mat-cell *matCellDef="let flag" class="col-info">
+                <mat-chip-set>
+                  @for (entry of getVariantValueCounts(flag).slice(0, 3); track entry.value) {
+                    <mat-chip
+                      class="info-chip"
+                      [matTooltip]="entry.variantNames.join(', ')"
+                      matTooltipPosition="above"
+                    >
+                      {{ entry.count }} x {{ entry.value }}
+                    </mat-chip>
+                  }
+                  @if (getVariantValueCounts(flag).length > 3) {
+                    <mat-chip class="info-chip"
+                      >+ {{ getVariantValueCounts(flag).length - 3 }}</mat-chip
+                    >
+                  }
+                </mat-chip-set>
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="targeting">
+              <th mat-header-cell *matHeaderCellDef mat-sort-header="targeting">Targeting</th>
+              <td mat-cell *matCellDef="let flag">
+                @if (hasTargeting(flag)) {
+                  <mat-chip class="targeting-chip">yes</mat-chip>
+                } @else {
+                  <span class="no-targeting">-</span>
+                }
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="actions">
+              <th mat-header-cell *matHeaderCellDef></th>
+              <td mat-cell *matCellDef="let flag" class="col-actions">
+                <button
+                  mat-icon-button
+                  color="warn"
+                  (click)="confirmDelete(flag); $event.stopPropagation()"
+                  title="Delete"
+                >
+                  <mat-icon>delete</mat-icon>
+                </button>
+              </td>
+            </ng-container>
+
+            <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+            <tr
+              mat-row
+              *matRowDef="let row; columns: displayedColumns"
+              [class.selected-row]="row.key === selectedFlagKey()"
+              (click)="openEditFlagEditor(row)"
+            ></tr>
+          </table>
+
+          @if (!visibleFlagEntries().length) {
+            <div class="empty-search">No flags match your search.</div>
+          }
+        } @else {
+          <div class="empty-flags">
+            <p>No flags in this file yet.</p>
+            <button mat-flat-button color="primary" (click)="openNewFlagEditor()">
+              Create your first flag
+            </button>
+          </div>
+        }
+      </div>
+
+      @if (showInlineEditor()) {
+        <div class="inline-editor">
+          <app-flag-editor
+            [inline]="true"
+            [allowMaximize]="true"
+            [flag]="editingFlag()"
+            [existingKeys]="existingFlagKeys()"
+            (maximize)="openPageEditor()"
+            (save)="onSaveFlag($event)"
+            (cancelled)="closeEditor()"
+          />
+        </div>
+      }
+    </div>
+  </div>
+</div>

@@ -54,8 +54,11 @@ export class MetadataEditorComponent implements OnChanges {
   }
 
   addRow(): void {
+    if (this.hasUntouchedDraftRow()) {
+      return;
+    }
+
     this.rows = [...this.rows, { key: '', type: 'string', value: '' }];
-    this.emitChange();
   }
 
   removeRow(index: number): void {
@@ -149,5 +152,15 @@ export class MetadataEditorComponent implements OnChanges {
 
     if (typeof value === 'string') return value;
     return value === null || value === undefined ? '' : String(value);
+  }
+
+  private hasUntouchedDraftRow(): boolean {
+    return this.rows.some((row) => {
+      if (row.key.trim().length > 0) {
+        return false;
+      }
+
+      return row.value === this.defaultValueForType(row.type);
+    });
   }
 }

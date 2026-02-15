@@ -1,3 +1,4 @@
+<!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events, @angular-eslint/template/interactive-supports-focus -->
 <section
   class="playground-drawer"
   [class.open]="open()"
@@ -13,7 +14,9 @@
     <div class="drawer-header-left">
       <h3>Playground</h3>
       @if (open()) {
-        <p>Evaluate a flag with OpenFeature against a flagd server.</p>
+        <p>
+          Evaluate a flag with OpenFeature. If no server is configured, local JSON logic is used.
+        </p>
       }
     </div>
     <div class="drawer-header-right">
@@ -30,11 +33,18 @@
               (selectionChange)="onServerSelectionChange($event.value)"
             >
               <mat-select-trigger>
-                @if (activeServer()) {
+                @if (activeServerId() === localEvaluatorId) {
+                  <span class="server-provider-tag">local</span>
+                  Local evaluation
+                } @else if (activeServer()) {
                   <span class="server-provider-tag">{{ activeServer()!.provider }}</span>
                   {{ activeServer()!.url }}
                 }
               </mat-select-trigger>
+              <mat-option [value]="localEvaluatorId">
+                <span class="server-provider-tag">local</span>
+                Local evaluation
+              </mat-option>
               @for (server of servers(); track server.id) {
                 <mat-option [value]="server.id">
                   <span class="server-provider-tag">{{ server.provider }}</span>
@@ -121,6 +131,9 @@
           <p><strong>Value:</strong> {{ evaluation()!.value | json }}</p>
           <p><strong>Variant:</strong> {{ evaluation()!.variant ?? '-' }}</p>
           <p><strong>Reason:</strong> {{ evaluation()!.reason ?? '-' }}</p>
+          @if (evaluation()!.wouldUseFallbackValue) {
+            <p><strong>Fallback:</strong> would be used</p>
+          }
           @if (evaluation()!.errorCode || evaluation()!.errorMessage) {
             <p>
               <strong>Error:</strong> {{ evaluation()!.errorCode ?? '' }}

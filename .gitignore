@@ -1,5 +1,6 @@
 # Claude Code temporary files
 tmpclaude-*-cwd
+.playwright-cli
 
 # Rust build artifacts
 /target

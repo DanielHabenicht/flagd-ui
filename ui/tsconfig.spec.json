@@ -4,7 +4,16 @@
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "outDir": "./out-tsc/spec",
-    "types": ["vitest/globals"]
+    "target": "es2022",
+    "types": [
+      "vitest/globals"
+    ]
   },
-  "include": ["src/**/*.d.ts", "src/**/*.spec.ts"]
+  "files": [
+    "src/test-setup.ts"
+  ],
+  "include": [
+    "src/**/*.spec.ts",
+    "src/**/*.d.ts"
+  ]
 }

@@ -1,7 +1,6 @@
 {
   "name": "Flagd UI Dev Container",
   "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
-
   "features": {
     "ghcr.io/devcontainers/features/apt-get:1": {
       "packages": [
@@ -12,14 +11,12 @@
     "ghcr.io/devcontainers/features/rust:1": {
       "version": "1.93.1"
     },
-
     "ghcr.io/devcontainers/features/node:1": {
       "version": "24"
     },
     "ghcr.io/devcontainers/features/docker-in-docker:2": {},
     "ghcr.io/devcontainers-extra/features/uv:1": {}
   },
-
   "customizations": {
     "vscode": {
       "extensions": [
@@ -27,11 +24,19 @@
         "GitHub.copilot-chat",
         "GitHub.copilot-labs",
         "esbenp.prettier-vscode",
-        "ms-playwright.playwright"
+        "ms-playwright.playwright",
+        "vitest.explorer",
+        "dbaeumer.vscode-eslint",
+        "tamasfe.even-better-toml"
       ],
       "settings": {}
     }
   },
   "postCreateCommand": "cargo check && cd ui && npm install && npm run build",
-  "forwardPorts": [3000, 4200, 8013, 8016]
+  "forwardPorts": [
+    3000,
+    4200,
+    8013,
+    8016
+  ]
 }

@@ -26,11 +26,12 @@ test('sidebar does not show overflow when content fits', async ({ page }) => {
     await route.fulfill({ status: 404, body: 'Not found' });
   });
 
+  await page.setViewportSize({ width: 1600, height: 1000 });
   await page.goto('/');
 
   const sidebarContainer = page.locator('.sidebar .mat-drawer-inner-container').first();
   await expect(sidebarContainer).toBeVisible();
-  const createButton = page.getByRole('button', { name: /create flag file|new flag file/i });
+  const createButton = page.getByRole('button', { name: /create flags-file/i });
   await expect(createButton).toBeVisible();
 
   const dimensions = await sidebarContainer.evaluate((element) => ({
@@ -40,10 +41,7 @@ test('sidebar does not show overflow when content fits', async ({ page }) => {
 
   expect(dimensions.scrollHeight - dimensions.clientHeight).toBeLessThanOrEqual(1);
 
-  const [sidebarBox, buttonBox] = await Promise.all([
-    sidebarContainer.boundingBox(),
-    createButton.boundingBox(),
-  ]);
+  const [sidebarBox, buttonBox] = await Promise.all([sidebarContainer.boundingBox(), createButton.boundingBox()]);
 
   expect(sidebarBox).not.toBeNull();
   expect(buttonBox).not.toBeNull();

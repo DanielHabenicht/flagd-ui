@@ -1,0 +1,9 @@
+<h2 mat-dialog-title>Add Flag File</h2>
+
+<mat-dialog-content>
+  <app-new-flags-file-form (formSubmitted)="onFormSubmitted()"></app-new-flags-file-form>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button (click)="cancel()">Cancel</button>
+</mat-dialog-actions>

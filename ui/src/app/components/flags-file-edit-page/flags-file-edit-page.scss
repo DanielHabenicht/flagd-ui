@@ -1,0 +1,42 @@
+:host {
+  display: flex;
+  flex: 1 1 auto;
+  width: 100%;
+  min-height: 0;
+}
+
+.edit-page-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.edit-page-workspace {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  padding: 12px 16px;
+}
+
+.edit-page-content {
+  display: flex;
+  flex: 1 1 auto;
+  width: 100%;
+  max-width: none;
+  height: 100%;
+  min-height: 0;
+
+  app-flag-editor {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+}
+
+@media (max-width: 720px) {
+  .edit-page-workspace {
+    padding: 8px;
+  }
+}

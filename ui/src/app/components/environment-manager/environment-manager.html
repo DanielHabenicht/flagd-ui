@@ -1,0 +1,140 @@
+<div class="environment-manager" [class.embedded]="embedded()">
+  @if (isDialogMode()) {
+    <h2>Manage Environments</h2>
+  }
+
+  <div class="environment-content">
+    <div class="environments-list">
+      <div class="environments-header">
+        <h3>Current Environments</h3>
+        <span class="environment-count">{{ environments().length }}</span>
+      </div>
+      @if (environments().length === 0) {
+        <p class="empty-message">No environments defined. Add one below to get started.</p>
+      } @else {
+        <mat-form-field appearance="outline" class="environment-filter">
+          <mat-label>Filter environments</mat-label>
+          <input
+            matInput
+            [value]="environmentFilter()"
+            (input)="onEnvironmentFilterInput($event)"
+            placeholder="Search by name or alias"
+            autocomplete="off"
+          />
+          <mat-icon matSuffix>search</mat-icon>
+        </mat-form-field>
+
+        @if (filteredEnvironments().length === 0) {
+          <p class="empty-message">No environments match the current filter.</p>
+        } @else {
+          <div class="environment-items">
+            @for (item of filteredEnvironments(); track item.env.name) {
+              <div class="environment-item">
+                <div class="environment-info">
+                  <strong>{{ item.env.displayName }}</strong>
+                  <span class="aliases">Aliases: {{ item.env.aliases.join(', ') }}</span>
+                </div>
+                <div class="environment-actions">
+                  <button
+                    mat-icon-button
+                    (click)="editEnvironment(item.index)"
+                    [disabled]="isEditing()"
+                  >
+                    <mat-icon>edit</mat-icon>
+                  </button>
+                  <button
+                    mat-icon-button
+                    (click)="deleteEnvironment(item.index)"
+                    [disabled]="isEditing()"
+                  >
+                    <mat-icon>delete</mat-icon>
+                  </button>
+                </div>
+              </div>
+            }
+          </div>
+        }
+      }
+    </div>
+
+    <div class="environment-form">
+      <h3>{{ isEditing() ? 'Edit Environment' : 'Add Environment' }}</h3>
+      <form [formGroup]="form" (ngSubmit)="addEnvironment()">
+        <mat-form-field appearance="outline">
+          <mat-label>Environment Name</mat-label>
+          <input
+            matInput
+            formControlName="name"
+            placeholder="e.g., Production"
+            autocomplete="off"
+          />
+          <mat-hint>Must start with a letter and contain only letters and numbers</mat-hint>
+          @if (form.get('name')?.hasError('required')) {
+            <mat-error>Environment name is required</mat-error>
+          }
+          @if (form.get('name')?.hasError('pattern')) {
+            <mat-error>Invalid name format</mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Aliases</mat-label>
+          <mat-chip-grid #aliasesGrid aria-label="Environment aliases">
+            @for (alias of form.controls.aliases.value ?? []; track alias) {
+              <mat-chip-row
+                [editable]="true"
+                (edited)="editAlias(alias, $event.value)"
+                (removed)="removeAlias(alias)"
+              >
+                {{ alias }}
+                <button matChipEdit [attr.aria-label]="'Edit alias ' + alias">
+                  <mat-icon>edit</mat-icon>
+                </button>
+                <button matChipRemove [attr.aria-label]="'Remove alias ' + alias">
+                  <mat-icon>cancel</mat-icon>
+                </button>
+              </mat-chip-row>
+            }
+            <input
+              matInput
+              [value]="aliasesInputValue()"
+              (input)="onAliasesInput($event)"
+              [matChipInputFor]="aliasesGrid"
+              [matChipInputSeparatorKeyCodes]="separatorKeysCodes"
+              [matChipInputAddOnBlur]="true"
+              (matChipInputTokenEnd)="addAliasFromInput($event)"
+              placeholder="Type alias and press Enter"
+              autocomplete="off"
+            />
+          </mat-chip-grid>
+          <mat-hint>Press Enter or comma to add an alias</mat-hint>
+          @if (form.get('aliases')?.hasError('required')) {
+            <mat-error>At least one alias is required</mat-error>
+          }
+        </mat-form-field>
+
+        <div class="form-actions">
+          @if (isEditing()) {
+            <button type="button" mat-stroked-button (click)="cancelEdit()">Cancel Edit</button>
+          }
+          <button type="submit" mat-flat-button color="primary" [disabled]="!form.valid">
+            {{ isEditing() ? 'Update' : 'Add' }} Environment
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="manager-actions" [class.dialog-actions]="isDialogMode()">
+    @if (isDialogMode()) {
+      <button mat-button (click)="cancel()">Cancel</button>
+      <button mat-flat-button color="primary" (click)="save()" [disabled]="saveDisabled()">
+        Save All
+      </button>
+    } @else {
+      <button mat-flat-button color="primary" (click)="save()" [disabled]="saveDisabled()">
+        Save Environments
+      </button>
+    }
+  </div>
+</div>
