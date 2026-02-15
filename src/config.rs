@@ -61,30 +61,6 @@ impl ServerConfig {
             schema_file_path: args.schema_file_path,
         }
     }
-
-    /// Load configuration from environment variables with sensible defaults (legacy support)
-    pub fn from_env() -> Self {
-        let port = env::var("SERVER_PORT")
-            .ok()
-            .and_then(|p| p.parse().ok())
-            .unwrap_or(3000);
-
-        let static_dir = env::var("STATIC_DIR").unwrap_or_else(|_| "./public".to_string());
-
-        let storage_uri = env::var("STORAGE_URI")
-            .or_else(|_| env::var("FLAGS_DIR"))
-            .unwrap_or_else(|_| "./flags".to_string());
-
-        let schema_file_path = env::var("FLAGD_SCHEMA_FILE")
-            .unwrap_or_else(|_| "./schema/flagd-schema.json".to_string());
-
-        Self {
-            port,
-            static_dir,
-            storage_uri,
-            schema_file_path,
-        }
-    }
 }
 
 impl Default for ServerConfig {
