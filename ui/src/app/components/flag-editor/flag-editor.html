@@ -8,16 +8,15 @@
     <div class="panel-header-actions">
       <mat-button-toggle-group [value]="editorMode()" (change)="setMode($event.value)">
         <mat-button-toggle
-          value="easy"
-          [disabled]="!easyModeAvailable() && editorMode() !== 'easy'"
+          value="interactive"
+          [disabled]="!interactiveModeAvailable() && editorMode() !== 'interactive'"
           [title]="
-            !easyModeAvailable() && editorMode() !== 'easy'
-              ? 'This flag uses features not available in easy mode'
+            !interactiveModeAvailable() && editorMode() !== 'interactive'
+              ? 'This flag uses features not available in interactive mode'
               : ''
           "
-          >Easy</mat-button-toggle
+          >Interactive</mat-button-toggle
         >
-        <mat-button-toggle value="advanced">Advanced</mat-button-toggle>
         <mat-button-toggle value="json">JSON</mat-button-toggle>
       </mat-button-toggle-group>
       @if (inline() && allowMaximize()) {
@@ -61,7 +60,7 @@
         </mat-form-field>
       </div>
 
-      @if (editorMode() === 'easy' || editorMode() === 'advanced') {
+      @if (editorMode() === 'interactive') {
         <div class="form-field">
           <span class="field-label">Flag Type</span>
           <mat-button-toggle-group
@@ -78,7 +77,7 @@
       }
 
       <!-- Default (Fallback) Value Section (When environments exist) -->
-      @if (editorMode() === 'easy' && hasEnvironments()) {
+      @if (editorMode() === 'interactive' && hasEnvironments()) {
         <div class="form-field default-value-section">
           <span class="field-label">Default (Fallback) Value</span>
           <p class="hint-text">This value is used when no environment-specific override is set.</p>
@@ -134,9 +133,9 @@
         </div>
       }
 
-      <!-- ==================== EASY MODE ==================== -->
-      @if (editorMode() === 'easy') {
-        <div class="easy-mode">
+      <!-- ==================== INTERACTIVE MODE ==================== -->
+      @if (editorMode() === 'interactive') {
+        <div class="interactive-mode">
           @if (hasEnvironments()) {
             <div class="environment-mode">
               <!-- Environment Overrides Panel -->
@@ -225,7 +224,7 @@
                           </div>
 
                           @if (hasEnvironmentTimeWindow(env.name.toLowerCase())) {
-                            <div class="easy-time-window-section">
+                            <div class="interactive-time-window-section">
                               <span class="time-window-label">Activate after</span>
                               <div class="form-row">
                                 <mat-form-field appearance="outline" class="full-width">
@@ -452,7 +451,7 @@
                   }
                 </mat-expansion-panel-header>
 
-                <div class="easy-time-window-section">
+                <div class="interactive-time-window-section">
                   <span class="time-window-label">Activate after</span>
                   <div class="form-row">
                     <mat-form-field appearance="outline" class="full-width">
@@ -460,8 +459,7 @@
                       <input
                         matInput
                         [matDatepicker]="startDatePicker"
-                        formControlName="easyStartDate"
-                        (change)="syncEasyToAdvanced()"
+                        formControlName="interactiveStartDate"
                       />
                       <mat-datepicker-toggle
                         matIconSuffix
@@ -475,8 +473,7 @@
                       <input
                         matInput
                         [matTimepicker]="startTimePicker"
-                        formControlName="easyStartTime"
-                        (change)="syncEasyToAdvanced()"
+                        formControlName="interactiveStartTime"
                       />
                       <mat-timepicker-toggle
                         matIconSuffix
@@ -493,8 +490,7 @@
                       <input
                         matInput
                         [matDatepicker]="endDatePicker"
-                        formControlName="easyEndDate"
-                        (change)="syncEasyToAdvanced()"
+                        formControlName="interactiveEndDate"
                       />
                       <mat-datepicker-toggle
                         matIconSuffix
@@ -508,8 +504,7 @@
                       <input
                         matInput
                         [matTimepicker]="endTimePicker"
-                        formControlName="easyEndTime"
-                        (change)="syncEasyToAdvanced()"
+                        formControlName="interactiveEndTime"
                       />
                       <mat-timepicker-toggle
                         matIconSuffix
@@ -519,35 +514,35 @@
                     </mat-form-field>
                   </div>
 
-                  <p class="easy-hint">
+                  <p class="interactive-hint">
                     Applies to all environments. Outside this window the fallback variant is used.
                   </p>
                 </div>
               </mat-expansion-panel>
             </div>
           } @else {
-            @if (form.get('easyType')!.value === 'boolean') {
+            @if (form.get('interactiveType')!.value === 'boolean') {
               <div class="global-environment-value-section">
                 <h3>Global Value</h3>
                 <p class="hint-text">This sets the default value while no environments exist.</p>
 
-                <ng-container *ngTemplateOutlet="easyModeGlobalBooleanSwitch"></ng-container>
+                <ng-container *ngTemplateOutlet="interactiveModeGlobalBooleanSwitch"></ng-container>
               </div>
             }
 
-            @if (form.get('easyType')!.value === 'string') {
-              <div class="easy-string-section">
+            @if (form.get('interactiveType')!.value === 'string') {
+              <div class="interactive-string-section">
                 <mat-form-field appearance="outline" class="full-width">
                   <mat-label>On Value</mat-label>
                   <textarea
                     matInput
-                    formControlName="easyStringOnValue"
+                    formControlName="interactiveStringOnValue"
                     placeholder="Enter value when ON"
                     rows="3"
-                    (input)="onEasyStringValueChange()"
+                    (input)="onInteractiveStringValueChange()"
                   ></textarea>
                   @if (
-                    form.get('easyStringOnValue')!.invalid && form.get('easyStringOnValue')!.touched
+                    form.get('interactiveStringOnValue')!.invalid && form.get('interactiveStringOnValue')!.touched
                   ) {
                     <mat-error>On value is required</mat-error>
                   }
@@ -557,10 +552,10 @@
                   <mat-label>Off Value (optional)</mat-label>
                   <textarea
                     matInput
-                    formControlName="easyStringOffValue"
+                    formControlName="interactiveStringOffValue"
                     placeholder="Leave empty for no off value"
                     rows="3"
-                    (input)="onEasyStringValueChange()"
+                    (input)="onInteractiveStringValueChange()"
                   ></textarea>
                 </mat-form-field>
               </div>
@@ -576,39 +571,7 @@
         </div>
       }
 
-      <!-- ==================== ADVANCED MODE ==================== -->
-      @if (editorMode() === 'advanced') {
-        <div class="advanced-mode">
-          <app-variants-editor
-            [flagType]="form.get('flagType')!.value"
-            [variants]="variants()"
-            (variantsChange)="onVariantsChange($event)"
-          />
 
-          <mat-form-field appearance="outline" class="full-width">
-            <mat-label>Default Variant</mat-label>
-            <mat-select formControlName="defaultVariant">
-              <mat-option value="">-- none --</mat-option>
-              @for (name of variantNames(); track name) {
-                <mat-option [value]="name">{{ name }}</mat-option>
-              }
-            </mat-select>
-          </mat-form-field>
-
-          <app-targeting-editor
-            [targeting]="targeting()"
-            [variantKeys]="variantNames()"
-            (targetingChange)="onTargetingChange($event)"
-          />
-
-          @if (showMetadata()) {
-            <app-metadata-editor
-              [metadata]="metadata()"
-              (metadataChange)="onMetadataChange($event)"
-            />
-          }
-        </div>
-      }
 
       <!-- ==================== JSON MODE ==================== -->
       @if (editorMode() === 'json') {
@@ -640,12 +603,12 @@
       }
     </div>
 
-    <ng-template #easyModeGlobalBooleanSwitch>
+    <ng-template #interactiveModeGlobalBooleanSwitch>
       <mat-slide-toggle
-        [checked]="isEasyModeGlobalBooleanOn()"
-        (change)="onEasyModeGlobalBooleanChange($event.checked)"
+        [checked]="isInteractiveModeGlobalBooleanOn()"
+        (change)="onInteractiveModeGlobalBooleanChange($event.checked)"
       >
-        {{ getEasyModeGlobalBooleanLabel() }}
+        {{ getInteractiveModeGlobalBooleanLabel() }}
       </mat-slide-toggle>
     </ng-template>
 

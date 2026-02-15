@@ -43,14 +43,13 @@ import {
   isEnvironmentBasedFlag,
   extractEnvironmentStates,
 } from '../../models/flag.models';
-import { VariantsEditorComponent, VariantRow } from '../variants-editor/variants-editor';
-import { TargetingEditorComponent } from '../targeting-editor/targeting-editor';
+import { VariantRow } from '../variants-editor/variants-editor';
 import { MetadataEditorComponent } from '../metadata-editor/metadata-editor';
 import { Store } from '@ngxs/store';
 import { FlagSchemaAdapter, TimeWindowBounds } from '../../services/flag-schema-adapter';
 import { FlagStoreState } from '../../state/flag-store.state';
 
-export type EditorMode = 'easy' | 'advanced' | 'json';
+export type EditorMode = 'interactive' | 'json';
 
 interface TimeWindowFormState {
   startDate: Date | null;
@@ -66,8 +65,6 @@ interface TimeWindowFormState {
     CommonModule,
     ReactiveFormsModule,
     FormsModule,
-    VariantsEditorComponent,
-    TargetingEditorComponent,
     MetadataEditorComponent,
     MatButtonToggleModule,
     MatSlideToggleModule,
@@ -104,7 +101,7 @@ export class FlagEditorComponent implements OnInit, OnChanges {
   variants = signal<VariantRow[]>([]);
   targeting = signal<Record<string, unknown> | undefined>(undefined);
   metadata = signal<MetadataMap | undefined>(undefined);
-  editorMode = signal<EditorMode>('easy');
+  editorMode = signal<EditorMode>('interactive');
 
   // Environment mode state
   defaultFallbackValue = signal<unknown>(undefined);
@@ -171,7 +168,7 @@ export class FlagEditorComponent implements OnInit, OnChanges {
       .filter(Boolean),
   );
 
-  readonly easyModeAvailable = computed(() => {
+  readonly interactiveModeAvailable = computed(() => {
     if (this.hasEnvironments()) return true;
 
     const variants = this.variants();
@@ -179,7 +176,7 @@ export class FlagEditorComponent implements OnInit, OnChanges {
     const flagType = this.form?.get('flagType')?.value as FlagType | undefined;
 
     if (!flagType || (flagType !== 'boolean' && flagType !== 'string')) return false;
-    if (targeting && Object.keys(targeting).length > 0 && !this.isEasyTimeTargeting(targeting))
+    if (targeting && Object.keys(targeting).length > 0 && !this.isInteractiveTimeTargeting(targeting))
       return false;
     return this.isSimpleFlagStructure(flagType, variants);
   });
@@ -222,22 +219,22 @@ export class FlagEditorComponent implements OnInit, OnChanges {
       state: new FormControl<FlagState>(f?.state ?? 'ENABLED', { nonNullable: true }),
       flagType: new FormControl<FlagType>(initialType, { nonNullable: true }),
       defaultVariant: new FormControl<string>(f?.defaultVariant ?? ''),
-      // Easy mode fields
-      easyType: new FormControl<'boolean' | 'string'>(
+      // Interactive mode fields
+      interactiveType: new FormControl<'boolean' | 'string'>(
         initialType === 'boolean' || initialType === 'string' ? initialType : 'boolean',
         { nonNullable: true },
       ),
-      easyStringValue: new FormControl<string>(
+      interactiveStringValue: new FormControl<string>(
         initialType === 'string' && initialVariants.length > 0
           ? String(initialVariants[0]?.value ?? '')
           : '',
       ),
-      easyStringOnValue: new FormControl<string>(
+      interactiveStringOnValue: new FormControl<string>(
         initialType === 'string'
           ? String(initialVariants.find((variant) => variant.name === 'on')?.value ?? '')
           : '',
       ),
-      easyStringOffValue: new FormControl<string>(
+      interactiveStringOffValue: new FormControl<string>(
         initialType === 'string'
           ? String(initialVariants.find((variant) => variant.name === 'off')?.value ?? '')
           : '',
@@ -247,10 +244,10 @@ export class FlagEditorComponent implements OnInit, OnChanges {
       defaultStringValue: new FormControl<string>(''),
       defaultNumberValue: new FormControl<number>(0, { nonNullable: true }),
       defaultObjectValue: new FormControl<string>('{}'),
-      easyStartDate: new FormControl<Date | null>(null),
-      easyStartTime: new FormControl<Date | null>(null),
-      easyEndDate: new FormControl<Date | null>(null),
-      easyEndTime: new FormControl<Date | null>(null),
+      interactiveStartDate: new FormControl<Date | null>(null),
+      interactiveStartTime: new FormControl<Date | null>(null),
+      interactiveEndDate: new FormControl<Date | null>(null),
+      interactiveEndTime: new FormControl<Date | null>(null),
     });
 
     this.applyFlagToForm(f);
@@ -293,12 +290,12 @@ export class FlagEditorComponent implements OnInit, OnChanges {
       }
     }
 
-    const parsedEasyTimeTargeting = this.parseEasyTimeTargeting(f?.targeting);
+    const parsedInteractiveTimeTargeting = this.parseInteractiveTimeTargeting(f?.targeting);
     const parsedEnvironmentTiming = this.parseEnvironmentTimingTargeting(f?.targeting);
 
     const globalTimeBounds = isEnvironmentFlag
       ? parsedEnvironmentTiming.global
-      : parsedEasyTimeTargeting;
+      : parsedInteractiveTimeTargeting;
 
     const hasGlobalTimeWindow =
       !!globalTimeBounds &&
@@ -324,16 +321,16 @@ export class FlagEditorComponent implements OnInit, OnChanges {
         state: f?.state ?? 'ENABLED',
         flagType: nextType,
         defaultVariant: f?.defaultVariant ?? '',
-        easyType: nextType === 'boolean' || nextType === 'string' ? nextType : 'boolean',
-        easyStringValue:
+        interactiveType: nextType === 'boolean' || nextType === 'string' ? nextType : 'boolean',
+        interactiveStringValue:
           nextType === 'string' && nextVariants.length > 0
             ? String(nextVariants[0]?.value ?? '')
             : '',
-        easyStringOnValue:
+        interactiveStringOnValue:
           nextType === 'string'
             ? String(nextVariants.find((variant) => variant.name === 'on')?.value ?? '')
             : '',
-        easyStringOffValue:
+        interactiveStringOffValue:
           nextType === 'string'
             ? String(nextVariants.find((variant) => variant.name === 'off')?.value ?? '')
             : '',
@@ -346,38 +343,38 @@ export class FlagEditorComponent implements OnInit, OnChanges {
           !(defaultValue instanceof Array)
             ? JSON.stringify(defaultValue, null, 2)
             : '{}',
-        easyStartDate: this.parseTimestampDate(globalTimeBounds?.start),
-        easyStartTime: this.parseTimestampDate(globalTimeBounds?.start),
-        easyEndDate: this.parseTimestampDate(globalTimeBounds?.end),
-        easyEndTime: this.parseTimestampDate(globalTimeBounds?.end),
+        interactiveStartDate: this.parseTimestampDate(globalTimeBounds?.start),
+        interactiveStartTime: this.parseTimestampDate(globalTimeBounds?.start),
+        interactiveEndDate: this.parseTimestampDate(globalTimeBounds?.end),
+        interactiveEndTime: this.parseTimestampDate(globalTimeBounds?.end),
       },
       { emitEvent: false },
     );
 
     this.form.get('key')?.updateValueAndValidity({ emitEvent: false });
 
-    this.updateEasyStringValidators();
+    this.updateInteractiveStringValidators();
 
     // Determine editor mode
     if (f) {
       if (isEnvironmentFlag) {
-        this.editorMode.set('easy');
+        this.editorMode.set('interactive');
       } else {
         const isSimpleType = nextType === 'boolean' || nextType === 'string';
         const hasUnsupportedTargeting =
           !!f.targeting &&
           Object.keys(f.targeting).length > 0 &&
-          !this.isEasyTimeTargeting(f.targeting);
+          !this.isInteractiveTimeTargeting(f.targeting);
         const isSimpleVariants = this.isSimpleFlagStructure(nextType, nextVariants);
 
         if (isSimpleType && !hasUnsupportedTargeting && isSimpleVariants) {
-          this.editorMode.set('easy');
+          this.editorMode.set('interactive');
         } else {
-          this.editorMode.set('advanced');
+          this.editorMode.set('json');
         }
       }
     } else {
-      this.editorMode.set('easy');
+      this.editorMode.set('interactive');
     }
 
     this.form.markAsPristine();
@@ -398,43 +395,25 @@ export class FlagEditorComponent implements OnInit, OnChanges {
       }
     }
 
-    if (mode === 'easy') {
-      // After applying JSON (if coming from json), check compatibility
-      if (!this.easyModeAvailable()) return;
-      if (previousMode === 'advanced') {
-        this.syncAdvancedToEasy();
-      }
-    }
-
-    if (previousMode === 'easy' && mode === 'advanced') {
-      if (this.hasEnvironments()) {
-        this.syncEnvironmentEasyToAdvanced();
-      } else {
-        this.syncEasyToAdvanced();
-      }
+    if (mode === 'interactive') {
+      // After applying JSON (if coming from json), interactive mode is always available
+      if (!this.interactiveModeAvailable()) return;
     }
 
     if (mode === 'json') {
-      if (previousMode === 'easy') {
-        if (this.hasEnvironments()) {
-          this.syncEnvironmentEasyToAdvanced();
-        } else {
-          this.syncEasyToAdvanced();
-        }
-      }
       this.syncToJson();
     }
 
     this.editorMode.set(mode);
   }
 
-  // --- Easy mode ---
+  // --- Interactive mode ---
 
-  onEasyTypeChange(): void {
-    const easyType = this.form.get('easyType')!.value as 'boolean' | 'string';
-    this.form.get('flagType')!.setValue(easyType);
-    this.updateEasyStringValidators();
-    if (easyType === 'boolean') {
+  onInteractiveTypeChange(): void {
+    const interactiveType = this.form.get('interactiveType')!.value as 'boolean' | 'string';
+    this.form.get('flagType')!.setValue(interactiveType);
+    this.updateInteractiveStringValidators();
+    if (interactiveType === 'boolean') {
       this.variants.set(getDefaultVariants('boolean'));
       this.form.get('defaultVariant')!.setValue('on');
     } else {
@@ -443,22 +422,16 @@ export class FlagEditorComponent implements OnInit, OnChanges {
         { name: 'off', value: '' },
       ]);
       this.form.get('defaultVariant')!.setValue('on');
-      this.form.get('easyStringValue')!.setValue('');
-      this.form.get('easyStringOnValue')!.setValue('');
-      this.form.get('easyStringOffValue')!.setValue('');
+      this.form.get('interactiveStringValue')!.setValue('');
+      this.form.get('interactiveStringOnValue')!.setValue('');
+      this.form.get('interactiveStringOffValue')!.setValue('');
     }
   }
 
   onFlagTypeToggleChange(value: FlagType): void {
     const mode = this.editorMode();
 
-    if (mode === 'advanced') {
-      this.form.get('flagType')!.setValue(value);
-      this.onTypeChange();
-      return;
-    }
-
-    if (mode !== 'easy') return;
+    if (mode !== 'interactive') return;
 
     if (this.hasEnvironments()) {
       this.form.get('flagType')!.setValue(value);
@@ -467,30 +440,30 @@ export class FlagEditorComponent implements OnInit, OnChanges {
     }
 
     if (value === 'boolean' || value === 'string') {
-      this.form.get('easyType')!.setValue(value);
-      this.onEasyTypeChange();
+      this.form.get('interactiveType')!.setValue(value);
+      this.onInteractiveTypeChange();
       return;
     }
 
+    // For other types in interactive mode without environments, update variants and switch to JSON if needed
     this.form.get('flagType')!.setValue(value);
     this.onTypeChange();
-    this.editorMode.set('advanced');
   }
 
-  onEasyStringValueChange(): void {
-    const onValue = this.form.get('easyStringOnValue')!.value ?? '';
-    const offValue = this.form.get('easyStringOffValue')!.value ?? '';
+  onInteractiveStringValueChange(): void {
+    const onValue = this.form.get('interactiveStringOnValue')!.value ?? '';
+    const offValue = this.form.get('interactiveStringOffValue')!.value ?? '';
     this.variants.set([
       { name: 'on', value: onValue },
       { name: 'off', value: offValue },
     ]);
   }
 
-  onEasyDefaultChange(value: string): void {
+  onInteractiveDefaultChange(value: string): void {
     this.form.get('defaultVariant')!.setValue(value);
   }
 
-  isEasyModeGlobalBooleanOn(): boolean {
+  isInteractiveModeGlobalBooleanOn(): boolean {
     if (this.hasEnvironments()) {
       return this.getGlobalEnvironmentValue() === true;
     }
@@ -498,24 +471,24 @@ export class FlagEditorComponent implements OnInit, OnChanges {
     return this.form.get('defaultVariant')!.value === 'on';
   }
 
-  onEasyModeGlobalBooleanChange(checked: boolean): void {
+  onInteractiveModeGlobalBooleanChange(checked: boolean): void {
     if (this.hasEnvironments()) {
       this.onGlobalEnvironmentValueChange(checked);
       return;
     }
 
-    this.onEasyDefaultChange(checked ? 'on' : 'off');
+    this.onInteractiveDefaultChange(checked ? 'on' : 'off');
   }
 
-  getEasyModeGlobalBooleanLabel(): string {
-    return this.isEasyModeGlobalBooleanOn() ? 'ON' : 'OFF';
+  getInteractiveModeGlobalBooleanLabel(): string {
+    return this.isInteractiveModeGlobalBooleanOn() ? 'ON' : 'OFF';
   }
 
-  resetEasyTimeWindow(): void {
-    this.form.get('easyStartDate')!.setValue(null);
-    this.form.get('easyStartTime')!.setValue(null);
-    this.form.get('easyEndDate')!.setValue(null);
-    this.form.get('easyEndTime')!.setValue(null);
+  resetInteractiveTimeWindow(): void {
+    this.form.get('interactiveStartDate')!.setValue(null);
+    this.form.get('interactiveStartTime')!.setValue(null);
+    this.form.get('interactiveEndDate')!.setValue(null);
+    this.form.get('interactiveEndTime')!.setValue(null);
   }
 
   addGlobalEnvironmentTimeWindow(): void {
@@ -524,7 +497,7 @@ export class FlagEditorComponent implements OnInit, OnChanges {
 
   removeGlobalEnvironmentTimeWindow(): void {
     this.globalEnvironmentTimeEnabled.set(false);
-    this.resetEasyTimeWindow();
+    this.resetInteractiveTimeWindow();
   }
 
   hasEnvironmentTimeWindow(envName: string): boolean {
@@ -581,25 +554,12 @@ export class FlagEditorComponent implements OnInit, OnChanges {
     this.environmentTimeWindows.set(windows);
   }
 
-  // --- Advanced mode ---
+  // --- Type and variants ---
 
   onTypeChange(): void {
     const newType = this.form.get('flagType')!.value as FlagType;
     this.variants.set(getDefaultVariants(newType));
     this.form.get('defaultVariant')!.setValue('');
-  }
-
-  onVariantsChange(rows: VariantRow[]): void {
-    this.variants.set(rows);
-    const currentDefault = this.form.get('defaultVariant')!.value;
-    const names = rows.map((r) => r.name).filter(Boolean);
-    if (currentDefault && !names.includes(currentDefault)) {
-      this.form.get('defaultVariant')!.setValue(names[0] ?? '');
-    }
-  }
-
-  onTargetingChange(t: Record<string, unknown> | undefined): void {
-    this.targeting.set(t);
   }
 
   onMetadataChange(metadata: MetadataMap | undefined): void {
@@ -634,7 +594,7 @@ export class FlagEditorComponent implements OnInit, OnChanges {
       return;
     }
 
-    if (mode === 'easy') {
+    if (mode === 'interactive') {
       if (this.hasEnvironments()) {
         if (!this.isCurrentModeFormValid() || this.keyAlreadyExists() || !key) return;
 
@@ -647,8 +607,6 @@ export class FlagEditorComponent implements OnInit, OnChanges {
         });
         return;
       }
-
-      this.syncEasyToAdvanced();
     }
 
     if (!this.isCurrentModeFormValid() || this.keyAlreadyExists() || !key) return;
@@ -672,7 +630,7 @@ export class FlagEditorComponent implements OnInit, OnChanges {
       flag.defaultVariant = defaultVariant;
     }
 
-    if (mode === 'advanced' || mode === 'easy') {
+    if (mode === 'interactive') {
       const t = this.targeting();
       if (t && Object.keys(t).length > 0) {
         flag.targeting = t;
@@ -718,74 +676,6 @@ export class FlagEditorComponent implements OnInit, OnChanges {
     return false;
   }
 
-  syncEasyToAdvanced(): void {
-    const easyType = this.form.get('easyType')!.value as 'boolean' | 'string';
-    this.form.get('flagType')!.setValue(easyType);
-
-    if (easyType === 'boolean') {
-      this.variants.set(getDefaultVariants('boolean'));
-      const currentDefault = this.form.get('defaultVariant')!.value;
-      if (currentDefault !== 'on' && currentDefault !== 'off') {
-        this.form.get('defaultVariant')!.setValue('on');
-      }
-    } else {
-      const onValue = this.form.get('easyStringOnValue')!.value ?? '';
-      const offValue = this.form.get('easyStringOffValue')!.value ?? '';
-      this.variants.set([
-        { name: 'on', value: onValue },
-        { name: 'off', value: offValue },
-      ]);
-      const currentDefault = this.form.get('defaultVariant')!.value;
-      if (currentDefault !== 'on' && currentDefault !== 'off') {
-        this.form.get('defaultVariant')!.setValue('on');
-      }
-    }
-
-    this.targeting.set(this.buildEasyTimeTargeting());
-  }
-
-  private syncAdvancedToEasy(): void {
-    const flagType = this.form.get('flagType')!.value as FlagType;
-    const easyType = flagType === 'string' ? 'string' : 'boolean';
-    this.form.get('easyType')!.setValue(easyType);
-
-    if (easyType === 'string') {
-      const currentVariants = this.variants();
-      const onVariant = currentVariants.find((variant) => variant.name === 'on');
-      const offVariant = currentVariants.find((variant) => variant.name === 'off');
-      const fallback = currentVariants[0];
-      const source = onVariant ?? fallback;
-      if (source) {
-        this.form.get('easyStringValue')!.setValue(String(source.value ?? ''));
-        this.form.get('easyStringOnValue')!.setValue(String(source.value ?? ''));
-      }
-      this.form.get('easyStringOffValue')!.setValue(String(offVariant?.value ?? ''));
-      const currentDefault = this.form.get('defaultVariant')!.value;
-      if (currentDefault !== 'on' && currentDefault !== 'off') {
-        this.form.get('defaultVariant')!.setValue('on');
-      }
-    } else {
-      this.form.get('defaultVariant')!.setValue('on');
-    }
-
-    const parsedTimeTargeting = this.parseEasyTimeTargeting(this.targeting());
-    this.form.get('easyStartTime')!.setValue(this.parseTimestampDate(parsedTimeTargeting?.start));
-    this.form.get('easyStartDate')!.setValue(this.parseTimestampDate(parsedTimeTargeting?.start));
-    this.form.get('easyEndTime')!.setValue(this.parseTimestampDate(parsedTimeTargeting?.end));
-    this.form.get('easyEndDate')!.setValue(this.parseTimestampDate(parsedTimeTargeting?.end));
-  }
-
-  private syncEnvironmentEasyToAdvanced(): void {
-    const envFlag = this.buildEnvironmentBasedFlag();
-    const nextVariants: VariantRow[] = Object.entries(envFlag.variants).map(([name, value]) => ({
-      name,
-      value,
-    }));
-    this.variants.set(nextVariants);
-    this.form.get('defaultVariant')!.setValue(envFlag.defaultVariant ?? '');
-    this.targeting.set(envFlag.targeting);
-  }
-
   private syncToJson(): void {
     const variantsObj: Record<string, unknown> = {};
     for (const v of this.variants()) {
@@ -823,7 +713,7 @@ export class FlagEditorComponent implements OnInit, OnChanges {
     }
 
     if (parsed.easyType) {
-      this.form.get('easyType')!.setValue(parsed.easyType);
+      this.form.get('interactiveType')!.setValue(parsed.easyType);
     }
 
     if (parsed.hasDefaultVariant) {
@@ -864,22 +754,22 @@ export class FlagEditorComponent implements OnInit, OnChanges {
     const state = this.form?.get('state')?.value ?? 'ENABLED';
     const flagType = this.form?.get('flagType')?.value ?? 'boolean';
     const defaultVariant = this.form?.get('defaultVariant')?.value ?? '';
-    const easyType = this.form?.get('easyType')?.value ?? 'boolean';
-    const easyStringValue = this.form?.get('easyStringValue')?.value ?? '';
-    const easyStringOnValue = this.form?.get('easyStringOnValue')?.value ?? '';
-    const easyStringOffValue = this.form?.get('easyStringOffValue')?.value ?? '';
-    const easyStartTime =
+    const interactiveType = this.form?.get('interactiveType')?.value ?? 'boolean';
+    const interactiveStringValue = this.form?.get('interactiveStringValue')?.value ?? '';
+    const interactiveStringOnValue = this.form?.get('interactiveStringOnValue')?.value ?? '';
+    const interactiveStringOffValue = this.form?.get('interactiveStringOffValue')?.value ?? '';
+    const interactiveStartTime =
       this.toTimestampString(
         this.combineDateAndTime(
-          this.form?.get('easyStartDate')?.value ?? null,
-          this.form?.get('easyStartTime')?.value ?? null,
+          this.form?.get('interactiveStartDate')?.value ?? null,
+          this.form?.get('interactiveStartTime')?.value ?? null,
         ),
       ) ?? '';
-    const easyEndTime =
+    const interactiveEndTime =
       this.toTimestampString(
         this.combineDateAndTime(
-          this.form?.get('easyEndDate')?.value ?? null,
-          this.form?.get('easyEndTime')?.value ?? null,
+          this.form?.get('interactiveEndDate')?.value ?? null,
+          this.form?.get('interactiveEndTime')?.value ?? null,
         ),
       ) ?? '';
 
@@ -888,12 +778,12 @@ export class FlagEditorComponent implements OnInit, OnChanges {
       state,
       flagType,
       defaultVariant,
-      easyType,
-      easyStringValue,
-      easyStringOnValue,
-      easyStringOffValue,
-      easyStartTime,
-      easyEndTime,
+      interactiveType,
+      interactiveStringValue,
+      interactiveStringOnValue,
+      interactiveStringOffValue,
+      interactiveStartTime,
+      interactiveEndTime,
       editorMode: this.editorMode(),
       hasEnvironments: this.hasEnvironments(),
       globalEnvironmentTimeEnabled: this.globalEnvironmentTimeEnabled(),
@@ -907,14 +797,14 @@ export class FlagEditorComponent implements OnInit, OnChanges {
     });
   }
 
-  private updateEasyStringValidators(): void {
-    const easyType = this.form.get('easyType')!.value as 'boolean' | 'string';
-    const onControl = this.form.get('easyStringOnValue');
-    const offControl = this.form.get('easyStringOffValue');
+  private updateInteractiveStringValidators(): void {
+    const interactiveType = this.form.get('interactiveType')!.value as 'boolean' | 'string';
+    const onControl = this.form.get('interactiveStringOnValue');
+    const offControl = this.form.get('interactiveStringOffValue');
 
     if (!onControl || !offControl) return;
 
-    if (easyType === 'string') {
+    if (interactiveType === 'string') {
       onControl.setValidators([this.nonWhitespaceRequiredValidator()]);
     } else {
       onControl.clearValidators();
@@ -957,26 +847,26 @@ export class FlagEditorComponent implements OnInit, OnChanges {
 
     const mode = this.editorMode();
     if (
-      mode === 'easy' &&
+      mode === 'interactive' &&
       !this.hasEnvironments() &&
-      this.form.get('easyType')!.value === 'string'
+      this.form.get('interactiveType')!.value === 'string'
     ) {
-      const onValueControl = this.form.get('easyStringOnValue');
+      const onValueControl = this.form.get('interactiveStringOnValue');
       return !!onValueControl && onValueControl.valid;
     }
 
     return true;
   }
 
-  private buildEasyTimeTargeting(): Record<string, unknown> | undefined {
-    return this.schemaAdapter.buildEasyTimeTargeting(this.getEasyTimeWindowBounds());
+  private buildInteractiveTimeTargeting(): Record<string, unknown> | undefined {
+    return this.schemaAdapter.buildEasyTimeTargeting(this.getInteractiveTimeWindowBounds());
   }
 
-  private isEasyTimeTargeting(targeting: Record<string, unknown>): boolean {
+  private isInteractiveTimeTargeting(targeting: Record<string, unknown>): boolean {
     return this.schemaAdapter.isEasyTimeTargeting(targeting);
   }
 
-  private parseEasyTimeTargeting(
+  private parseInteractiveTimeTargeting(
     targeting: Record<string, unknown> | undefined,
   ): { start?: number; end?: number } | null {
     return this.schemaAdapter.parseEasyTimeTargeting(targeting);
@@ -1135,11 +1025,11 @@ export class FlagEditorComponent implements OnInit, OnChanges {
     );
   }
 
-  private getEasyTimeWindowBounds(): TimeWindowBounds | null {
-    const startDate = this.form.get('easyStartDate')?.value ?? null;
-    const startTime = this.form.get('easyStartTime')?.value ?? null;
-    const endDate = this.form.get('easyEndDate')?.value ?? null;
-    const endTime = this.form.get('easyEndTime')?.value ?? null;
+  private getInteractiveTimeWindowBounds(): TimeWindowBounds | null {
+    const startDate = this.form.get('interactiveStartDate')?.value ?? null;
+    const startTime = this.form.get('interactiveStartTime')?.value ?? null;
+    const endDate = this.form.get('interactiveEndDate')?.value ?? null;
+    const endTime = this.form.get('interactiveEndTime')?.value ?? null;
 
     const start = this.toUnixEpochSeconds(this.combineDateAndTime(startDate, startTime));
     const end = this.toUnixEpochSeconds(this.combineDateAndTime(endDate, endTime));
@@ -1155,10 +1045,10 @@ export class FlagEditorComponent implements OnInit, OnChanges {
   private getGlobalTimeWindowBounds(): TimeWindowBounds | null {
     if (!this.globalEnvironmentTimeEnabled()) return null;
 
-    const startDate = this.form.get('easyStartDate')?.value ?? null;
-    const startTime = this.form.get('easyStartTime')?.value ?? null;
-    const endDate = this.form.get('easyEndDate')?.value ?? null;
-    const endTime = this.form.get('easyEndTime')?.value ?? null;
+    const startDate = this.form.get('interactiveStartDate')?.value ?? null;
+    const startTime = this.form.get('interactiveStartTime')?.value ?? null;
+    const endDate = this.form.get('interactiveEndDate')?.value ?? null;
+    const endTime = this.form.get('interactiveEndTime')?.value ?? null;
 
     const start = this.toUnixEpochSeconds(this.combineDateAndTime(startDate, startTime));
     const end = this.toUnixEpochSeconds(this.combineDateAndTime(endDate, endTime));

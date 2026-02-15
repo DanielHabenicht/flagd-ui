@@ -137,24 +137,23 @@
   gap: 12px;
 }
 
-/* Easy / Advanced / JSON modes */
+/* Interactive / JSON modes */
 
-.easy-mode,
-.advanced-mode,
+.interactive-mode,
 .json-mode {
   display: flex;
   flex-direction: column;
   gap: 12px;
 }
 
-.easy-mode {
+.interactive-mode {
   flex: 1 1 auto;
   min-height: 0;
 }
 
-.easy-toggle-section,
-.easy-string-section,
-.easy-time-window-section {
+.interactive-toggle-section,
+.interactive-string-section,
+.interactive-time-window-section {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
   padding: 12px;
@@ -164,14 +163,14 @@
   gap: 10px;
 }
 
-.easy-time-window-header {
+.interactive-time-window-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 12px;
 }
 
-.easy-time-window-header label {
+.interactive-time-window-header label {
   font-size: 0.85rem;
   font-weight: 600;
   color: var(--color-text);
@@ -184,13 +183,13 @@
   color: var(--color-text-secondary);
 }
 
-.easy-toggle-row {
+.interactive-toggle-row {
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-.easy-hint {
+.interactive-hint {
   margin: 0;
   font-size: 0.8rem;
   color: var(--color-text-secondary);
