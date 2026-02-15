@@ -102,7 +102,7 @@
         ]
       },
       "variants": {
-        "another": true,
+        "another": false,
         "off": false,
         "test": true
       }

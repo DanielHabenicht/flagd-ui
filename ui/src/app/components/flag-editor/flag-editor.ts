@@ -105,6 +105,7 @@ export class FlagEditorComponent implements OnInit, OnChanges {
   editorMode = signal<EditorMode>('easy');
 
   // Environment mode state
+  defaultFallbackValue = signal<unknown>(undefined);
   environmentStates = signal<Record<string, unknown>>({});
   environmentTimeWindows = signal<Record<string, TimeWindowFormState>>({});
   globalEnvironmentTimeEnabled = signal(false);
@@ -141,13 +142,12 @@ export class FlagEditorComponent implements OnInit, OnChanges {
     if (environments.length === 0) return true;
 
     const states = this.environmentStates();
-    const firstEnv = environments[0].name.toLowerCase();
-    const firstValue = states[firstEnv];
+    const fallback = this.defaultFallbackValue();
 
     return environments.every((env) => {
       const envValue = states[env.name.toLowerCase()];
       // Use JSON.stringify for deep comparison
-      return JSON.stringify(envValue) === JSON.stringify(firstValue);
+      return JSON.stringify(envValue) === JSON.stringify(fallback);
     });
   });
 
@@ -239,6 +239,11 @@ export class FlagEditorComponent implements OnInit, OnChanges {
           ? String(initialVariants.find((variant) => variant.name === 'off')?.value ?? '')
           : '',
       ),
+      // Default fallback value controls
+      defaultBooleanValue: new FormControl<boolean>(false, { nonNullable: true }),
+      defaultStringValue: new FormControl<string>(''),
+      defaultNumberValue: new FormControl<number>(0, { nonNullable: true }),
+      defaultObjectValue: new FormControl<string>('{}'),
       easyStartDate: new FormControl<Date | null>(null),
       easyStartTime: new FormControl<Date | null>(null),
       easyEndDate: new FormControl<Date | null>(null),
@@ -268,11 +273,17 @@ export class FlagEditorComponent implements OnInit, OnChanges {
 
     if (envs.length > 0) {
       if (isEnvironmentFlag) {
-        this.environmentStates.set(extractEnvironmentStates(f!, envs, nextType));
+        const extractedStates = extractEnvironmentStates(f!, envs, nextType);
+        this.environmentStates.set(extractedStates);
+        // Set the default/fallback value as the first environment's value
+        const firstEnv = envs[0].name.toLowerCase();
+        this.defaultFallbackValue.set(extractedStates[firstEnv]);
       } else {
+        const defaultValue = this.getDefaultValueForType(nextType);
+        this.defaultFallbackValue.set(defaultValue);
         const defaultStates: Record<string, unknown> = {};
         for (const env of envs) {
-          defaultStates[env.name.toLowerCase()] = this.getDefaultValueForType(nextType);
+          defaultStates[env.name.toLowerCase()] = defaultValue;
         }
         this.environmentStates.set(defaultStates);
       }
@@ -300,6 +311,7 @@ export class FlagEditorComponent implements OnInit, OnChanges {
     }
     this.environmentTimeWindows.set(environmentTimeWindows);
 
+    const defaultValue = this.defaultFallbackValue();
     this.form.patchValue(
       {
         key: f?.key ?? '',
@@ -319,6 +331,15 @@ export class FlagEditorComponent implements OnInit, OnChanges {
           nextType === 'string'
             ? String(nextVariants.find((variant) => variant.name === 'off')?.value ?? '')
             : '',
+        defaultBooleanValue: defaultValue === true ? true : false,
+        defaultStringValue: typeof defaultValue === 'string' ? defaultValue : '',
+        defaultNumberValue: typeof defaultValue === 'number' ? defaultValue : 0,
+        defaultObjectValue:
+          typeof defaultValue === 'object' &&
+          defaultValue !== null &&
+          !(defaultValue instanceof Array)
+            ? JSON.stringify(defaultValue, null, 2)
+            : '{}',
         easyStartDate: this.parseTimestampDate(globalTimeBounds?.start),
         easyStartTime: this.parseTimestampDate(globalTimeBounds?.start),
         easyEndDate: this.parseTimestampDate(globalTimeBounds?.end),
@@ -870,6 +891,7 @@ export class FlagEditorComponent implements OnInit, OnChanges {
       editorMode: this.editorMode(),
       hasEnvironments: this.hasEnvironments(),
       globalEnvironmentTimeEnabled: this.globalEnvironmentTimeEnabled(),
+      defaultFallbackValue: this.defaultFallbackValue(),
       environmentStates: this.environmentStates(),
       environmentTimeWindows: this.serializeEnvironmentTimeWindows(),
       variants: this.variants(),
@@ -1038,7 +1060,22 @@ export class FlagEditorComponent implements OnInit, OnChanges {
     return this.getDefaultValueForType(flagType ?? 'boolean');
   }
 
+  getDefaultFallbackValue(): unknown {
+    return this.defaultFallbackValue();
+  }
+
+  onDefaultFallbackValueChange(value: unknown): void {
+    this.defaultFallbackValue.set(value);
+    // Update all environment states to match the new default
+    const nextStates: Record<string, unknown> = {};
+    for (const env of this.environments()) {
+      nextStates[env.name.toLowerCase()] = value;
+    }
+    this.environmentStates.set(nextStates);
+  }
+
   onGlobalEnvironmentValueChange(value: unknown): void {
+    // This now just updates all environments at once (they share the same value)
     const nextStates: Record<string, unknown> = {};
     for (const env of this.environments()) {
       nextStates[env.name.toLowerCase()] = value;
@@ -1048,10 +1085,12 @@ export class FlagEditorComponent implements OnInit, OnChanges {
 
   onEnvironmentTypeChange(): void {
     const flagType = this.form.get('flagType')?.value as FlagType;
-    // Reset all environment values to defaults for the new type
+    // Reset all environment values and default fallback to defaults for the new type
+    const defaultValue = this.getDefaultValueForType(flagType);
+    this.defaultFallbackValue.set(defaultValue);
     const states: Record<string, unknown> = {};
     for (const env of this.environments()) {
-      states[env.name.toLowerCase()] = this.getDefaultValueForType(flagType);
+      states[env.name.toLowerCase()] = defaultValue;
     }
     this.environmentStates.set(states);
   }

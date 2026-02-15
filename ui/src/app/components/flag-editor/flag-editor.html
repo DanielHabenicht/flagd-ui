@@ -77,6 +77,61 @@
         </div>
       }
 
+      <!-- Default (Fallback) Value Section (When environments exist) -->
+      @if (editorMode() === 'easy' && hasEnvironments()) {
+        <div class="form-field default-value-section">
+          <span class="field-label">Default (Fallback) Value</span>
+          <p class="hint-text">This value is used when no environment-specific override is set.</p>
+
+          @if (form.get('flagType')!.value === 'boolean') {
+            <mat-slide-toggle
+              [checked]="form.get('defaultBooleanValue')!.value"
+              (change)="onDefaultFallbackValueChange($event.checked)"
+            >
+              {{ form.get('defaultBooleanValue')!.value ? 'ON' : 'OFF' }}
+            </mat-slide-toggle>
+          }
+
+          @if (form.get('flagType')!.value === 'string') {
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>String Value</mat-label>
+              <input
+                matInput
+                [value]="form.get('defaultStringValue')!.value"
+                (input)="onDefaultFallbackValueChange($any($event.target).value)"
+                placeholder="Enter default value"
+              />
+            </mat-form-field>
+          }
+
+          @if (form.get('flagType')!.value === 'number') {
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Number Value</mat-label>
+              <input
+                matInput
+                type="number"
+                [value]="form.get('defaultNumberValue')!.value"
+                (input)="onDefaultFallbackValueChange(+$any($event.target).value)"
+                placeholder="Enter default number"
+              />
+            </mat-form-field>
+          }
+
+          @if (form.get('flagType')!.value === 'object') {
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>JSON Object</mat-label>
+              <textarea
+                matInput
+                [value]="form.get('defaultObjectValue')!.value"
+                (input)="onDefaultFallbackValueChange(JSON.parse($any($event.target).value || '{}'))"
+                rows="4"
+                placeholder="{}"
+              ></textarea>
+            </mat-form-field>
+          }
+        </div>
+      }
+
       <!-- ==================== EASY MODE ==================== -->
       @if (editorMode() === 'easy') {
         <div class="easy-mode">
@@ -175,11 +230,11 @@
                 }
               </div>
 
-              <!-- Default/Environment Values Section with Expansion Panel -->
-              <mat-expansion-panel [expanded]="true" [hideToggle]="true">
+              <!-- Environment Overrides Panel -->
+              <mat-expansion-panel [expanded]="!allEnvironmentsSameValue() || showEnvironmentOverrides()" [hideToggle]="true">
                 <mat-expansion-panel-header>
                   <mat-panel-title>
-                    {{ 'Environments' }}
+                    Environment-Specific Overrides
                   </mat-panel-title>
                   @if (allEnvironmentsSameValue()) {
                     <button
@@ -191,8 +246,8 @@
                       "
                       [title]="
                         showEnvironmentOverrides()
-                          ? 'Use same value for all environments'
-                          : 'Customize per environment'
+                          ? 'Collapse (all use default)'
+                          : 'Expand to set per-environment values'
                       "
                       class="environment-toggle-button"
                     >
@@ -201,68 +256,15 @@
                       }}</mat-icon>
                       {{
                         showEnvironmentOverrides()
-                          ? 'Use same for all'
-                          : 'Customize per environment'
+                          ? 'All use default'
+                          : 'All use default - expand to override'
                       }}
                     </button>
                   }
                 </mat-expansion-panel-header>
 
-                <!-- Default Value Display (visible when all same and not customizing) -->
-                @if (allEnvironmentsSameValue() && !showEnvironmentOverrides()) {
-                  <div class="default-value-section">
-                    @if (form.get('flagType')!.value === 'boolean') {
-                      <ng-container *ngTemplateOutlet="easyModeGlobalBooleanSwitch"></ng-container>
-                    }
-
-                    @if (form.get('flagType')!.value === 'string') {
-                      <mat-form-field appearance="outline" class="full-width">
-                        <mat-label>String Value</mat-label>
-                        <input
-                          matInput
-                          [value]="$any(getGlobalEnvironmentValue() ?? '')"
-                          (input)="onGlobalEnvironmentValueChange($any($event.target).value)"
-                          placeholder="Enter value"
-                        />
-                      </mat-form-field>
-                    }
-
-                    @if (form.get('flagType')!.value === 'number') {
-                      <mat-form-field appearance="outline" class="full-width">
-                        <mat-label>Number Value</mat-label>
-                        <input
-                          matInput
-                          type="number"
-                          [value]="+$any(getGlobalEnvironmentValue() ?? 0)"
-                          (input)="onGlobalEnvironmentValueChange(+$any($event.target).value)"
-                          placeholder="Enter number"
-                        />
-                      </mat-form-field>
-                    }
-
-                    @if (form.get('flagType')!.value === 'object') {
-                      <mat-form-field appearance="outline" class="full-width">
-                        <mat-label>JSON Object</mat-label>
-                        <textarea
-                          matInput
-                          [value]="JSON.stringify(getGlobalEnvironmentValue() ?? {}, null, 2)"
-                          (input)="
-                            onGlobalEnvironmentValueChange(
-                              JSON.parse($any($event.target).value || '{}')
-                            )
-                          "
-                          rows="4"
-                          placeholder="{}"
-                        ></textarea>
-                      </mat-form-field>
-                    }
-                    <p class="hint-text">All environments use the same value.</p>
-                  </div>
-                }
-
-                <!-- Environment-Specific Overrides (visible when expanded or values differ) -->
-                @if (!allEnvironmentsSameValue() || showEnvironmentOverrides()) {
-                  <div class="environment-values-section">
+                <!-- Environment-Specific Overrides -->
+                <div class="environment-values-section">
                     @if (hasMultipleEnvironments()) {
                       <mat-form-field appearance="outline" class="full-width environment-filter">
                         <mat-label>Filter environments</mat-label>
@@ -490,7 +492,6 @@
                       </div>
                     }
                   </div>
-                }
               </mat-expansion-panel>
             </div>
           } @else {
