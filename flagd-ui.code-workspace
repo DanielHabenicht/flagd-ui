@@ -19,5 +19,18 @@
     "[json]": {
       "editor.defaultFormatter": "esbenp.prettier-vscode"
     }
+  },
+  "extensions": {
+    "recommendations": [
+      "GitHub.copilot",
+      "GitHub.copilot-chat",
+      "GitHub.copilot-labs",
+      "esbenp.prettier-vscode",
+      "ms-playwright.playwright",
+      "vitest.explorer",
+      "dbaeumer.vscode-eslint",
+      "rust-lang.rust-analyzer",
+      "tamasfe.even-better-toml"
+    ]
   }
 }
