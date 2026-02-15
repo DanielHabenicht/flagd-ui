@@ -88,13 +88,13 @@ async function mockFlagsApi(page: Page): Promise<void> {
 
 test.beforeEach(async ({ page }) => {
   await mockFlagsApi(page);
+  await page.setViewportSize({ width: 1600, height: 1000 });
 });
 
 test('loads app shell and welcome page', async ({ page }) => {
   await page.goto('/');
 
-  await expect(page.getByRole('heading', { name: 'flagd' })).toBeVisible();
-  await expect(page.getByText('Local Files')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'flagd-ui' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Feature Flag Manager' })).toBeVisible();
   await expect(page.getByRole('link', { name: 'demo.flagd.json' })).toBeVisible();
 });
@@ -106,7 +106,7 @@ test('navigates to a flags-file and renders flag data', async ({ page }) => {
 
   await expect(page.getByRole('heading', { name: 'demo.flagd.json' })).toBeVisible();
   await expect(page.getByRole('cell', { name: 'checkout-enabled' })).toBeVisible();
-  await expect(page.locator('.state-badge', { hasText: 'ENABLED' })).toBeVisible();
+  await expect(page.getByTitle('ENABLED')).toBeVisible();
 });
 
 test('creates a flags-file from the sidebar form', async ({ page }) => {
@@ -114,10 +114,10 @@ test('creates a flags-file from the sidebar form', async ({ page }) => {
 
   await page.getByRole('button', { name: 'Create flags-file' }).click();
   await page.getByLabel('File name').fill('new-project.flagd.json');
-  await page.getByRole('button', { name: 'Create Local File' }).click();
+  await page.getByRole('dialog', { name: 'Add Flag File' }).getByRole('button', { name: 'Create' }).click();
 
   await expect(page).toHaveURL(/\/flags-files\/local\/new-project.flagd.json$/);
   await expect(page.getByRole('heading', { name: 'new-project.flagd.json' })).toBeVisible();
   await expect(page.getByText('No flags in this file yet.')).toBeVisible();
-  await expect(page.getByRole('link', { name: 'new-project.flagd.json' })).toBeVisible();
+  await expect(page.locator('.sidebar').getByRole('link', { name: 'new-project.flagd.json' })).toBeVisible();
 });
