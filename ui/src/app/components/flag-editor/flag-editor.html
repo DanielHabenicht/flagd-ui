@@ -713,6 +713,20 @@
               </mat-button-toggle-group>
             </div>
 
+            @if (form.get('easyType')!.value === 'boolean') {
+              <div class="global-environment-value-section">
+                <h3>Global Value</h3>
+                <p class="hint-text">This sets the default value while no environments exist.</p>
+
+                <mat-slide-toggle
+                  [checked]="form.get('defaultVariant')!.value === 'on'"
+                  (change)="onEasyDefaultChange($event.checked ? 'on' : 'off')"
+                >
+                  {{ form.get('defaultVariant')!.value === 'on' ? 'ON' : 'OFF' }}
+                </mat-slide-toggle>
+              </div>
+            }
+
             <div class="easy-time-window-section">
               <div class="easy-time-window-header">
                 <label>Active Time Window</label>
