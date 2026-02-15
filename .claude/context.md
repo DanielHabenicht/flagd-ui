@@ -226,3 +226,32 @@ These are required behaviors from recent UI changes and should be preserved unle
 5. Below `1920px`, save/create closes editing; at/above `1920px`, keep editor open.
 6. Playground drawer must be available in routed edit page as well as detail view.
 7. Routed edit page layout must be full-width, have a scrollable workspace above playground, and include padding so card borders are visible and actions are not overlapped by expanded playground.
+
+## Recent E2E learnings (Feb 2026)
+
+1. New Playwright E2E spec exists at `e2e-tests/boolean-flag-playground.spec.ts` and uses the real backend (no API route mocking).
+2. Expected flow covered by this spec:
+
+- Create a new local flags-file from the sidebar dialog.
+- Create a boolean flag in Easy mode.
+- Evaluate in Playground and assert initial result `Value: true`, `Variant: on`.
+- Re-open flag editor and toggle the Easy mode global boolean switch from ON to OFF.
+- Save and re-evaluate, then assert `Value: false`, `Variant: off`.
+
+3. Cross-browser validation command used successfully:
+
+```bash
+PLAYWRIGHT_HTML_OPEN=never npx playwright test e2e-tests/boolean-flag-playground.spec.ts --project=chromium --project=firefox --project=webkit --trace=on --reporter=line
+```
+
+4. Trace artifacts from this run are in:
+
+- `test-results/boolean-flag-playground-cr-5453b-yground-then-switches-value-chromium/trace.zip`
+- `test-results/boolean-flag-playground-cr-5453b-yground-then-switches-value-firefox/trace.zip`
+- `test-results/boolean-flag-playground-cr-5453b-yground-then-switches-value-webkit/trace.zip`
+
+5. If `npx playwright show-trace <trace.zip>` fails with `Protocol error (Browser.getVersion)`, use hosted mode and an absolute path:
+
+```bash
+npx playwright show-trace --host 127.0.0.1 --port 9324 /workspaces/flagd-ui/test-results/boolean-flag-playground-cr-5453b-yground-then-switches-value-chromium/trace.zip
+```
