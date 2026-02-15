@@ -1,14 +1,16 @@
 import { Component, inject, OnInit } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
+import { Store } from '@ngxs/store';
 import { MatListModule } from '@angular/material/list';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatDialog } from '@angular/material/dialog';
-import { FlagStore } from '../../services/flag-store';
 import { BackendRegistry } from '../../services/backend-registry';
 import { FlagsFileEntry } from '../../models/flag.models';
 import { NewFlagsFileDialogComponent } from '../new-flags-file-dialog/new-flags-file-dialog';
+import { FlagStoreState } from '../../state/flag-store.state';
+import { SetHasDefaultBackend, LoadFlagsFiles, DeleteFlagsFile } from '../../state/flag-store.actions';
 
 @Component({
   selector: 'app-flags-file-list',
@@ -25,18 +27,21 @@ import { NewFlagsFileDialogComponent } from '../new-flags-file-dialog/new-flags-
   styleUrl: './flags-file-list.scss',
 })
 export class FlagsFileListComponent implements OnInit {
-  readonly store = inject(FlagStore);
+  private readonly ngxsStore = inject(Store);
   private readonly dialog = inject(MatDialog);
   private readonly backendRegistry = inject(BackendRegistry);
+
+  readonly fileGroups = this.ngxsStore.selectSignal(FlagStoreState.fileGroups);
+  readonly loading = this.ngxsStore.selectSignal(FlagStoreState.loading);
 
   ngOnInit(): void {
     // Auto-detect same-origin backend and register it
     this.backendRegistry.probeDefaultBackend().subscribe((available) => {
-      this.store.setHasDefaultBackend(available);
+      this.ngxsStore.dispatch(new SetHasDefaultBackend(available));
       if (available) {
         this.backendRegistry.addBackend('', 'This Server');
       }
-      this.store.loadFlagsFiles();
+      this.ngxsStore.dispatch(new LoadFlagsFiles());
     });
   }
 
@@ -63,7 +68,7 @@ export class FlagsFileListComponent implements OnInit {
     if (
       confirm(`Delete flags-file "${flagsFile.name}"? This will remove all flags in this file.`)
     ) {
-      this.store.deleteFlagsFile(flagsFile);
+      this.ngxsStore.dispatch(new DeleteFlagsFile(flagsFile));
     }
   }
 

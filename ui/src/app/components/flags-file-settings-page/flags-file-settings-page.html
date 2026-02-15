@@ -1,8 +1,8 @@
 <div class="settings-page-container">
   <div class="settings-page-workspace">
     <div class="settings-page-content">
-      @if (store.error()) {
-        <div class="error-banner">{{ store.error() }}</div>
+      @if (error()) {
+        <div class="error-banner">{{ error() }}</div>
       }
 
       <section class="settings-section">
@@ -31,8 +31,8 @@
   </div>
 
   <app-playground-drawer
-    [flags]="store.flagEntries()"
-    [evaluators]="store.currentEvaluators()"
+    [flags]="flagEntries()"
+    [evaluators]="currentEvaluators()"
     [selectedFlagKey]="null"
   />
 </div>

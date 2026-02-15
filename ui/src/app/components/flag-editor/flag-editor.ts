@@ -45,8 +45,9 @@ import {
 import { VariantsEditorComponent, VariantRow } from '../variants-editor/variants-editor';
 import { TargetingEditorComponent } from '../targeting-editor/targeting-editor';
 import { MetadataEditorComponent } from '../metadata-editor/metadata-editor';
-import { FlagStore } from '../../services/flag-store';
+import { Store } from '@ngxs/store';
 import { FlagSchemaAdapter, TimeWindowBounds } from '../../services/flag-schema-adapter';
+import { FlagStoreState } from '../../state/flag-store.state';
 
 export type EditorMode = 'easy' | 'advanced' | 'json';
 
@@ -83,7 +84,7 @@ interface TimeWindowFormState {
   styleUrl: './flag-editor.scss',
 })
 export class FlagEditorComponent implements OnInit, OnChanges {
-  private readonly store = inject(FlagStore);
+  private readonly ngxsStore = inject(Store);
   private readonly schemaAdapter = new FlagSchemaAdapter();
 
   readonly inline = input(false);
@@ -111,7 +112,7 @@ export class FlagEditorComponent implements OnInit, OnChanges {
   // Expose JSON to template for object editing
   readonly JSON = JSON;
 
-  readonly environments = computed(() => this.store.currentEnvironments());
+  readonly environments = this.ngxsStore.selectSignal(FlagStoreState.currentEnvironments);
   readonly filteredEnvironments = computed(() => {
     const filterValue = this.environmentFilter().trim().toLowerCase();
     const allEnvironments = this.environments();

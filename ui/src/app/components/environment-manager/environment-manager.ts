@@ -2,14 +2,16 @@ import { Component, inject, signal, computed, input, effect } from '@angular/cor
 import { COMMA, ENTER } from '@angular/cdk/keycodes';
 import { CommonModule } from '@angular/common';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { Store } from '@ngxs/store';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatChipInputEvent, MatChipsModule } from '@angular/material/chips';
 import { MatDialogRef } from '@angular/material/dialog';
-import { FlagStore } from '../../services/flag-store';
 import { Environment, Evaluator, createEnvironmentEvaluator } from '../../models/flag.models';
+import { FlagStoreState } from '../../state/flag-store.state';
+import { UpdateEvaluators } from '../../state/flag-store.actions';
 
 interface EnvironmentForm {
   name: string;
@@ -34,10 +36,13 @@ interface EnvironmentForm {
 export class EnvironmentManagerComponent {
   readonly embedded = input(false);
 
-  private readonly store = inject(FlagStore);
+  private readonly ngxsStore = inject(Store);
   private readonly dialogRef = inject(MatDialogRef<EnvironmentManagerComponent>, {
     optional: true,
   });
+
+  readonly loading = this.ngxsStore.selectSignal(FlagStoreState.loading);
+  readonly currentEnvironments = this.ngxsStore.selectSignal(FlagStoreState.currentEnvironments);
 
   readonly environments = signal<Environment[]>([]);
   readonly environmentFilter = signal('');
@@ -52,7 +57,7 @@ export class EnvironmentManagerComponent {
   readonly isEditing = computed(() => this.editingIndex() !== null);
   readonly isDialogMode = computed(() => !!this.dialogRef && !this.embedded());
   readonly hasLocalChanges = signal(false);
-  readonly saveDisabled = computed(() => !this.hasLocalChanges() || this.store.loading());
+  readonly saveDisabled = computed(() => !this.hasLocalChanges() || this.loading());
   readonly filteredEnvironments = computed(() => {
     const query = this.environmentFilter().trim().toLowerCase();
     const entries = this.environments().map((env, index) => ({ env, index }));
@@ -69,7 +74,7 @@ export class EnvironmentManagerComponent {
   });
 
   private readonly syncEnvironmentsFromStore = effect(() => {
-    const currentEnvs = this.store.currentEnvironments();
+    const currentEnvs = this.currentEnvironments();
     if (this.hasLocalChanges()) {
       return;
     }
@@ -201,7 +206,7 @@ export class EnvironmentManagerComponent {
     }
 
     // Update the store
-    this.store.updateEvaluators(Object.keys(evaluators).length > 0 ? evaluators : undefined);
+    this.ngxsStore.dispatch(new UpdateEvaluators(Object.keys(evaluators).length > 0 ? evaluators : undefined));
     this.hasLocalChanges.set(false);
     this.dialogRef?.close(true);
   }

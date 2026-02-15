@@ -1,5 +1,6 @@
 import { Component, computed, effect, HostListener, inject, OnInit, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
+import { Store } from '@ngxs/store';
 import { MatTableModule } from '@angular/material/table';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -9,10 +10,11 @@ import { MatInputModule } from '@angular/material/input';
 import { MatSortModule, Sort } from '@angular/material/sort';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { FlagStore } from '../../services/flag-store';
 import { FlagEditorComponent } from '../flag-editor/flag-editor';
 import { FlagDefinition, FlagEntry, inferFlagType } from '../../models/flag.models';
 import { PlaygroundDrawerComponent } from '../playground-drawer/playground-drawer';
+import { FlagStoreState } from '../../state/flag-store.state';
+import { SelectFlagsFileByRoute, SaveFlag, RenameFlag, DeleteFlag } from '../../state/flag-store.actions';
 
 @Component({
   selector: 'app-flags-file-detail',
@@ -34,7 +36,7 @@ import { PlaygroundDrawerComponent } from '../playground-drawer/playground-drawe
   styleUrl: './flags-file-detail.scss',
 })
 export class FlagsFileDetailComponent implements OnInit {
-  readonly store = inject(FlagStore);
+  private readonly ngxsStore = inject(Store);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly inlineEditorMinWidth = 1280;
@@ -43,11 +45,19 @@ export class FlagsFileDetailComponent implements OnInit {
     typeof window !== 'undefined' && window.innerWidth >= this.inlineEditorMinWidth;
   private readonly routeSelectedFlagKey = signal<string | null>(null);
 
+  readonly flagEntries = this.ngxsStore.selectSignal(FlagStoreState.flagEntries);
+  readonly currentFlagsFile = this.ngxsStore.selectSignal(FlagStoreState.currentFlagsFile);
+  readonly currentFlags = this.ngxsStore.selectSignal(FlagStoreState.currentFlags);
+  readonly currentMetadata = this.ngxsStore.selectSignal(FlagStoreState.currentMetadata);
+  readonly currentEvaluators = this.ngxsStore.selectSignal(FlagStoreState.currentEvaluators);
+  readonly loading = this.ngxsStore.selectSignal(FlagStoreState.loading);
+  readonly error = this.ngxsStore.selectSignal(FlagStoreState.error);
+
   showEditor = signal(false);
   editingFlag = signal<FlagEntry | null>(null);
   isWideLayout = signal(this.initialWideLayout);
   readonly selectedFlagKey = computed(() => this.editingFlag()?.key ?? null);
-  readonly existingFlagKeys = computed(() => this.store.flagEntries().map((f) => f.key));
+  readonly existingFlagKeys = computed(() => this.flagEntries().map((f) => f.key));
   readonly showInlineEditor = computed(() => this.showEditor() && this.isWideLayout());
   readonly searchQuery = signal('');
   readonly sortColumn = signal<'key' | 'type' | 'state' | 'default' | 'targeting'>('key');
@@ -63,7 +73,7 @@ export class FlagsFileDetailComponent implements OnInit {
   ] as const;
   readonly visibleFlagEntries = computed(() => {
     const query = this.searchQuery().trim().toLowerCase();
-    const entries = this.store.flagEntries();
+    const entries = this.flagEntries();
     const filteredEntries = query
       ? entries.filter((flag) => this.getSearchText(flag).includes(query))
       : entries;
@@ -85,7 +95,7 @@ export class FlagsFileDetailComponent implements OnInit {
     const selectedFlagKey = this.routeSelectedFlagKey();
     if (!selectedFlagKey) return;
 
-    const match = this.store.flagEntries().find((entry) => entry.key === selectedFlagKey);
+    const match = this.flagEntries().find((entry) => entry.key === selectedFlagKey);
     if (!match) return;
 
     this.editingFlag.set(match);
@@ -166,7 +176,7 @@ export class FlagsFileDetailComponent implements OnInit {
       metadata: flag.metadata,
     };
 
-    this.store.saveFlag(flag.key, updatedFlag);
+    this.ngxsStore.dispatch(new SaveFlag(flag.key, updatedFlag));
 
     if (this.editingFlag()?.key === flag.key) {
       this.editingFlag.set({ key: flag.key, ...updatedFlag });
@@ -187,9 +197,9 @@ export class FlagsFileDetailComponent implements OnInit {
 
       const routePath = this.route.snapshot.routeConfig?.path ?? '';
       if (routePath.startsWith('flags-files/remote')) {
-        this.store.selectFlagsFileByRoute('remote', name, backendId ?? undefined);
+        this.ngxsStore.dispatch(new SelectFlagsFileByRoute('remote', name, backendId ?? undefined));
       } else {
-        this.store.selectFlagsFileByRoute('local', name);
+        this.ngxsStore.dispatch(new SelectFlagsFileByRoute('local', name));
       }
     });
 
@@ -240,9 +250,9 @@ export class FlagsFileDetailComponent implements OnInit {
 
   onSaveFlag(event: { key: string; flag: FlagDefinition; originalKey?: string }): void {
     if (event.originalKey && event.originalKey !== event.key) {
-      this.store.renameFlag(event.originalKey, event.key, event.flag);
+      this.ngxsStore.dispatch(new RenameFlag(event.originalKey, event.key, event.flag));
     } else {
-      this.store.saveFlag(event.key, event.flag);
+      this.ngxsStore.dispatch(new SaveFlag(event.key, event.flag));
     }
 
     if (window.innerWidth >= this.keepEditorOpenAfterSaveMinWidth) {
@@ -261,11 +271,45 @@ export class FlagsFileDetailComponent implements OnInit {
     if (this.editingFlag()?.key === key) {
       this.closeEditor();
     }
-    this.store.deleteFlag(key);
+    this.ngxsStore.dispatch(new DeleteFlag(key));
   }
 
   downloadFlagsFile(): void {
-    this.store.downloadCurrentFlagsFile();
+    const flagsFile = this.currentFlagsFile();
+    const flags = this.currentFlags();
+    if (!flagsFile || !flags) return;
+
+    const content = this.buildFlagsFileContent(flags, this.currentMetadata());
+    const blob = new Blob([JSON.stringify(content, null, 2)], {
+      type: 'application/json',
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${flagsFile.name}.flagd.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  private buildFlagsFileContent(
+    flags: Record<string, FlagDefinition>,
+    metadata: any,
+  ): Record<string, any> {
+    const content: any = {
+      $schema: 'https://flagd.dev/schema/v0/flags.json',
+      flags,
+    };
+
+    const evaluators = this.currentEvaluators();
+    if (evaluators && Object.keys(evaluators).length > 0) {
+      content.$evaluators = evaluators;
+    }
+
+    if (metadata && Object.keys(metadata).length > 0) {
+      content.metadata = metadata;
+    }
+
+    return content;
   }
 
   openSettingsPage(): void {

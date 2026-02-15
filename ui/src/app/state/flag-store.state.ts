@@ -175,6 +175,11 @@ export class FlagStoreState {
     return state.localFlagsFiles;
   }
 
+  @Selector()
+  static currentFlagsFileName(state: FlagStoreStateModel): string | null {
+    return state.currentFlagsFile?.name ?? null;
+  }
+
   @Action(SetHasDefaultBackend)
   setHasDefaultBackend(ctx: StateContext<FlagStoreStateModel>, action: SetHasDefaultBackend): void {
     ctx.patchState({ hasDefaultBackend: action.hasDefaultBackend });

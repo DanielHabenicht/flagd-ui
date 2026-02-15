@@ -1,9 +1,11 @@
 import { Component, computed, effect, inject, OnInit, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
+import { Store } from '@ngxs/store';
 import { FlagEditorComponent } from '../flag-editor/flag-editor';
 import { PlaygroundDrawerComponent } from '../playground-drawer/playground-drawer';
-import { FlagStore } from '../../services/flag-store';
 import { FlagDefinition, FlagEntry } from '../../models/flag.models';
+import { FlagStoreState } from '../../state/flag-store.state';
+import { SelectFlagsFileByRoute, SaveFlag, RenameFlag } from '../../state/flag-store.actions';
 
 @Component({
   selector: 'app-flags-file-edit-page',
@@ -13,15 +15,18 @@ import { FlagDefinition, FlagEntry } from '../../models/flag.models';
   styleUrl: './flags-file-edit-page.scss',
 })
 export class FlagsFileEditPageComponent implements OnInit {
-  readonly store = inject(FlagStore);
+  private readonly ngxsStore = inject(Store);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly keepEditorOpenAfterSaveMinWidth = 1920;
 
   private readonly routeFlagKey = signal<string | null>(null);
 
+  readonly flagEntries = this.ngxsStore.selectSignal(FlagStoreState.flagEntries);
+  readonly currentEvaluators = this.ngxsStore.selectSignal(FlagStoreState.currentEvaluators);
+
   editingFlag = signal<FlagEntry | null>(null);
-  readonly existingFlagKeys = computed(() => this.store.flagEntries().map((f) => f.key));
+  readonly existingFlagKeys = computed(() => this.flagEntries().map((f) => f.key));
   readonly selectedFlagKey = computed(() => {
     const editingKey = this.editingFlag()?.key;
     if (editingKey) return editingKey;
@@ -37,7 +42,7 @@ export class FlagsFileEditPageComponent implements OnInit {
       return;
     }
 
-    const match = this.store.flagEntries().find((entry) => entry.key === flagKey);
+    const match = this.flagEntries().find((entry) => entry.key === flagKey);
     this.editingFlag.set(match ?? null);
   });
 
@@ -51,9 +56,9 @@ export class FlagsFileEditPageComponent implements OnInit {
 
       const routePath = this.route.snapshot.routeConfig?.path ?? '';
       if (routePath.startsWith('flags-files/remote')) {
-        this.store.selectFlagsFileByRoute('remote', name, backendId ?? undefined);
+        this.ngxsStore.dispatch(new SelectFlagsFileByRoute('remote', name, backendId ?? undefined));
       } else {
-        this.store.selectFlagsFileByRoute('local', name);
+        this.ngxsStore.dispatch(new SelectFlagsFileByRoute('local', name));
       }
 
       this.routeFlagKey.set(flagKey);
@@ -62,9 +67,9 @@ export class FlagsFileEditPageComponent implements OnInit {
 
   onSaveFlag(event: { key: string; flag: FlagDefinition; originalKey?: string }): void {
     if (event.originalKey && event.originalKey !== event.key) {
-      this.store.renameFlag(event.originalKey, event.key, event.flag);
+      this.ngxsStore.dispatch(new RenameFlag(event.originalKey, event.key, event.flag));
     } else {
-      this.store.saveFlag(event.key, event.flag);
+      this.ngxsStore.dispatch(new SaveFlag(event.key, event.flag));
     }
 
     if (window.innerWidth < this.keepEditorOpenAfterSaveMinWidth) {

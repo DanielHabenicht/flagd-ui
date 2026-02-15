@@ -19,12 +19,13 @@ import { FlagsFileListComponent } from './components/flags-file-list/flags-file-
 import { FlagsFileDetailComponent } from './components/flags-file-detail/flags-file-detail';
 import { FlagsFileEditPageComponent } from './components/flags-file-edit-page/flags-file-edit-page';
 import { FlagsFileSettingsPageComponent } from './components/flags-file-settings-page/flags-file-settings-page';
-import { FlagStore } from './services/flag-store';
 import { FlagFileContent } from './models/flag.models';
 import { GlobalLoadingService } from './services/global-loading.service';
 import { BackendRegistry } from './services/backend-registry';
 import { SetThemeMode, ThemeMode } from './state/ui-preferences.actions';
 import { UiPreferencesState } from './state/ui-preferences.state';
+import { FlagStoreState } from './state/flag-store.state';
+import { ImportLocalFlagsFile } from './state/flag-store.actions';
 
 type AppTheme = 'light' | 'dark';
 
@@ -45,13 +46,16 @@ type AppTheme = 'light' | 'dark';
   styleUrl: './app.scss',
 })
 export class App implements OnDestroy {
-  readonly store = inject(FlagStore);
   private readonly ngxsStore = inject(Store);
   private readonly router = inject(Router);
   private readonly backendRegistry = inject(BackendRegistry);
   private readonly navigationCollapseWidth = 1280;
   readonly globalLoading = inject(GlobalLoadingService);
   readonly themeMode = this.ngxsStore.selectSignal(UiPreferencesState.themeMode);
+  
+  // FlagStore selectors
+  readonly currentFlagsFileName = this.ngxsStore.selectSignal(FlagStoreState.currentFlagsFileName);
+  readonly currentFlagsFile = this.ngxsStore.selectSignal(FlagStoreState.currentFlagsFile);
   readonly prefersDark = signal(this.systemPrefersDark());
   readonly theme = computed<AppTheme>(() => {
     const mode = this.themeMode();
@@ -66,7 +70,7 @@ export class App implements OnDestroy {
     typeof window !== 'undefined' && window.innerWidth <= this.navigationCollapseWidth,
   );
   readonly showFlagsContextHeader = computed(
-    () => this.currentUrl().startsWith('/flags-files/') && !!this.store.currentFlagsFileName(),
+    () => this.currentUrl().startsWith('/flags-files/') && !!this.currentFlagsFileName(),
   );
   readonly showPageHeader = computed(() => this.isCompactLayout() || this.showFlagsContextHeader());
   readonly isOverviewComponentActive = computed(
@@ -108,7 +112,7 @@ export class App implements OnDestroy {
     return null;
   });
   readonly sourceBreadcrumb = computed(() => {
-    const flagsFile = this.store.currentFlagsFile();
+    const flagsFile = this.currentFlagsFile();
     if (!flagsFile) return null;
 
     if (flagsFile.source === 'local') {
@@ -243,7 +247,7 @@ export class App implements OnDestroy {
           if (!content.flags || typeof content.flags !== 'object') return;
           let name = file.name.replace(/\.flagd\.json$/, '').replace(/\.json$/, '');
           if (!name) name = 'imported';
-          this.store.importLocalFlagsFile(name, content, 'browser');
+          this.ngxsStore.dispatch(new ImportLocalFlagsFile(name, content, 'browser'));
         } catch {
           console.error(`Failed to parse ${file.name}`);
         }

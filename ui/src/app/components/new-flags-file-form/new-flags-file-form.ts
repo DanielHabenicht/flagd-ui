@@ -1,17 +1,22 @@
 import { Component, Output, EventEmitter, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
+import { Store } from '@ngxs/store';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
-import { FlagStore } from '../../services/flag-store';
 import { BackendRegistry } from '../../services/backend-registry';
 import { RemoteApi } from '../../services/remote-api';
 import { FlagFileContent } from '../../models/flag.models';
 import { FileSystemAccess } from '../../services/file-system-access';
+import {
+  CreateLocalFlagsFile,
+  ImportLocalFlagsFile,
+  LoadFlagsFiles,
+} from '../../state/flag-store.actions';
 
 export interface NewFlagsFileFormResult {
   type: 'empty' | 'url' | 'disk' | 'backend';
@@ -35,7 +40,7 @@ export interface NewFlagsFileFormResult {
 export class NewFlagsFileFormComponent {
   @Output() formSubmitted = new EventEmitter<NewFlagsFileFormResult>();
 
-  private readonly store = inject(FlagStore);
+  private readonly store = inject(Store);
   private readonly http = inject(HttpClient);
   private readonly backendRegistry = inject(BackendRegistry);
   private readonly remoteApi = inject(RemoteApi);
@@ -172,7 +177,7 @@ export class NewFlagsFileFormComponent {
   createEmptyFlagsFile(): void {
     const name = this.flagsFileName.trim();
     if (!name) return;
-    this.store.createLocalFlagsFile(name);
+    this.store.dispatch(new CreateLocalFlagsFile(name));
     this.formSubmitted.emit({ type: 'empty' });
   }
 
@@ -198,7 +203,7 @@ export class NewFlagsFileFormComponent {
           name = name.replace(/\.flagd\.json$/, '').replace(/\.json$/, '');
           if (!name) name = 'imported';
 
-          this.store.importLocalFlagsFile(name, content);
+          this.store.dispatch(new ImportLocalFlagsFile(name, content));
           this.formSubmitted.emit({ type: 'url' });
         } catch {
           this.urlError = 'Failed to parse JSON file';
@@ -228,7 +233,7 @@ export class NewFlagsFileFormComponent {
         return;
       }
 
-      this.store.importLocalFlagsFile(result.name, result.content, 'disk');
+      this.store.dispatch(new ImportLocalFlagsFile(result.name, result.content, 'disk'));
       this.formSubmitted.emit({ type: 'disk' });
     } catch (error) {
       this.diskLoading = false;
@@ -280,7 +285,7 @@ export class NewFlagsFileFormComponent {
     }
     const label = this.backendLabel.trim() || undefined;
     this.backendRegistry.addBackend(url, label);
-    this.store.loadFlagsFiles();
+    this.store.dispatch(new LoadFlagsFiles());
     this.formSubmitted.emit({ type: 'backend' });
   }
 }

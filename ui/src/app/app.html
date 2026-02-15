@@ -60,11 +60,11 @@
               @if (flagsFileDetailRoute()) {
                 <h2>
                   <a class="file-breadcrumb breadcrumb-link" [routerLink]="flagsFileDetailRoute()">
-                    {{ store.currentFlagsFileName() }}
+                    {{ currentFlagsFileName() }}
                   </a>
                 </h2>
               } @else {
-                <h2>{{ store.currentFlagsFileName() }}</h2>
+                <h2>{{ currentFlagsFileName() }}</h2>
               }
               @if (detailBreadcrumb()) {
                 <span class="source-separator" aria-hidden="true">›</span>

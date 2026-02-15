@@ -2,13 +2,13 @@
   <div class="project-workspace">
     <div class="project-detail-layout" [class.with-inline-editor]="showInlineEditor()">
       <div class="project-detail">
-        @if (store.error()) {
-          <div class="error-banner">{{ store.error() }}</div>
+        @if (error()) {
+          <div class="error-banner">{{ error() }}</div>
         }
 
-        @if (store.loading() && !store.flagEntries().length) {
+        @if (loading() && !flagEntries().length) {
           <div class="loading">Loading flags...</div>
-        } @else if (store.flagEntries().length) {
+        } @else if (flagEntries().length) {
           <div class="table-controls">
             <mat-form-field appearance="outline" subscriptSizing="dynamic" class="search-field">
               <mat-label>Search flags</mat-label>
@@ -158,8 +158,8 @@
   </div>
 
   <app-playground-drawer
-    [flags]="store.flagEntries()"
-    [evaluators]="store.currentEvaluators()"
+    [flags]="flagEntries()"
+    [evaluators]="currentEvaluators()"
     [selectedFlagKey]="selectedFlagKey()"
   />
 </div>
