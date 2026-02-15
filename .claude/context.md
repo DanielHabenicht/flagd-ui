@@ -257,3 +257,36 @@ PLAYWRIGHT_HTML_OPEN=never npx playwright test e2e-tests/boolean-flag-playground
 ```bash
 npx playwright show-trace --host 127.0.0.1 --port 9324 /workspaces/flagd-ui/test-results/boolean-flag-playground-cr-5453b-yground-then-switches-value-chromium/trace.zip
 ```
+
+## Claude Agent Workflow Commitments
+
+When working on this codebase, the following practices must be followed:
+
+1. **Build Verification**: Always run `get_errors()` after making any changes to:
+   - Component files (`.ts`)
+   - Templates (`.html`)
+   - Styles (`.scss`)
+   - Configuration files
+
+2. **Fix All Errors**: Do not consider a task complete until all compilation/lint errors are resolved.
+
+3. **Code Formatting**: After making changes to frontend files in `ui/`:
+   - Run `npm run format:check` to validate formatting
+   - Run `npm run format` to auto-format if needed
+   - Ensure Prettier config in `ui/package.json` is respected
+
+4. **Theme Awareness**: When modifying or creating UI components:
+   - Use theme variables from `ui/src/styles.scss` (`--color-bg`, `--color-surface`, `--color-text`, etc.)
+   - Never hard-code semantic colors
+   - Ensure components work in both light and dark themes
+   - Reference Material theme tokens from `ui/src/material-theme.scss` when using Material components
+
+5. **Import Missing Dependencies**: When using Material components or other dependencies in templates:
+   - Verify all required imports are present in the component's `.ts` file
+   - Add missing module imports to the `imports` array in `@Component()`
+   - Example: If adding `mat-divider`, import `MatDividerModule`
+
+6. **Documentation**: Update this context file when:
+   - Adding new architectural patterns or components
+   - Establishing new workflow requirements or best practices
+   - Documenting important learnings or gotchas

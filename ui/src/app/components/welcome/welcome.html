@@ -1,12 +1,21 @@
 <div class="welcome-container">
-  <mat-card appearance="outlined" class="welcome-card">
-    <mat-card-content>
+  <mat-card appearance="outlined" class="unified-card">
+    <mat-card-content class="welcome-section">
       <mat-icon class="welcome-icon">flag</mat-icon>
       <h2>Feature Flag Manager</h2>
-      <p>
-        Create a new flags-file to get started, connect to a backend instance, or drop a
+      <p class="welcome-description">
+        Get started by creating a new flag file, connect to a backend instance, or drop a
         <code>.flagd.json</code> file into the sidebar.
       </p>
+    </mat-card-content>
+
+    <mat-divider></mat-divider>
+
+    <mat-card-header class="form-header">
+      <mat-card-title>Add Flag File</mat-card-title>
+    </mat-card-header>
+    <mat-card-content class="form-section">
+      <app-new-flags-file-form (formSubmitted)="onFormSubmitted()"></app-new-flags-file-form>
     </mat-card-content>
   </mat-card>
 </div>

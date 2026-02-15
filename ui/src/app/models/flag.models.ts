@@ -100,7 +100,7 @@ export function extractEnvironments(evaluators?: Record<string, Evaluator>): Env
   for (const [key, evaluator] of Object.entries(evaluators)) {
     // Check if this is an environment evaluator (pattern: "isXxx")
     if (key.startsWith('is') && typeof evaluator === 'object' && evaluator !== null) {
-      const inOperator = (evaluator as Record<string, unknown>).in;
+      const inOperator = (evaluator as Record<string, unknown>)['in'];
       if (Array.isArray(inOperator) && inOperator.length === 2) {
         const varCheck = inOperator[0];
         const aliases = inOperator[1];
@@ -109,7 +109,7 @@ export function extractEnvironments(evaluators?: Record<string, Evaluator>): Env
         if (
           typeof varCheck === 'object' &&
           varCheck !== null &&
-          (varCheck as Record<string, unknown>).var === 'environment' &&
+          (varCheck as Record<string, unknown>)['var'] === 'environment' &&
           Array.isArray(aliases)
         ) {
           const envName = key.slice(2); // Remove 'is' prefix
@@ -166,7 +166,7 @@ export function generateEnvironmentTargeting(
     };
   };
 
-  return buildTargeting(0);
+  return buildTargeting(0) as Record<string, unknown>;
 }
 
 /**
