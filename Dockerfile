@@ -22,6 +22,11 @@ COPY src ./src
 RUN cargo build --release
 
 
+FROM scratch AS artifacts
+
+COPY --from=backend-builder /app/ui/openapi.json /openapi.json
+
+
 FROM openapitools/openapi-generator-cli:v7.19.0 AS api-client-generator
 
 WORKDIR /local

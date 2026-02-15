@@ -23,6 +23,24 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      - name: Extract OpenAPI schema
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          target: artifacts
+          outputs: type=local,dest=./artifacts
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Upload OpenAPI schema
+        uses: actions/upload-artifact@v4
+        with:
+          name: openapi-schema
+          path: artifacts/openapi.json
+          if-no-files-found: error
+          retention-days: 1
+
       - name: Build image
         uses: docker/build-push-action@v6
         with:
@@ -123,6 +141,12 @@ jobs:
       - name: Install UI dependencies
         run: npm ci
         working-directory: ui
+
+      - name: Download OpenAPI schema
+        uses: actions/download-artifact@v4
+        with:
+          name: openapi-schema
+          path: ui/
 
       - name: Download docs screenshots
         uses: actions/download-artifact@v4
