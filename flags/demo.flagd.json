@@ -24,12 +24,9 @@
   "$schema": "https://flagd.dev/schema/v0/flags.json",
   "flags": {
     "background-color": {
-      "defaultVariant": "red",
+      "defaultVariant": "yellow",
       "state": "ENABLED",
       "variants": {
-        "blue": "#0000FF",
-        "green": "#00FF00",
-        "red": "#FF0000",
         "yellow": "#FFFF00"
       }
     },

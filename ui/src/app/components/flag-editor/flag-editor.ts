@@ -135,6 +135,23 @@ export class FlagEditorComponent implements OnInit, OnChanges {
   });
   readonly showGlobalEnvironmentValueOnly = computed(() => !this.hasDefinitionTargeting());
 
+  readonly allEnvironmentsSameValue = computed(() => {
+    const environments = this.environments();
+    if (environments.length === 0) return true;
+
+    const states = this.environmentStates();
+    const firstEnv = environments[0].name.toLowerCase();
+    const firstValue = states[firstEnv];
+
+    return environments.every((env) => {
+      const envValue = states[env.name.toLowerCase()];
+      // Use JSON.stringify for deep comparison
+      return JSON.stringify(envValue) === JSON.stringify(firstValue);
+    });
+  });
+
+  readonly canCollapseEnvironmentOverrides = computed(() => this.allEnvironmentsSameValue());
+
   // JSON editor state
   rawJson = '';
   jsonError: string | null = null;

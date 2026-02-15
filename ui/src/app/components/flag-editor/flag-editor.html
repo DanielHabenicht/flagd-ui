@@ -176,68 +176,87 @@
               </div>
 
               @if (showGlobalEnvironmentValueOnly()) {
-                <div class="global-environment-value-section">
-                  <h3>Global Value</h3>
-                  <p class="hint-text">
-                    No targeting is defined. This value applies to all environments.
-                  </p>
-
-                  @if (form.get('flagType')!.value === 'boolean') {
-                    <ng-container *ngTemplateOutlet="easyModeGlobalBooleanSwitch"></ng-container>
-                  }
-
-                  @if (form.get('flagType')!.value === 'string') {
-                    <mat-form-field appearance="outline" class="full-width">
-                      <mat-label>String Value</mat-label>
-                      <input
-                        matInput
-                        [value]="$any(getGlobalEnvironmentValue() ?? '')"
-                        (input)="onGlobalEnvironmentValueChange($any($event.target).value)"
-                        placeholder="Enter value"
-                      />
-                    </mat-form-field>
-                  }
-
-                  @if (form.get('flagType')!.value === 'number') {
-                    <mat-form-field appearance="outline" class="full-width">
-                      <mat-label>Number Value</mat-label>
-                      <input
-                        matInput
-                        type="number"
-                        [value]="+$any(getGlobalEnvironmentValue() ?? 0)"
-                        (input)="onGlobalEnvironmentValueChange(+$any($event.target).value)"
-                        placeholder="Enter number"
-                      />
-                    </mat-form-field>
-                  }
-
-                  @if (form.get('flagType')!.value === 'object') {
-                    <mat-form-field appearance="outline" class="full-width">
-                      <mat-label>JSON Object</mat-label>
-                      <textarea
-                        matInput
-                        [value]="JSON.stringify(getGlobalEnvironmentValue() ?? {}, null, 2)"
-                        (input)="
-                          onGlobalEnvironmentValueChange(
-                            JSON.parse($any($event.target).value || '{}')
-                          )
-                        "
-                        rows="4"
-                        placeholder="{}"
-                      ></textarea>
-                    </mat-form-field>
-                  }
-                </div>
-              }
-
-              @if (showGlobalEnvironmentValueOnly()) {
-                <mat-expansion-panel>
+                <!-- Default/Environment Values Section with Expansion Panel -->
+                <mat-expansion-panel
+                  [expanded]="!allEnvironmentsSameValue()"
+                  (beforeClose)="
+                    !canCollapseEnvironmentOverrides() ? $event.preventDefault() : null
+                  "
+                  [hideToggle]="false"
+                >
                   <mat-expansion-panel-header>
-                    <mat-panel-title>Environment-specific overrides</mat-panel-title>
+                    <mat-panel-title>
+                      {{ allEnvironmentsSameValue() ? 'Default Value' : 'Environment Values' }}
+                    </mat-panel-title>
                   </mat-expansion-panel-header>
 
+                  <!-- Default Value Display (visible when collapsed and all same) -->
+                  @if (allEnvironmentsSameValue()) {
+                    <div class="default-value-section">
+                      <p class="hint-text">
+                        All environments use the same value. Edit below or expand to customize per
+                        environment.
+                      </p>
+
+                      @if (form.get('flagType')!.value === 'boolean') {
+                        <ng-container
+                          *ngTemplateOutlet="easyModeGlobalBooleanSwitch"
+                        ></ng-container>
+                      }
+
+                      @if (form.get('flagType')!.value === 'string') {
+                        <mat-form-field appearance="outline" class="full-width">
+                          <mat-label>String Value</mat-label>
+                          <input
+                            matInput
+                            [value]="$any(getGlobalEnvironmentValue() ?? '')"
+                            (input)="onGlobalEnvironmentValueChange($any($event.target).value)"
+                            placeholder="Enter value"
+                          />
+                        </mat-form-field>
+                      }
+
+                      @if (form.get('flagType')!.value === 'number') {
+                        <mat-form-field appearance="outline" class="full-width">
+                          <mat-label>Number Value</mat-label>
+                          <input
+                            matInput
+                            type="number"
+                            [value]="+$any(getGlobalEnvironmentValue() ?? 0)"
+                            (input)="onGlobalEnvironmentValueChange(+$any($event.target).value)"
+                            placeholder="Enter number"
+                          />
+                        </mat-form-field>
+                      }
+
+                      @if (form.get('flagType')!.value === 'object') {
+                        <mat-form-field appearance="outline" class="full-width">
+                          <mat-label>JSON Object</mat-label>
+                          <textarea
+                            matInput
+                            [value]="JSON.stringify(getGlobalEnvironmentValue() ?? {}, null, 2)"
+                            (input)="
+                              onGlobalEnvironmentValueChange(
+                                JSON.parse($any($event.target).value || '{}')
+                              )
+                            "
+                            rows="4"
+                            placeholder="{}"
+                          ></textarea>
+                        </mat-form-field>
+                      }
+                    </div>
+                  }
+
+                  <!-- Environment-Specific Overrides (visible when expanded or values differ) -->
                   <div class="environment-values-section">
-                    <p class="hint-text">Optional: edit each environment individually</p>
+                    <p class="hint-text">
+                      @if (!allEnvironmentsSameValue()) {
+                        Environments have different values. Configure each one:
+                      } @else {
+                        Optional: edit each environment individually
+                      }
+                    </p>
 
                     <mat-form-field appearance="outline" class="full-width environment-filter">
                       <mat-label>Filter environments</mat-label>
