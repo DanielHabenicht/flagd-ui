@@ -3,7 +3,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: flagd-ui:local
+    image: ${FLAGD_UI_IMAGE:-flagd-ui:local}
     user: "${UID:-1000}:${GID:-1000}"
     ports:
       - '3000:3000'

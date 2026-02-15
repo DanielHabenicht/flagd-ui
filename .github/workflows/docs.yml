@@ -51,6 +51,10 @@ jobs:
       - name: Build docs
         run: uvx zensical build --clean
 
+      - name: Build UI demo for docs
+        run: npm run build-demo
+        working-directory: ui
+
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v4
         with:

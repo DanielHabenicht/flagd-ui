@@ -1,12 +1,31 @@
+import '../test-setup';
+import { provideHttpClient } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
+import { provideStore } from '@ngxs/store';
+import { MatDialog } from '@angular/material/dialog';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
+import { provideRouter } from '@angular/router';
 import { App } from './app';
+import { FlagStoreState } from './state/flag-store.state';
+import { UiPreferencesState } from './state/ui-preferences.state';
+import { PlaygroundPreferencesState } from './state/playground-preferences.state';
 
 describe('App', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [App],
-      providers: [provideAnimationsAsync()],
+      providers: [
+        provideAnimationsAsync(),
+        provideRouter([]),
+        provideHttpClient(),
+        provideStore([FlagStoreState, UiPreferencesState, PlaygroundPreferencesState]),
+        {
+          provide: MatDialog,
+          useValue: {
+            open: () => ({}),
+          },
+        },
+      ],
     }).compileComponents();
   });
 

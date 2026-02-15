@@ -43,7 +43,7 @@
   flex-shrink: 0;
 }
 
-.sidebar app-project-list {
+.sidebar app-flags-file-list {
   display: block;
   flex: 1 1 auto;
   min-height: 0;
@@ -62,11 +62,94 @@ h1 {
 }
 
 .main-content {
-  padding: 24px 0px 0px 0px;
+  padding: 14px 0px 0px 0px;
   height: 100%;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
+}
+
+.page-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.flags-context-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.flags-title-row {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.flags-context-header h2 {
+  margin: 0;
+  font-size: 1.02rem;
+  font-weight: 600;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.file-breadcrumb {
+  color: inherit;
+  text-decoration: none;
+}
+
+.file-breadcrumb:hover {
+  text-decoration: underline;
+}
+
+.source-breadcrumb {
+  font-size: 0.92rem;
+  font-weight: 500;
+  line-height: 1.2;
+  color: var(--color-text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.breadcrumb-link {
+  color: inherit;
+  text-decoration: none;
+}
+
+.breadcrumb-link:hover {
+  text-decoration: underline;
+}
+
+.edit-breadcrumb {
+  font-size: 0.92rem;
+  font-weight: 500;
+  line-height: 1.2;
+  color: var(--color-text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.source-separator {
+  font-size: 0.9rem;
+  line-height: 1;
+  color: var(--color-text-secondary);
+  opacity: 0.75;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .main-content > router-outlet + * {
@@ -81,14 +164,9 @@ h1 {
   min-height: 0;
 }
 
-.page-header-nav {
-  display: flex;
-  align-items: center;
-  margin-bottom: 8px;
-}
-
 .nav-toggle-button {
-  margin-left: -8px;
+  margin-left: -2px;
+  flex: 0 0 auto;
 }
 
 .app-shell.drag-active {

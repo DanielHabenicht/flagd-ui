@@ -1,47 +1,31 @@
 import { inject, Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
+import { Store } from '@ngxs/store';
 import { BackendInstance } from '../models/flag.models';
 import { catchError, map, Observable, of } from 'rxjs';
-
-const STORAGE_KEY = 'flagd-ui-backends';
+import { AddBackend, RemoveBackend } from '../state/flag-store.actions';
+import { FlagStoreState } from '../state/flag-store.state';
 
 @Injectable({ providedIn: 'root' })
 export class BackendRegistry {
   private readonly http = inject(HttpClient);
+  private readonly store = inject(Store);
 
   getBackends(): BackendInstance[] {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return [];
-    try {
-      return JSON.parse(raw);
-    } catch {
-      return [];
-    }
-  }
-
-  saveBackends(backends: BackendInstance[]): void {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(backends));
+    return this.store.selectSnapshot(FlagStoreState.backends);
   }
 
   addBackend(url: string, label?: string): BackendInstance {
-    const backends = this.getBackends();
     const normalized = url.replace(/\/+$/, '');
-    const existing = backends.find((b) => b.url === normalized);
+    const existing = this.getBackends().find((backend) => backend.url === normalized);
     if (existing) return existing;
 
-    const instance: BackendInstance = {
-      id: crypto.randomUUID().slice(0, 8),
-      url: normalized,
-      label: label || new URL(normalized).host,
-    };
-    backends.push(instance);
-    this.saveBackends(backends);
-    return instance;
+    this.store.dispatch(new AddBackend(normalized, label));
+    return this.getBackends().find((backend) => backend.url === normalized)!;
   }
 
   removeBackend(id: string): void {
-    const backends = this.getBackends().filter((b) => b.id !== id);
-    this.saveBackends(backends);
+    this.store.dispatch(new RemoveBackend(id));
   }
 
   getBackendById(id: string): BackendInstance | undefined {

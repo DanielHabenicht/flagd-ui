@@ -19,6 +19,11 @@
         <mat-button-toggle value="advanced">Advanced</mat-button-toggle>
         <mat-button-toggle value="json">JSON</mat-button-toggle>
       </mat-button-toggle-group>
+      @if (inline() && allowMaximize()) {
+        <button mat-icon-button (click)="onMaximize()" [title]="maximizeTitle()">
+          <mat-icon>{{ maximizeIcon() }}</mat-icon>
+        </button>
+      }
       @if (!inline()) {
         <button mat-icon-button (click)="onCancel()">
           <mat-icon>close</mat-icon>
@@ -27,206 +32,855 @@
     </div>
   </div>
 
-  <form [formGroup]="form" (ngSubmit)="onSave()" class="panel-body">
-    <!-- Flag Key + State (shared across all modes) -->
-    <div class="key-state-row">
-      <mat-form-field appearance="outline" class="full-width">
-        <mat-label>Flag Key</mat-label>
-        <input matInput formControlName="key" placeholder="my-feature-flag" />
-        @if (
-          form.get('key')!.hasError('required') &&
-          (form.get('key')!.dirty || form.get('key')!.touched)
-        ) {
-          <mat-error>Flag key is required</mat-error>
-        }
-        @if (
-          form.get('key')!.hasError('pattern') &&
-          (form.get('key')!.dirty || form.get('key')!.touched)
-        ) {
-          <mat-error>Use only letters, numbers, dots, hyphens, and underscores</mat-error>
-        }
-        @if (
-          form.get('key')!.hasError('duplicateKey') &&
-          (form.get('key')!.dirty || form.get('key')!.touched)
-        ) {
-          <mat-error>A flag with this key already exists in the current file</mat-error>
-        }
-      </mat-form-field>
-
-      <div class="state-toggle-field">
-        <label>State</label>
-        <mat-slide-toggle
-          [checked]="form.get('state')!.value === 'ENABLED'"
-          (change)="onStateToggle()"
-          labelPosition="before"
-        >
-          {{ form.get('state')!.value === 'ENABLED' ? 'Enabled' : 'Disabled' }}
-        </mat-slide-toggle>
+  <form [formGroup]="form" (ngSubmit)="onSave()" class="panel-body" [class.inline-body]="inline()">
+    <div class="panel-content">
+      <!-- Flag Key (shared across all modes) -->
+      <div class="key-row">
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Flag Key</mat-label>
+          <input matInput formControlName="key" placeholder="my-feature-flag" />
+          @if (
+            form.get('key')!.hasError('required') &&
+            (form.get('key')!.dirty || form.get('key')!.touched)
+          ) {
+            <mat-error>Flag key is required</mat-error>
+          }
+          @if (
+            form.get('key')!.hasError('pattern') &&
+            (form.get('key')!.dirty || form.get('key')!.touched)
+          ) {
+            <mat-error>Use only letters, numbers, dots, hyphens, and underscores</mat-error>
+          }
+          @if (
+            form.get('key')!.hasError('duplicateKey') &&
+            (form.get('key')!.dirty || form.get('key')!.touched)
+          ) {
+            <mat-error>A flag with this key already exists in the current file</mat-error>
+          }
+        </mat-form-field>
       </div>
-    </div>
 
-    <!-- ==================== EASY MODE ==================== -->
-    @if (editorMode() === 'easy') {
-      <div class="easy-mode">
+      @if (editorMode() === 'easy' || editorMode() === 'advanced') {
         <div class="form-field">
           <label>Flag Type</label>
           <mat-button-toggle-group
-            [value]="form.get('easyType')!.value"
-            (change)="form.get('easyType')!.setValue($event.value); onEasyTypeChange()"
+            class="flag-type-toggle-group"
+            [value]="form.get('flagType')!.value"
+            (change)="onFlagTypeToggleChange($event.value)"
           >
             <mat-button-toggle value="boolean">Boolean</mat-button-toggle>
             <mat-button-toggle value="string">String</mat-button-toggle>
+            <mat-button-toggle value="number">Number</mat-button-toggle>
+            <mat-button-toggle value="object">Object</mat-button-toggle>
           </mat-button-toggle-group>
         </div>
+      }
 
-        <div class="easy-time-window-section">
-          <div class="easy-time-window-header">
-            <label>Active Time Window</label>
-            <button mat-stroked-button type="button" (click)="resetEasyTimeWindow()">Reset</button>
+      <!-- ==================== EASY MODE ==================== -->
+      @if (editorMode() === 'easy') {
+        <div class="easy-mode">
+          @if (hasEnvironments()) {
+            <div class="environment-mode">
+              <div class="global-time-window-section">
+                <div class="easy-time-window-header">
+                  <label>Global Active Time Window</label>
+                  @if (!globalEnvironmentTimeEnabled()) {
+                    <button
+                      mat-stroked-button
+                      type="button"
+                      (click)="addGlobalEnvironmentTimeWindow()"
+                    >
+                      Add Time Window
+                    </button>
+                  } @else {
+                    <button
+                      mat-stroked-button
+                      type="button"
+                      (click)="removeGlobalEnvironmentTimeWindow()"
+                    >
+                      Remove Time Window
+                    </button>
+                  }
+                </div>
+
+                @if (globalEnvironmentTimeEnabled()) {
+                  <div class="easy-time-window-section">
+                    <label class="time-window-label">Activate after</label>
+                    <div class="form-row">
+                      <mat-form-field appearance="outline" class="full-width">
+                        <mat-label>From Date</mat-label>
+                        <input
+                          matInput
+                          [matDatepicker]="startDatePicker"
+                          formControlName="easyStartDate"
+                        />
+                        <mat-datepicker-toggle
+                          matIconSuffix
+                          [for]="startDatePicker"
+                        ></mat-datepicker-toggle>
+                        <mat-datepicker #startDatePicker></mat-datepicker>
+                      </mat-form-field>
+
+                      <mat-form-field appearance="outline" class="full-width">
+                        <mat-label>From Time</mat-label>
+                        <input
+                          matInput
+                          [matTimepicker]="startTimePicker"
+                          formControlName="easyStartTime"
+                        />
+                        <mat-timepicker-toggle
+                          matIconSuffix
+                          [for]="startTimePicker"
+                        ></mat-timepicker-toggle>
+                        <mat-timepicker #startTimePicker></mat-timepicker>
+                      </mat-form-field>
+                    </div>
+
+                    <label class="time-window-label">Activate till</label>
+                    <div class="form-row">
+                      <mat-form-field appearance="outline" class="full-width">
+                        <mat-label>Till Date</mat-label>
+                        <input
+                          matInput
+                          [matDatepicker]="endDatePicker"
+                          formControlName="easyEndDate"
+                        />
+                        <mat-datepicker-toggle
+                          matIconSuffix
+                          [for]="endDatePicker"
+                        ></mat-datepicker-toggle>
+                        <mat-datepicker #endDatePicker></mat-datepicker>
+                      </mat-form-field>
+
+                      <mat-form-field appearance="outline" class="full-width">
+                        <mat-label>Till Time</mat-label>
+                        <input
+                          matInput
+                          [matTimepicker]="endTimePicker"
+                          formControlName="easyEndTime"
+                        />
+                        <mat-timepicker-toggle
+                          matIconSuffix
+                          [for]="endTimePicker"
+                        ></mat-timepicker-toggle>
+                        <mat-timepicker #endTimePicker></mat-timepicker>
+                      </mat-form-field>
+                    </div>
+
+                    <p class="easy-hint">
+                      Applies to all environments. Outside this window the fallback variant is used.
+                    </p>
+                  </div>
+                }
+              </div>
+
+              @if (showGlobalEnvironmentValueOnly()) {
+                <div class="global-environment-value-section">
+                  <h3>Global Value</h3>
+                  <p class="hint-text">
+                    No targeting is defined. This value applies to all environments.
+                  </p>
+
+                  @if (form.get('flagType')!.value === 'boolean') {
+                    <ng-container *ngTemplateOutlet="easyModeGlobalBooleanSwitch"></ng-container>
+                  }
+
+                  @if (form.get('flagType')!.value === 'string') {
+                    <mat-form-field appearance="outline" class="full-width">
+                      <mat-label>String Value</mat-label>
+                      <input
+                        matInput
+                        [value]="$any(getGlobalEnvironmentValue() ?? '')"
+                        (input)="onGlobalEnvironmentValueChange($any($event.target).value)"
+                        placeholder="Enter value"
+                      />
+                    </mat-form-field>
+                  }
+
+                  @if (form.get('flagType')!.value === 'number') {
+                    <mat-form-field appearance="outline" class="full-width">
+                      <mat-label>Number Value</mat-label>
+                      <input
+                        matInput
+                        type="number"
+                        [value]="+$any(getGlobalEnvironmentValue() ?? 0)"
+                        (input)="onGlobalEnvironmentValueChange(+$any($event.target).value)"
+                        placeholder="Enter number"
+                      />
+                    </mat-form-field>
+                  }
+
+                  @if (form.get('flagType')!.value === 'object') {
+                    <mat-form-field appearance="outline" class="full-width">
+                      <mat-label>JSON Object</mat-label>
+                      <textarea
+                        matInput
+                        [value]="JSON.stringify(getGlobalEnvironmentValue() ?? {}, null, 2)"
+                        (input)="
+                          onGlobalEnvironmentValueChange(
+                            JSON.parse($any($event.target).value || '{}')
+                          )
+                        "
+                        rows="4"
+                        placeholder="{}"
+                      ></textarea>
+                    </mat-form-field>
+                  }
+                </div>
+              }
+
+              @if (showGlobalEnvironmentValueOnly()) {
+                <mat-expansion-panel>
+                  <mat-expansion-panel-header>
+                    <mat-panel-title>Environment-specific overrides</mat-panel-title>
+                  </mat-expansion-panel-header>
+
+                  <div class="environment-values-section">
+                    <p class="hint-text">Optional: edit each environment individually</p>
+
+                    <mat-form-field appearance="outline" class="full-width environment-filter">
+                      <mat-label>Filter environments</mat-label>
+                      <input
+                        matInput
+                        [value]="environmentFilter()"
+                        (input)="onEnvironmentFilterInput($event)"
+                        placeholder="Search by name or alias"
+                        autocomplete="off"
+                      />
+                      <mat-icon matSuffix>search</mat-icon>
+                    </mat-form-field>
+
+                    @if (filteredEnvironments().length === 0) {
+                      <p class="hint-text">No environments match the current filter.</p>
+                    } @else {
+                      <div class="environment-values-list">
+                        @for (env of filteredEnvironments(); track env.name) {
+                          <div class="environment-value-item">
+                            <div class="environment-header-row">
+                              <label class="environment-label">{{ env.displayName }}</label>
+                              @if (!hasEnvironmentTimeWindow(env.name.toLowerCase())) {
+                                <button
+                                  mat-stroked-button
+                                  type="button"
+                                  (click)="addEnvironmentTimeWindow(env.name.toLowerCase())"
+                                >
+                                  Add Time Window
+                                </button>
+                              } @else {
+                                <button
+                                  mat-stroked-button
+                                  type="button"
+                                  (click)="removeEnvironmentTimeWindow(env.name.toLowerCase())"
+                                >
+                                  Remove Time Window
+                                </button>
+                              }
+                            </div>
+
+                            @if (hasEnvironmentTimeWindow(env.name.toLowerCase())) {
+                              <div class="easy-time-window-section">
+                                <label class="time-window-label">Activate after</label>
+                                <div class="form-row">
+                                  <mat-form-field appearance="outline" class="full-width">
+                                    <mat-label>From Date</mat-label>
+                                    <input
+                                      matInput
+                                      [matDatepicker]="envStartDatePicker"
+                                      [ngModel]="
+                                        getEnvironmentTimeWindow(env.name.toLowerCase()).startDate
+                                      "
+                                      [ngModelOptions]="{ standalone: true }"
+                                      (ngModelChange)="
+                                        onEnvironmentTimeWindowChange(
+                                          env.name.toLowerCase(),
+                                          'startDate',
+                                          $event
+                                        )
+                                      "
+                                    />
+                                    <mat-datepicker-toggle
+                                      matIconSuffix
+                                      [for]="envStartDatePicker"
+                                    ></mat-datepicker-toggle>
+                                    <mat-datepicker #envStartDatePicker></mat-datepicker>
+                                  </mat-form-field>
+
+                                  <mat-form-field appearance="outline" class="full-width">
+                                    <mat-label>From Time</mat-label>
+                                    <input
+                                      matInput
+                                      [matTimepicker]="envStartTimePicker"
+                                      [ngModel]="
+                                        getEnvironmentTimeWindow(env.name.toLowerCase()).startTime
+                                      "
+                                      [ngModelOptions]="{ standalone: true }"
+                                      (ngModelChange)="
+                                        onEnvironmentTimeWindowChange(
+                                          env.name.toLowerCase(),
+                                          'startTime',
+                                          $event
+                                        )
+                                      "
+                                    />
+                                    <mat-timepicker-toggle
+                                      matIconSuffix
+                                      [for]="envStartTimePicker"
+                                    ></mat-timepicker-toggle>
+                                    <mat-timepicker #envStartTimePicker></mat-timepicker>
+                                  </mat-form-field>
+                                </div>
+
+                                <label class="time-window-label">Activate till</label>
+                                <div class="form-row">
+                                  <mat-form-field appearance="outline" class="full-width">
+                                    <mat-label>Till Date</mat-label>
+                                    <input
+                                      matInput
+                                      [matDatepicker]="envEndDatePicker"
+                                      [ngModel]="
+                                        getEnvironmentTimeWindow(env.name.toLowerCase()).endDate
+                                      "
+                                      [ngModelOptions]="{ standalone: true }"
+                                      (ngModelChange)="
+                                        onEnvironmentTimeWindowChange(
+                                          env.name.toLowerCase(),
+                                          'endDate',
+                                          $event
+                                        )
+                                      "
+                                    />
+                                    <mat-datepicker-toggle
+                                      matIconSuffix
+                                      [for]="envEndDatePicker"
+                                    ></mat-datepicker-toggle>
+                                    <mat-datepicker #envEndDatePicker></mat-datepicker>
+                                  </mat-form-field>
+
+                                  <mat-form-field appearance="outline" class="full-width">
+                                    <mat-label>Till Time</mat-label>
+                                    <input
+                                      matInput
+                                      [matTimepicker]="envEndTimePicker"
+                                      [ngModel]="
+                                        getEnvironmentTimeWindow(env.name.toLowerCase()).endTime
+                                      "
+                                      [ngModelOptions]="{ standalone: true }"
+                                      (ngModelChange)="
+                                        onEnvironmentTimeWindowChange(
+                                          env.name.toLowerCase(),
+                                          'endTime',
+                                          $event
+                                        )
+                                      "
+                                    />
+                                    <mat-timepicker-toggle
+                                      matIconSuffix
+                                      [for]="envEndTimePicker"
+                                    ></mat-timepicker-toggle>
+                                    <mat-timepicker #envEndTimePicker></mat-timepicker>
+                                  </mat-form-field>
+                                </div>
+                              </div>
+                            }
+
+                            @if (form.get('flagType')!.value === 'boolean') {
+                              <mat-slide-toggle
+                                [checked]="environmentStates()[env.name.toLowerCase()] === true"
+                                (change)="
+                                  onEnvironmentValueChange(env.name.toLowerCase(), $event.checked)
+                                "
+                              >
+                                {{
+                                  environmentStates()[env.name.toLowerCase()] === true
+                                    ? 'ON'
+                                    : 'OFF'
+                                }}
+                              </mat-slide-toggle>
+                            }
+
+                            @if (form.get('flagType')!.value === 'string') {
+                              <mat-form-field appearance="outline" class="full-width">
+                                <mat-label>String Value</mat-label>
+                                <input
+                                  matInput
+                                  [value]="environmentStates()[env.name.toLowerCase()] || ''"
+                                  (input)="
+                                    onEnvironmentValueChange(
+                                      env.name.toLowerCase(),
+                                      $any($event.target).value
+                                    )
+                                  "
+                                  placeholder="Enter value"
+                                />
+                              </mat-form-field>
+                            }
+
+                            @if (form.get('flagType')!.value === 'number') {
+                              <mat-form-field appearance="outline" class="full-width">
+                                <mat-label>Number Value</mat-label>
+                                <input
+                                  matInput
+                                  type="number"
+                                  [value]="environmentStates()[env.name.toLowerCase()] || 0"
+                                  (input)="
+                                    onEnvironmentValueChange(
+                                      env.name.toLowerCase(),
+                                      +$any($event.target).value
+                                    )
+                                  "
+                                  placeholder="Enter number"
+                                />
+                              </mat-form-field>
+                            }
+
+                            @if (form.get('flagType')!.value === 'object') {
+                              <mat-form-field appearance="outline" class="full-width">
+                                <mat-label>JSON Object</mat-label>
+                                <textarea
+                                  matInput
+                                  [value]="
+                                    environmentStates()[env.name.toLowerCase()]
+                                      ? JSON.stringify(
+                                          environmentStates()[env.name.toLowerCase()],
+                                          null,
+                                          2
+                                        )
+                                      : '{}'
+                                  "
+                                  (input)="
+                                    onEnvironmentValueChange(
+                                      env.name.toLowerCase(),
+                                      JSON.parse($any($event.target).value || '{}')
+                                    )
+                                  "
+                                  rows="4"
+                                  placeholder="{}"
+                                ></textarea>
+                              </mat-form-field>
+                            }
+                          </div>
+                        }
+                      </div>
+                    }
+                  </div>
+                </mat-expansion-panel>
+              } @else {
+                <div class="environment-values-section">
+                  <h3>Environment Values</h3>
+                  <p class="hint-text">Configure the value for each environment</p>
+
+                  <mat-form-field appearance="outline" class="full-width environment-filter">
+                    <mat-label>Filter environments</mat-label>
+                    <input
+                      matInput
+                      [value]="environmentFilter()"
+                      (input)="onEnvironmentFilterInput($event)"
+                      placeholder="Search by name or alias"
+                      autocomplete="off"
+                    />
+                    <mat-icon matSuffix>search</mat-icon>
+                  </mat-form-field>
+
+                  @if (filteredEnvironments().length === 0) {
+                    <p class="hint-text">No environments match the current filter.</p>
+                  } @else {
+                    <div class="environment-values-list">
+                      @for (env of filteredEnvironments(); track env.name) {
+                        <div class="environment-value-item">
+                          <div class="environment-header-row">
+                            <label class="environment-label">{{ env.displayName }}</label>
+                            @if (!hasEnvironmentTimeWindow(env.name.toLowerCase())) {
+                              <button
+                                mat-stroked-button
+                                type="button"
+                                (click)="addEnvironmentTimeWindow(env.name.toLowerCase())"
+                              >
+                                Add Time Window
+                              </button>
+                            } @else {
+                              <button
+                                mat-stroked-button
+                                type="button"
+                                (click)="removeEnvironmentTimeWindow(env.name.toLowerCase())"
+                              >
+                                Remove Time Window
+                              </button>
+                            }
+                          </div>
+
+                          @if (hasEnvironmentTimeWindow(env.name.toLowerCase())) {
+                            <div class="easy-time-window-section">
+                              <label class="time-window-label">Activate after</label>
+                              <div class="form-row">
+                                <mat-form-field appearance="outline" class="full-width">
+                                  <mat-label>From Date</mat-label>
+                                  <input
+                                    matInput
+                                    [matDatepicker]="envStartDatePicker"
+                                    [ngModel]="
+                                      getEnvironmentTimeWindow(env.name.toLowerCase()).startDate
+                                    "
+                                    [ngModelOptions]="{ standalone: true }"
+                                    (ngModelChange)="
+                                      onEnvironmentTimeWindowChange(
+                                        env.name.toLowerCase(),
+                                        'startDate',
+                                        $event
+                                      )
+                                    "
+                                  />
+                                  <mat-datepicker-toggle
+                                    matIconSuffix
+                                    [for]="envStartDatePicker"
+                                  ></mat-datepicker-toggle>
+                                  <mat-datepicker #envStartDatePicker></mat-datepicker>
+                                </mat-form-field>
+
+                                <mat-form-field appearance="outline" class="full-width">
+                                  <mat-label>From Time</mat-label>
+                                  <input
+                                    matInput
+                                    [matTimepicker]="envStartTimePicker"
+                                    [ngModel]="
+                                      getEnvironmentTimeWindow(env.name.toLowerCase()).startTime
+                                    "
+                                    [ngModelOptions]="{ standalone: true }"
+                                    (ngModelChange)="
+                                      onEnvironmentTimeWindowChange(
+                                        env.name.toLowerCase(),
+                                        'startTime',
+                                        $event
+                                      )
+                                    "
+                                  />
+                                  <mat-timepicker-toggle
+                                    matIconSuffix
+                                    [for]="envStartTimePicker"
+                                  ></mat-timepicker-toggle>
+                                  <mat-timepicker #envStartTimePicker></mat-timepicker>
+                                </mat-form-field>
+                              </div>
+
+                              <label class="time-window-label">Activate till</label>
+                              <div class="form-row">
+                                <mat-form-field appearance="outline" class="full-width">
+                                  <mat-label>Till Date</mat-label>
+                                  <input
+                                    matInput
+                                    [matDatepicker]="envEndDatePicker"
+                                    [ngModel]="
+                                      getEnvironmentTimeWindow(env.name.toLowerCase()).endDate
+                                    "
+                                    [ngModelOptions]="{ standalone: true }"
+                                    (ngModelChange)="
+                                      onEnvironmentTimeWindowChange(
+                                        env.name.toLowerCase(),
+                                        'endDate',
+                                        $event
+                                      )
+                                    "
+                                  />
+                                  <mat-datepicker-toggle
+                                    matIconSuffix
+                                    [for]="envEndDatePicker"
+                                  ></mat-datepicker-toggle>
+                                  <mat-datepicker #envEndDatePicker></mat-datepicker>
+                                </mat-form-field>
+
+                                <mat-form-field appearance="outline" class="full-width">
+                                  <mat-label>Till Time</mat-label>
+                                  <input
+                                    matInput
+                                    [matTimepicker]="envEndTimePicker"
+                                    [ngModel]="
+                                      getEnvironmentTimeWindow(env.name.toLowerCase()).endTime
+                                    "
+                                    [ngModelOptions]="{ standalone: true }"
+                                    (ngModelChange)="
+                                      onEnvironmentTimeWindowChange(
+                                        env.name.toLowerCase(),
+                                        'endTime',
+                                        $event
+                                      )
+                                    "
+                                  />
+                                  <mat-timepicker-toggle
+                                    matIconSuffix
+                                    [for]="envEndTimePicker"
+                                  ></mat-timepicker-toggle>
+                                  <mat-timepicker #envEndTimePicker></mat-timepicker>
+                                </mat-form-field>
+                              </div>
+                            </div>
+                          }
+
+                          @if (form.get('flagType')!.value === 'boolean') {
+                            <mat-slide-toggle
+                              [checked]="environmentStates()[env.name.toLowerCase()] === true"
+                              (change)="
+                                onEnvironmentValueChange(env.name.toLowerCase(), $event.checked)
+                              "
+                            >
+                              {{
+                                environmentStates()[env.name.toLowerCase()] === true ? 'ON' : 'OFF'
+                              }}
+                            </mat-slide-toggle>
+                          }
+
+                          @if (form.get('flagType')!.value === 'string') {
+                            <mat-form-field appearance="outline" class="full-width">
+                              <mat-label>String Value</mat-label>
+                              <input
+                                matInput
+                                [value]="environmentStates()[env.name.toLowerCase()] || ''"
+                                (input)="
+                                  onEnvironmentValueChange(
+                                    env.name.toLowerCase(),
+                                    $any($event.target).value
+                                  )
+                                "
+                                placeholder="Enter value"
+                              />
+                            </mat-form-field>
+                          }
+
+                          @if (form.get('flagType')!.value === 'number') {
+                            <mat-form-field appearance="outline" class="full-width">
+                              <mat-label>Number Value</mat-label>
+                              <input
+                                matInput
+                                type="number"
+                                [value]="environmentStates()[env.name.toLowerCase()] || 0"
+                                (input)="
+                                  onEnvironmentValueChange(
+                                    env.name.toLowerCase(),
+                                    +$any($event.target).value
+                                  )
+                                "
+                                placeholder="Enter number"
+                              />
+                            </mat-form-field>
+                          }
+
+                          @if (form.get('flagType')!.value === 'object') {
+                            <mat-form-field appearance="outline" class="full-width">
+                              <mat-label>JSON Object</mat-label>
+                              <textarea
+                                matInput
+                                [value]="
+                                  environmentStates()[env.name.toLowerCase()]
+                                    ? JSON.stringify(
+                                        environmentStates()[env.name.toLowerCase()],
+                                        null,
+                                        2
+                                      )
+                                    : '{}'
+                                "
+                                (input)="
+                                  onEnvironmentValueChange(
+                                    env.name.toLowerCase(),
+                                    JSON.parse($any($event.target).value || '{}')
+                                  )
+                                "
+                                rows="4"
+                                placeholder="{}"
+                              ></textarea>
+                            </mat-form-field>
+                          }
+                        </div>
+                      }
+                    </div>
+                  }
+                </div>
+              }
+            </div>
+          } @else {
+            @if (form.get('easyType')!.value === 'boolean') {
+              <div class="global-environment-value-section">
+                <h3>Global Value</h3>
+                <p class="hint-text">This sets the default value while no environments exist.</p>
+
+                <ng-container *ngTemplateOutlet="easyModeGlobalBooleanSwitch"></ng-container>
+              </div>
+            }
+
+            <div class="easy-time-window-section">
+              <div class="easy-time-window-header">
+                <label>Active Time Window</label>
+                <button mat-stroked-button type="button" (click)="resetEasyTimeWindow()">
+                  Reset
+                </button>
+              </div>
+
+              <label class="time-window-label">Activate after</label>
+              <div class="form-row">
+                <mat-form-field appearance="outline" class="full-width">
+                  <mat-label>From Date</mat-label>
+                  <input
+                    matInput
+                    [matDatepicker]="startDatePicker"
+                    formControlName="easyStartDate"
+                  />
+                  <mat-datepicker-toggle
+                    matIconSuffix
+                    [for]="startDatePicker"
+                  ></mat-datepicker-toggle>
+                  <mat-datepicker #startDatePicker></mat-datepicker>
+                </mat-form-field>
+
+                <mat-form-field appearance="outline" class="full-width">
+                  <mat-label>From Time</mat-label>
+                  <input
+                    matInput
+                    [matTimepicker]="startTimePicker"
+                    formControlName="easyStartTime"
+                  />
+                  <mat-timepicker-toggle
+                    matIconSuffix
+                    [for]="startTimePicker"
+                  ></mat-timepicker-toggle>
+                  <mat-timepicker #startTimePicker></mat-timepicker>
+                </mat-form-field>
+              </div>
+
+              <label class="time-window-label">Activate till</label>
+              <div class="form-row">
+                <mat-form-field appearance="outline" class="full-width">
+                  <mat-label>Till Date</mat-label>
+                  <input matInput [matDatepicker]="endDatePicker" formControlName="easyEndDate" />
+                  <mat-datepicker-toggle
+                    matIconSuffix
+                    [for]="endDatePicker"
+                  ></mat-datepicker-toggle>
+                  <mat-datepicker #endDatePicker></mat-datepicker>
+                </mat-form-field>
+
+                <mat-form-field appearance="outline" class="full-width">
+                  <mat-label>Till Time</mat-label>
+                  <input matInput [matTimepicker]="endTimePicker" formControlName="easyEndTime" />
+                  <mat-timepicker-toggle
+                    matIconSuffix
+                    [for]="endTimePicker"
+                  ></mat-timepicker-toggle>
+                  <mat-timepicker #endTimePicker></mat-timepicker>
+                </mat-form-field>
+              </div>
+
+              <p class="easy-hint">
+                Builds targeting with <code>$flagd.timestamp</code>; if only one side is set, only
+                that boundary is applied.
+              </p>
+            </div>
+
+            @if (form.get('easyType')!.value === 'string') {
+              <div class="easy-string-section">
+                <mat-form-field appearance="outline" class="full-width">
+                  <mat-label>On Value</mat-label>
+                  <textarea
+                    matInput
+                    formControlName="easyStringOnValue"
+                    placeholder="Enter value when ON"
+                    rows="3"
+                    (input)="onEasyStringValueChange()"
+                  ></textarea>
+                  @if (
+                    form.get('easyStringOnValue')!.invalid && form.get('easyStringOnValue')!.touched
+                  ) {
+                    <mat-error>On value is required</mat-error>
+                  }
+                </mat-form-field>
+
+                <mat-form-field appearance="outline" class="full-width">
+                  <mat-label>Off Value (optional)</mat-label>
+                  <textarea
+                    matInput
+                    formControlName="easyStringOffValue"
+                    placeholder="Leave empty for no off value"
+                    rows="3"
+                    (input)="onEasyStringValueChange()"
+                  ></textarea>
+                </mat-form-field>
+              </div>
+            }
+          }
+
+          <app-metadata-editor
+            [metadata]="metadata()"
+            (metadataChange)="onMetadataChange($event)"
+          />
+        </div>
+      }
+
+      <!-- ==================== ADVANCED MODE ==================== -->
+      @if (editorMode() === 'advanced') {
+        <div class="advanced-mode">
+          <app-variants-editor
+            [flagType]="form.get('flagType')!.value"
+            [variants]="variants()"
+            (variantsChange)="onVariantsChange($event)"
+          />
+
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Default Variant</mat-label>
+            <mat-select formControlName="defaultVariant">
+              <mat-option value="">-- none --</mat-option>
+              @for (name of variantNames(); track name) {
+                <mat-option [value]="name">{{ name }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+
+          <app-targeting-editor
+            [targeting]="targeting()"
+            [variantKeys]="variantNames()"
+            (targetingChange)="onTargetingChange($event)"
+          />
+
+          <app-metadata-editor
+            [metadata]="metadata()"
+            (metadataChange)="onMetadataChange($event)"
+          />
+        </div>
+      }
+
+      <!-- ==================== JSON MODE ==================== -->
+      @if (editorMode() === 'json') {
+        <div class="json-mode">
+          <div class="json-mode-header">
+            <label class="section-label">Flag Definition</label>
+            <button mat-stroked-button type="button" (click)="formatJson()">Format</button>
           </div>
-
-          <label class="time-window-label">Activate after</label>
-          <div class="form-row">
-            <mat-form-field appearance="outline" class="full-width">
-              <mat-label>From Date</mat-label>
-              <input matInput [matDatepicker]="startDatePicker" formControlName="easyStartDate" />
-              <mat-datepicker-toggle matIconSuffix [for]="startDatePicker"></mat-datepicker-toggle>
-              <mat-datepicker #startDatePicker></mat-datepicker>
-            </mat-form-field>
-
-            <mat-form-field appearance="outline" class="full-width">
-              <mat-label>From Time</mat-label>
-              <input matInput [matTimepicker]="startTimePicker" formControlName="easyStartTime" />
-              <mat-timepicker-toggle matIconSuffix [for]="startTimePicker"></mat-timepicker-toggle>
-              <mat-timepicker #startTimePicker></mat-timepicker>
-            </mat-form-field>
-          </div>
-
-          <label class="time-window-label">Activate till</label>
-          <div class="form-row">
-            <mat-form-field appearance="outline" class="full-width">
-              <mat-label>Till Date</mat-label>
-              <input matInput [matDatepicker]="endDatePicker" formControlName="easyEndDate" />
-              <mat-datepicker-toggle matIconSuffix [for]="endDatePicker"></mat-datepicker-toggle>
-              <mat-datepicker #endDatePicker></mat-datepicker>
-            </mat-form-field>
-
-            <mat-form-field appearance="outline" class="full-width">
-              <mat-label>Till Time</mat-label>
-              <input matInput [matTimepicker]="endTimePicker" formControlName="easyEndTime" />
-              <mat-timepicker-toggle matIconSuffix [for]="endTimePicker"></mat-timepicker-toggle>
-              <mat-timepicker #endTimePicker></mat-timepicker>
-            </mat-form-field>
-          </div>
-
-          <p class="easy-hint">
-            Builds targeting with <code>$flagd.timestamp</code>; if only one side is set, only that
-            boundary is applied.
+          <mat-form-field appearance="outline" class="full-width">
+            <textarea
+              matInput
+              class="json-editor-textarea"
+              [ngModel]="rawJson"
+              [ngModelOptions]="{ standalone: true }"
+              (ngModelChange)="onJsonInput($event)"
+              rows="20"
+              spellcheck="false"
+              placeholder='{ "state": "ENABLED", "variants": { ... } }'
+            ></textarea>
+          </mat-form-field>
+          @if (jsonError) {
+            <p class="json-error">{{ jsonError }}</p>
+          }
+          <p class="json-hint">
+            Edit the full flag definition as JSON. Required fields: <code>state</code>,
+            <code>variants</code>.
           </p>
         </div>
+      }
+    </div>
 
-        @if (form.get('easyType')!.value === 'string') {
-          <div class="easy-string-section">
-            <mat-form-field appearance="outline" class="full-width">
-              <mat-label>On Value</mat-label>
-              <textarea
-                matInput
-                formControlName="easyStringOnValue"
-                placeholder="Enter value when ON"
-                rows="3"
-                (input)="onEasyStringValueChange()"
-              ></textarea>
-              @if (
-                form.get('easyStringOnValue')!.invalid && form.get('easyStringOnValue')!.touched
-              ) {
-                <mat-error>On value is required</mat-error>
-              }
-            </mat-form-field>
-
-            <mat-form-field appearance="outline" class="full-width">
-              <mat-label>Off Value (optional)</mat-label>
-              <textarea
-                matInput
-                formControlName="easyStringOffValue"
-                placeholder="Leave empty for no off value"
-                rows="3"
-                (input)="onEasyStringValueChange()"
-              ></textarea>
-            </mat-form-field>
-          </div>
-        }
-
-        <app-metadata-editor [metadata]="metadata()" (metadataChange)="onMetadataChange($event)" />
-      </div>
-    }
-
-    <!-- ==================== ADVANCED MODE ==================== -->
-    @if (editorMode() === 'advanced') {
-      <div class="advanced-mode">
-        <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Flag Type</mat-label>
-          <mat-select formControlName="flagType" (selectionChange)="onTypeChange()">
-            <mat-option value="boolean">Boolean</mat-option>
-            <mat-option value="string">String</mat-option>
-            <mat-option value="number">Number</mat-option>
-            <mat-option value="object">Object</mat-option>
-          </mat-select>
-        </mat-form-field>
-
-        <app-variants-editor
-          [flagType]="form.get('flagType')!.value"
-          [variants]="variants()"
-          (variantsChange)="onVariantsChange($event)"
-        />
-
-        <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Default Variant</mat-label>
-          <mat-select formControlName="defaultVariant">
-            <mat-option value="">-- none --</mat-option>
-            @for (name of variantNames(); track name) {
-              <mat-option [value]="name">{{ name }}</mat-option>
-            }
-          </mat-select>
-        </mat-form-field>
-
-        <app-targeting-editor
-          [targeting]="targeting()"
-          [variantKeys]="variantNames()"
-          (targetingChange)="onTargetingChange($event)"
-        />
-
-        <app-metadata-editor [metadata]="metadata()" (metadataChange)="onMetadataChange($event)" />
-      </div>
-    }
-
-    <!-- ==================== JSON MODE ==================== -->
-    @if (editorMode() === 'json') {
-      <div class="json-mode">
-        <div class="json-mode-header">
-          <label class="section-label">Flag Definition</label>
-          <button mat-stroked-button type="button" (click)="formatJson()">Format</button>
-        </div>
-        <mat-form-field appearance="outline" class="full-width">
-          <textarea
-            matInput
-            class="json-editor-textarea"
-            [ngModel]="rawJson"
-            [ngModelOptions]="{ standalone: true }"
-            (ngModelChange)="onJsonInput($event)"
-            rows="20"
-            spellcheck="false"
-            placeholder='{ "state": "ENABLED", "variants": { ... } }'
-          ></textarea>
-        </mat-form-field>
-        @if (jsonError) {
-          <p class="json-error">{{ jsonError }}</p>
-        }
-        <p class="json-hint">
-          Edit the full flag definition as JSON. Required fields: <code>state</code>,
-          <code>variants</code>.
-        </p>
-      </div>
-    }
+    <ng-template #easyModeGlobalBooleanSwitch>
+      <mat-slide-toggle
+        [checked]="isEasyModeGlobalBooleanOn()"
+        (change)="onEasyModeGlobalBooleanChange($event.checked)"
+      >
+        {{ getEasyModeGlobalBooleanLabel() }}
+      </mat-slide-toggle>
+    </ng-template>
 
     <!-- ==================== ACTIONS ==================== -->
     <div class="panel-actions">

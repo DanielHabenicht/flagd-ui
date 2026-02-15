@@ -30,23 +30,65 @@
         </button>
       </div>
     </mat-toolbar>
-    <app-project-list />
+    <app-flags-file-list />
   </mat-sidenav>
   <mat-sidenav-content class="main-content">
-    @if (isCompactLayout()) {
-      <div class="page-header-nav">
-        <button
-          mat-icon-button
-          class="nav-toggle-button"
-          type="button"
-          (click)="toggleNavigation()"
-          title="Toggle navigation"
-          aria-label="Toggle navigation"
-        >
-          <mat-icon>menu</mat-icon>
-        </button>
+    @if (showPageHeader()) {
+      <div class="page-header">
+        @if (isCompactLayout()) {
+          <button
+            mat-icon-button
+            class="nav-toggle-button"
+            type="button"
+            (click)="toggleNavigation()"
+            title="Toggle navigation"
+            aria-label="Toggle navigation"
+          >
+            <mat-icon>menu</mat-icon>
+          </button>
+        }
+
+        @if (showFlagsContextHeader()) {
+          <div class="flags-context-header">
+            <div class="flags-title-row">
+              @if (sourceBreadcrumb()) {
+                <a class="source-breadcrumb breadcrumb-link" [routerLink]="sourceBreadcrumbRoute()">
+                  {{ sourceBreadcrumb() }}
+                </a>
+                <span class="source-separator" aria-hidden="true">›</span>
+              }
+              @if (flagsFileDetailRoute()) {
+                <h2>
+                  <a class="file-breadcrumb breadcrumb-link" [routerLink]="flagsFileDetailRoute()">
+                    {{ store.currentFlagsFileName() }}
+                  </a>
+                </h2>
+              } @else {
+                <h2>{{ store.currentFlagsFileName() }}</h2>
+              }
+              @if (detailBreadcrumb()) {
+                <span class="source-separator" aria-hidden="true">›</span>
+                <span class="edit-breadcrumb">{{ detailBreadcrumb() }}</span>
+              }
+            </div>
+
+            @if (isOverviewComponentActive()) {
+              <div class="header-actions">
+                <button mat-icon-button (click)="openSettingsPage()" title="Settings">
+                  <mat-icon>settings</mat-icon>
+                </button>
+                <button mat-icon-button (click)="downloadFlagsFile()" title="Download JSON">
+                  <mat-icon>download</mat-icon>
+                </button>
+                <button mat-flat-button color="primary" (click)="openNewFlagEditor()">
+                  <mat-icon>add</mat-icon> Add Flag
+                </button>
+              </div>
+            }
+          </div>
+        }
       </div>
     }
-    <router-outlet />
+    <router-outlet (activate)="onRouteActivate($event)" (deactivate)="onRouteDeactivate()" />
   </mat-sidenav-content>
 </mat-sidenav-container>

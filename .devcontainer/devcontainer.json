@@ -21,7 +21,8 @@
         "GitHub.copilot-chat",
         "GitHub.copilot-labs",
         "esbenp.prettier-vscode",
-        "ms-playwright.playwright"
+        "ms-playwright.playwright",
+        "vitest.explorer"
       ],
       "settings": {}
     }

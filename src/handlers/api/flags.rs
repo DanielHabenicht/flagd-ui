@@ -61,6 +61,10 @@ pub struct CreateFlagRequest {
     /// Optional metadata for the full flag set
     #[schema(value_type = Object)]
     pub metadata: Option<serde_json::Map<String, serde_json::Value>>,
+    /// Optional reusable evaluators for targeting logic
+    #[serde(rename = "$evaluators")]
+    #[schema(value_type = Object)]
+    pub evaluators: Option<serde_json::Map<String, serde_json::Value>>,
 }
 
 /// Request payload for updating a flag definition file
@@ -72,6 +76,10 @@ pub struct UpdateFlagRequest {
     /// Optional metadata for the full flag set
     #[schema(value_type = Object)]
     pub metadata: Option<serde_json::Map<String, serde_json::Value>>,
+    /// Optional reusable evaluators for targeting logic
+    #[serde(rename = "$evaluators")]
+    #[schema(value_type = Object)]
+    pub evaluators: Option<serde_json::Map<String, serde_json::Value>>,
 }
 
 /// Response for a single flag definition file
@@ -268,6 +276,10 @@ pub async fn create_flag(
         complete_doc["metadata"] = serde_json::Value::Object(metadata);
     }
 
+    if let Some(evaluators) = payload.evaluators {
+        complete_doc["$evaluators"] = serde_json::Value::Object(evaluators);
+    }
+
     // Validate the full document against the schema
     validate_flags(&state.schema, &complete_doc)?;
 
@@ -337,7 +349,13 @@ pub async fn update_flag(
         .and_then(|value| value.as_object())
         .cloned();
 
+    let existing_evaluators = existing_json
+        .get("$evaluators")
+        .and_then(|value| value.as_object())
+        .cloned();
+
     let metadata_to_write = payload.metadata.or(existing_metadata);
+    let evaluators_to_write = payload.evaluators.or(existing_evaluators);
 
     let mut complete_doc = serde_json::json!({
         "$schema": "https://flagd.dev/schema/v0/flags.json",
@@ -346,6 +364,10 @@ pub async fn update_flag(
 
     if let Some(metadata) = metadata_to_write {
         complete_doc["metadata"] = serde_json::Value::Object(metadata);
+    }
+
+    if let Some(evaluators) = evaluators_to_write {
+        complete_doc["$evaluators"] = serde_json::Value::Object(evaluators);
     }
 
     // Validate the full document against the schema

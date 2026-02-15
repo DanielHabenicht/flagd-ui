@@ -1,0 +1,23 @@
+<div class="edit-page-container">
+  <div class="edit-page-workspace">
+    <div class="edit-page-content">
+      <app-flag-editor
+        [inline]="true"
+        [allowMaximize]="true"
+        [maximizeIcon]="'close_fullscreen'"
+        [maximizeTitle]="'Return to detail view'"
+        [flag]="editingFlag()"
+        [existingKeys]="existingFlagKeys()"
+        (maximize)="onUnexpand()"
+        (save)="onSaveFlag($event)"
+        (cancel)="onCancel()"
+      />
+    </div>
+  </div>
+
+  <app-playground-drawer
+    [flags]="store.flagEntries()"
+    [evaluators]="store.currentEvaluators()"
+    [selectedFlagKey]="selectedFlagKey()"
+  />
+</div>
