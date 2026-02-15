@@ -43,7 +43,7 @@ export class FlagsFileDetailComponent implements OnInit {
     typeof window !== 'undefined' && window.innerWidth >= this.inlineEditorMinWidth;
   private readonly routeSelectedFlagKey = signal<string | null>(null);
 
-  showEditor = signal(this.initialWideLayout);
+  showEditor = signal(false);
   editingFlag = signal<FlagEntry | null>(null);
   isWideLayout = signal(this.initialWideLayout);
   readonly selectedFlagKey = computed(() => this.editingFlag()?.key ?? null);
@@ -202,7 +202,9 @@ export class FlagsFileDetailComponent implements OnInit {
   onWindowResize(): void {
     const isWide = window.innerWidth >= this.inlineEditorMinWidth;
     this.isWideLayout.set(isWide);
-    if (isWide) {
+    if (!isWide) {
+      this.showEditor.set(false);
+    } else if (this.editingFlag()) {
       this.showEditor.set(true);
     }
   }
@@ -232,7 +234,7 @@ export class FlagsFileDetailComponent implements OnInit {
   }
 
   closeEditor(): void {
-    this.showEditor.set(this.isWideLayout());
+    this.showEditor.set(false);
     this.editingFlag.set(null);
   }
 

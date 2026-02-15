@@ -41,7 +41,7 @@
 
 .project-detail {
   min-width: 0;
-  max-width: 960px;
+  max-width: none;
 }
 
 .inline-editor {
@@ -201,12 +201,6 @@
 .empty-search {
   padding: 16px 0;
   color: var(--color-text-secondary);
-}
-
-@media (max-width: 1280px) {
-  .project-detail {
-    max-width: none;
-  }
 }
 
 @media (max-width: 1200px) {
