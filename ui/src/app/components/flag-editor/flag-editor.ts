@@ -156,6 +156,7 @@ export class FlagEditorComponent implements OnInit, OnChanges {
   readonly canCollapseEnvironmentOverrides = computed(() => this.allEnvironmentsSameValue());
 
   showEnvironmentOverrides = signal(false);
+  showGlobalTimeWindow = signal(false);
 
   // JSON editor state
   rawJson = '';
@@ -299,10 +300,12 @@ export class FlagEditorComponent implements OnInit, OnChanges {
       ? parsedEnvironmentTiming.global
       : parsedEasyTimeTargeting;
 
-    this.globalEnvironmentTimeEnabled.set(
+    const hasGlobalTimeWindow =
       !!globalTimeBounds &&
-        (globalTimeBounds.start !== undefined || globalTimeBounds.end !== undefined),
-    );
+      (globalTimeBounds.start !== undefined || globalTimeBounds.end !== undefined);
+
+    this.globalEnvironmentTimeEnabled.set(hasGlobalTimeWindow);
+    this.showGlobalTimeWindow.set(hasGlobalTimeWindow);
 
     const environmentTimeWindows: Record<string, TimeWindowFormState> = {};
     for (const env of envs) {
@@ -715,7 +718,7 @@ export class FlagEditorComponent implements OnInit, OnChanges {
     return false;
   }
 
-  private syncEasyToAdvanced(): void {
+  syncEasyToAdvanced(): void {
     const easyType = this.form.get('easyType')!.value as 'boolean' | 'string';
     this.form.get('flagType')!.setValue(easyType);
 
