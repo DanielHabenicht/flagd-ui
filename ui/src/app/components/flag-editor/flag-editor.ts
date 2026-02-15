@@ -277,9 +277,10 @@ export class FlagEditorComponent implements OnInit, OnChanges {
       if (isEnvironmentFlag) {
         const extractedStates = extractEnvironmentStates(f!, envs, nextType);
         this.environmentStates.set(extractedStates);
-        // Set the default/fallback value as the first environment's value
-        const firstEnv = envs[0].name.toLowerCase();
-        this.defaultFallbackValue.set(extractedStates[firstEnv]);
+        // Set the default/fallback value from the variant specified in defaultVariant
+        const defaultVariantName = f!.defaultVariant || 'off';
+        const defaultVariantValue = f!.variants[defaultVariantName];
+        this.defaultFallbackValue.set(defaultVariantValue);
       } else {
         const defaultValue = this.getDefaultValueForType(nextType);
         this.defaultFallbackValue.set(defaultValue);
