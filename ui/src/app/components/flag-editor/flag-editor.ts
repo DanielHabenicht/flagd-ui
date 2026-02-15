@@ -30,6 +30,7 @@ import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule } from '@angular/material/core';
 import { MatTimepickerModule } from '@angular/material/timepicker';
 import { MatExpansionModule } from '@angular/material/expansion';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import {
   FlagDefinition,
   FlagEntry,
@@ -79,6 +80,7 @@ interface TimeWindowFormState {
     MatNativeDateModule,
     MatTimepickerModule,
     MatExpansionModule,
+    MatTooltipModule,
   ],
   templateUrl: './flag-editor.html',
   styleUrl: './flag-editor.scss',
@@ -1066,12 +1068,6 @@ export class FlagEditorComponent implements OnInit, OnChanges {
 
   onDefaultFallbackValueChange(value: unknown): void {
     this.defaultFallbackValue.set(value);
-    // Update all environment states to match the new default
-    const nextStates: Record<string, unknown> = {};
-    for (const env of this.environments()) {
-      nextStates[env.name.toLowerCase()] = value;
-    }
-    this.environmentStates.set(nextStates);
   }
 
   onGlobalEnvironmentValueChange(value: unknown): void {

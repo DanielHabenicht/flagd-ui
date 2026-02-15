@@ -102,9 +102,9 @@
         ]
       },
       "variants": {
-        "another": false,
+        "another": true,
         "off": false,
-        "test": true
+        "test": false
       }
     }
   },
