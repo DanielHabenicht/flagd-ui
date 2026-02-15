@@ -1,67 +1,72 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 
-type FlagFile = {
-  flags: Record<string, unknown>;
-};
-
-async function mockFlagsApi(page: Page): Promise<void> {
-  const flagsFileNames: string[] = ['demo.flagd.json', 'test.flagd.json'];
-  const flagsFileData: Record<string, FlagFile> = {
-    'demo.flagd.json': {
-      flags: {
-        'checkout-enabled': {
-          state: 'ENABLED',
-          variants: { on: true, off: false },
-          defaultVariant: 'on',
-        },
+test('captures docs screenshots for key workflows', async ({ page }) => {
+  const mappedFlagsFile = {
+    flags: {
+      'disk-mapped-flag': {
+        state: 'ENABLED',
+        variants: { on: true, off: false },
+        defaultVariant: 'on',
       },
-    },
-    'test.flagd.json': {
-      flags: {},
     },
   };
 
-  await page.route('**/api/flags**', async (route) => {
-    const request = route.request();
-    const { pathname } = new URL(request.url());
-    const method = request.method();
+  await page.addInitScript((payload) => {
+    const mappedContent = JSON.stringify(payload.content, null, 2);
 
-    if (pathname === '/api/flags' && method === 'GET') {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({ files: flagsFileNames }),
-      });
-      return;
-    }
+    (window as Window & { showOpenFilePicker?: (options?: unknown) => Promise<unknown[]> }).showOpenFilePicker =
+      async () => {
+        const handle = {
+          getFile: async () =>
+            new File([mappedContent], payload.fileName, {
+              type: 'application/json',
+            }),
+          createWritable: async () => ({
+            write: async () => undefined,
+            close: async () => undefined,
+          }),
+        };
 
-    if (pathname.startsWith('/api/flags/') && method === 'GET') {
-      const name = decodeURIComponent(pathname.replace('/api/flags/', ''));
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify(flagsFileData[name] ?? { flags: {} }),
-      });
-      return;
-    }
-
-    await route.fulfill({ status: 404, body: 'Not found' });
+        return [handle];
+      };
+  }, {
+    fileName: 'docs-mapped-local.flagd.json',
+    content: mappedFlagsFile,
   });
-}
 
-test('captures docs screenshot while editing a flag', async ({ page }) => {
-  await mockFlagsApi(page);
-
-  await page.setViewportSize({ width: 1600, height: 1000 });
+  await page.setViewportSize({ width: 1920, height: 1080 });
   await page.goto('/');
 
-  await page.getByRole('link', { name: 'demo.flagd.json' }).click();
-  await expect(page.getByRole('heading', { name: 'demo.flagd.json' })).toBeVisible();
+  const createdFileName = `docs-local-${Date.now()}`;
+  await page.getByRole('button', { name: 'Create flags-file' }).click();
+  const createFileDialog = page.getByRole('dialog', { name: 'Add Flag File' });
+  await createFileDialog.getByLabel('File name').fill(createdFileName);
+  await createFileDialog.getByRole('button', { name: 'Create' }).click();
+  await expect(page.getByRole('heading', { name: createdFileName })).toBeVisible();
 
-  await page.getByRole('cell', { name: 'checkout-enabled' }).click();
+  await page.getByRole('button', { name: 'Create flags-file' }).click();
+  const mapLocalDialog = page.getByRole('dialog', { name: 'Add Flag File' });
+  await mapLocalDialog.getByRole('tab', { name: 'From Disk' }).click();
+  await mapLocalDialog.getByRole('button', { name: 'Open' }).click();
+  await expect(page.getByRole('link', { name: 'docs-mapped-local' })).toBeVisible();
+
+  await page.getByRole('link', { name: 'demo' }).click();
+  await expect(page.getByRole('heading', { name: 'demo' })).toBeVisible();
+
+  await page.getByRole('cell', { name: 'show-welcome-banner' }).click();
   await expect(page.getByRole('heading', { name: 'Edit Flag' })).toBeVisible();
 
-  await page.getByLabel('Flag Key').fill('checkout-enabled-v2');
+  await page.getByLabel('Flag Key').fill('show-welcome-banner-v2');
 
-  await page.screenshot({ path: './docs/assets/images/ui-editing-flag.png', fullPage: true });
+  await page.screenshot({ path: './docs/assets/images/ui-editing-flag.png' });
+
+  await page.getByLabel('Toggle playground drawer').click();
+  await expect(page.locator('.playground-drawer.open')).toBeVisible();
+
+  await page.screenshot({ path: './docs/assets/images/ui-playground-open.png' });
+
+  await page.getByRole('button', { name: 'Settings' }).click();
+  await expect(page.getByRole('heading', { name: 'Flags-File Metadata' })).toBeVisible();
+
+  await page.screenshot({ path: './docs/assets/images/ui-flags-file-settings.png' });
 });

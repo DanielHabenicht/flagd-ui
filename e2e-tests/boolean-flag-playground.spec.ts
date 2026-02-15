@@ -1,10 +1,13 @@
 import { expect, test } from '@playwright/test';
 
-test('creates file and boolean flag, evaluates in playground, then switches value', async ({ page, request }) => {
+test('creates file and boolean flag, evaluates in playground, then switches value', async ({
+  page,
+  request,
+}, testInfo) => {
   test.setTimeout(60_000);
 
   const uniqueId = Date.now();
-  const fileName = `playground-${uniqueId}.flagd.json`;
+  const fileName = `playground-${testInfo.project.name}-${uniqueId}`;
   const flagKey = `feature-${uniqueId}`;
 
   try {
@@ -13,7 +16,9 @@ test('creates file and boolean flag, evaluates in playground, then switches valu
 
     await page.getByRole('button', { name: 'Create flags-file' }).click();
     const createFileDialog = page.getByRole('dialog', { name: 'Add Flag File' });
-    await createFileDialog.getByLabel('File name').fill(fileName);
+    const fileNameInput = createFileDialog.getByLabel('File name');
+    await fileNameInput.fill(fileName);
+    await expect(fileNameInput).toHaveValue(fileName);
     const createFileButton = createFileDialog.getByRole('button', { name: 'Create' });
     await expect(createFileButton).toBeEnabled();
     await createFileButton.click();
