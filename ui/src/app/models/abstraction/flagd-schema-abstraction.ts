@@ -1,5 +1,6 @@
 import { FlagdSchema } from '../generated/flagd-schema';
 import { DisplayFlag, Environment, FlagState, FlagType } from './flagd-abstraction-models';
+import { JSONLOGIC_IN_OPERATOR, JSONLOGIC_VAR_PROPERTY } from './flagd-constants';
 
 /**
  * Abstraction layer for FlagdSchema
@@ -9,42 +10,44 @@ import { DisplayFlag, Environment, FlagState, FlagType } from './flagd-abstracti
  */
 export class FlagdSchemaAbstraction {
   /**
+   * Prefix used for environment evaluators
+   * Example: "isProduction", "isStaging"
+   */
+  private static readonly ENVIRONMENT_EVALUATOR_PREFIX = 'is';
+
+  /**
+   * The name of the environment context variable
+   */
+  private static readonly ENVIRONMENT_VAR_NAME = 'environment';
+
+  /**
+   * The variant name for boolean 'true' values in flag schemas
+   */
+  private static readonly BOOLEAN_ON_VARIANT = 'on';
+
+  /**
+   * The default variant name for non-boolean flags
+   */
+  private static readonly DEFAULT_VARIANT = 'default';
+  /**
    * Factory method to create a FlagdSchemaAbstraction from a FlagdSchema
    */
   static fromSchema(schema: FlagdSchema): FlagdSchemaAbstraction {
-    return new FlagdSchemaAbstraction(schema);
-  }
-
-  /**
-   * Factory method to create an empty FlagdSchemaAbstraction with no flags or environments
-   */
-  static empty(): FlagdSchemaAbstraction {
-    return new FlagdSchemaAbstraction({ flags: {} });
-  }
-
-  /**
-   * Mapping of environment aliases to their display names for easy lookup and management
-   */
-  private environmentAliases: Record<string, string[]> = {};
-
-  /**
-   * Internal representation of flags, keyed by flag key, with associated DisplayFlagEntry for easy access and updates
-   */
-  private flagsMap: Record<string, DisplayFlag> = {};
-  private metadata?: Record<string, string | number | boolean>;
-
-  private constructor(schema: FlagdSchema) {
-    // Store metadata if present
+    const newInstance = new FlagdSchemaAbstraction(schema);
     if (schema.metadata) {
-      this.metadata = schema.metadata;
+      newInstance.metadata = schema.metadata;
     }
 
     // Extract environments from evaluators
     if (schema.$evaluators) {
       for (const [key, evaluator] of Object.entries(schema.$evaluators)) {
         // Check if this is an environment evaluator (pattern: "isXxx")
-        if (key.startsWith('is') && typeof evaluator === 'object' && evaluator !== null) {
-          const inOperator = (evaluator as Record<string, unknown>)['in'];
+        if (
+          key.startsWith(FlagdSchemaAbstraction.ENVIRONMENT_EVALUATOR_PREFIX) &&
+          typeof evaluator === 'object' &&
+          evaluator !== null
+        ) {
+          const inOperator = (evaluator as Record<string, unknown>)[JSONLOGIC_IN_OPERATOR];
           if (Array.isArray(inOperator) && inOperator.length === 2) {
             const varCheck = inOperator[0];
             const aliases = inOperator[1];
@@ -53,11 +56,12 @@ export class FlagdSchemaAbstraction {
             if (
               typeof varCheck === 'object' &&
               varCheck !== null &&
-              (varCheck as Record<string, unknown>)['var'] === 'environment' &&
+              (varCheck as Record<string, unknown>)[JSONLOGIC_VAR_PROPERTY] ===
+                FlagdSchemaAbstraction.ENVIRONMENT_VAR_NAME &&
               Array.isArray(aliases)
             ) {
-              const envName = key.slice(2); // Remove 'is' prefix
-              this.environmentAliases[envName.toLowerCase()] = aliases.map(String);
+              const envName = key.slice(FlagdSchemaAbstraction.ENVIRONMENT_EVALUATOR_PREFIX.length); // Remove prefix
+              newInstance.environmentAliases[envName.toLowerCase()] = aliases.map(String);
             }
           }
         }
@@ -90,8 +94,31 @@ export class FlagdSchemaAbstraction {
         displayFlag.metadata = flagDef.metadata;
       }
 
-      this.flagsMap[flagKey] = displayFlag;
+      newInstance.flagsMap[flagKey] = displayFlag;
     }
+    return newInstance;
+  }
+
+  /**
+   * Factory method to create an empty FlagdSchemaAbstraction with no flags or environments
+   */
+  static empty(): FlagdSchemaAbstraction {
+    return new FlagdSchemaAbstraction();
+  }
+
+  /**
+   * Mapping of environment aliases to their display names for easy lookup and management
+   */
+  private environmentAliases: Record<string, string[]> = {};
+
+  /**
+   * Internal representation of flags, keyed by flag key, with associated DisplayFlagEntry for easy access and updates
+   */
+  private flagsMap: Record<string, DisplayFlag> = {};
+  private metadata?: Record<string, string | number | boolean>;
+
+  private constructor() {
+    /* empty */
   }
 
   /**
@@ -105,7 +132,8 @@ export class FlagdSchemaAbstraction {
   }
 
   createOrUpdateEnvironment(environment: Environment): void {
-    throw new Error('Not implemented');
+    const envKey = environment.displayName.toLowerCase();
+    this.environmentAliases[envKey] = environment.aliases;
   }
 
   /**
@@ -116,25 +144,30 @@ export class FlagdSchemaAbstraction {
   }
 
   /**
-   * Update a flag in the internal schema
-   * @param flagKey - The flag to update
+   * Update a flag in the internal state
+   * @param flagKey - The flag to update or create
    * @param updatedFlag - The updated DisplayFlag
-   * @param environments - Known environments for context
    */
   createOrUpdateFlag(flagKey: string, updatedFlag: DisplayFlag): void {
-    throw new Error('Not implemented');
+    this.flagsMap[flagKey] = updatedFlag;
   }
 
   /**
    * Generate a FlagdSchema from the internal state
    */
-  generateSchema(): FlagdSchema {
+  exportSchema(): FlagdSchema {
     // Build evaluators from environment aliases
     const evaluators: Record<string, Record<string, unknown>> = {};
     for (const [envName, aliases] of Object.entries(this.environmentAliases)) {
-      const refKey = 'is' + envName.charAt(0).toUpperCase() + envName.slice(1);
+      const refKey =
+        FlagdSchemaAbstraction.ENVIRONMENT_EVALUATOR_PREFIX +
+        envName.charAt(0).toUpperCase() +
+        envName.slice(1);
       evaluators[refKey] = {
-        in: [{ var: 'environment' }, aliases],
+        [JSONLOGIC_IN_OPERATOR]: [
+          { [JSONLOGIC_VAR_PROPERTY]: FlagdSchemaAbstraction.ENVIRONMENT_VAR_NAME },
+          aliases,
+        ],
       };
     }
 
@@ -144,7 +177,11 @@ export class FlagdSchemaAbstraction {
       const variants: Record<string, unknown> = {};
 
       // For now, create a single variant with the current value
-      variants[displayFlag.type === 'boolean' ? 'on' : 'default'] = displayFlag.value;
+      variants[
+        displayFlag.type === 'boolean'
+          ? FlagdSchemaAbstraction.BOOLEAN_ON_VARIANT
+          : FlagdSchemaAbstraction.DEFAULT_VARIANT
+      ] = displayFlag.value;
 
       const flagDef: Record<string, unknown> = {
         state: displayFlag.state,

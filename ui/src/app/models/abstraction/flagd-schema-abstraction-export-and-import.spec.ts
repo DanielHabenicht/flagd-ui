@@ -1,7 +1,7 @@
 import { FlagdSchemaAbstraction } from './flagd-schema-abstraction';
 import { FlagdSchema } from '../generated/flagd-schema';
 
-describe('FlagdSchemaAbstraction - Through Input/Output in one test', () => {
+describe('FlagdSchemaAbstraction - Through Importing and Export JsondSchema', () => {
   describe('generateSchema', () => {
     it('should generate a valid FlagdSchema from the internal state', () => {
       const inputSchema: FlagdSchema = {
@@ -42,7 +42,7 @@ describe('FlagdSchemaAbstraction - Through Input/Output in one test', () => {
       };
 
       const abstraction = FlagdSchemaAbstraction.fromSchema(inputSchema);
-      const generatedSchema = abstraction.generateSchema();
+      const generatedSchema = abstraction.exportSchema();
 
       expect(generatedSchema).toBeDefined();
       expect(generatedSchema.flags).toBeDefined();
