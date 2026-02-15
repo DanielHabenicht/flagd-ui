@@ -113,7 +113,7 @@ export class FlagsFileDetailComponent implements OnInit {
 
   getVariantValueCounts(
     flag: FlagEntry,
-  ): Array<{ value: string; count: number; variantNames: string[] }> {
+  ): { value: string; count: number; variantNames: string[] }[] {
     const counts = new Map<string, { count: number; variantNames: string[] }>();
 
     for (const [variantName, variantValue] of Object.entries(flag.variants)) {

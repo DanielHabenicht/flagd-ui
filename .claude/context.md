@@ -166,6 +166,8 @@ npm start            # Dev server on port 4200 (proxies /api to :3000)
 npm run build        # Production build to ../public
 npm run generate:api-client  # Regenerate API client from OpenAPI spec
 npm test -- --watch=false  # Run unit tests (Vitest)
+npm run lint         # Run ESLint
+npm run lint -- --fix  # Auto-fix ESLint issues
 ```
 
 ### Frontend formatting requirements (for Claude agents)

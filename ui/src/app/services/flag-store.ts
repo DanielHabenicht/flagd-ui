@@ -2,13 +2,10 @@ import { computed, inject, Injectable } from '@angular/core';
 import { Store } from '@ngxs/store';
 import {
   FlagDefinition,
-  FlagEntry,
   FlagsFileEntry,
   FlagFileContent,
   MetadataMap,
   Evaluator,
-  FileGroup,
-  Environment,
   LocalFlagsFileOrigin,
 } from '../models/flag.models';
 import {

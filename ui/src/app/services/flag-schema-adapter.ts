@@ -7,7 +7,10 @@ import {
   inferFlagType,
 } from '../models/flag.models';
 
-export type TimeWindowBounds = { start?: number; end?: number };
+export interface TimeWindowBounds {
+  start?: number;
+  end?: number;
+}
 
 export interface FlagSchemaVariantRow {
   name: string;
@@ -270,7 +273,7 @@ export class FlagSchemaAdapter {
   private parseJsonObject(
     raw: string,
     invalidJsonError: string,
-  ): AdapterResult<Record<string, any>> {
+  ): AdapterResult<Record<string, unknown>> {
     try {
       const parsed = JSON.parse(raw);
       if (!this.isRecord(parsed)) {
@@ -420,7 +423,7 @@ export class FlagSchemaAdapter {
     return null;
   }
 
-  private isRecord(value: unknown): value is Record<string, any> {
+  private isRecord(value: unknown): value is Record<string, unknown> {
     return typeof value === 'object' && value !== null;
   }
 }

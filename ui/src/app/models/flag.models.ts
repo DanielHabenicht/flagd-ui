@@ -42,9 +42,7 @@ export interface Environment {
   aliases: string[];
 }
 
-export interface Evaluator {
-  [key: string]: unknown;
-}
+export type Evaluator = Record<string, unknown>;
 
 export interface FlagFileContent {
   $schema?: string;
@@ -102,7 +100,7 @@ export function extractEnvironments(evaluators?: Record<string, Evaluator>): Env
   for (const [key, evaluator] of Object.entries(evaluators)) {
     // Check if this is an environment evaluator (pattern: "isXxx")
     if (key.startsWith('is') && typeof evaluator === 'object' && evaluator !== null) {
-      const inOperator = (evaluator as any).in;
+      const inOperator = (evaluator as Record<string, unknown>).in;
       if (Array.isArray(inOperator) && inOperator.length === 2) {
         const varCheck = inOperator[0];
         const aliases = inOperator[1];
@@ -111,7 +109,7 @@ export function extractEnvironments(evaluators?: Record<string, Evaluator>): Env
         if (
           typeof varCheck === 'object' &&
           varCheck !== null &&
-          (varCheck as any).var === 'environment' &&
+          (varCheck as Record<string, unknown>).var === 'environment' &&
           Array.isArray(aliases)
         ) {
           const envName = key.slice(2); // Remove 'is' prefix
@@ -144,20 +142,19 @@ export function createEnvironmentEvaluator(aliases: string[]): Evaluator {
 export function generateEnvironmentTargeting(
   environments: Environment[],
   environmentStates: Record<string, boolean>,
-  fallbackVariant: string = 'off',
+  fallbackVariant = 'off',
 ): Record<string, unknown> {
   if (environments.length === 0) {
     return {};
   }
 
   // Build nested if-else structure
-  const buildTargeting = (index: number): any => {
+  const buildTargeting = (index: number): Record<string, unknown> | string => {
     if (index >= environments.length) {
       return fallbackVariant;
     }
 
     const env = environments[index];
-    const isEnabled = environmentStates[env.name];
     const variantName = env.name.toLowerCase();
 
     return {
@@ -197,7 +194,7 @@ export function generateEnvironmentVariants(
 /**
  * Gets the default value for a flag type
  */
-function getDefaultValueForType(flagType: FlagType, enabled: boolean = true): unknown {
+function getDefaultValueForType(flagType: FlagType, enabled = true): unknown {
   switch (flagType) {
     case 'boolean':
       return enabled;

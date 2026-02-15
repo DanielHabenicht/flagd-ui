@@ -36,7 +36,10 @@ export class PlaygroundLocalEvaluatorService implements PlaygroundEvaluator {
     try {
       const expandedTargeting = this.expandRefs(targeting, request.evaluators ?? {}, []);
       const evaluationContext = this.withFlagdBuiltIns(context);
-      const outcome = jsonLogicEngine.run(expandedTargeting as any, evaluationContext as any);
+      const outcome = jsonLogicEngine.run(
+        expandedTargeting as unknown,
+        evaluationContext as unknown,
+      );
 
       if (typeof outcome === 'string' && this.hasVariant(flag, outcome)) {
         return {

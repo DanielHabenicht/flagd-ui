@@ -17,19 +17,11 @@ export class RemoteApi {
     return this.http.get<FlagFileContent>(`${backendUrl}/api/flags/${encodeURIComponent(name)}`);
   }
 
-  createFlagsFile(
-    backendUrl: string,
-    name: string,
-    content: FlagFileContent,
-  ): Observable<unknown> {
+  createFlagsFile(backendUrl: string, name: string, content: FlagFileContent): Observable<unknown> {
     return this.http.post(`${backendUrl}/api/flags`, { name, ...content });
   }
 
-  updateFlagsFile(
-    backendUrl: string,
-    name: string,
-    content: FlagFileContent,
-  ): Observable<unknown> {
+  updateFlagsFile(backendUrl: string, name: string, content: FlagFileContent): Observable<unknown> {
     return this.http.put(`${backendUrl}/api/flags/${encodeURIComponent(name)}`, content);
   }
 

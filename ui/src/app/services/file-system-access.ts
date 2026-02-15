@@ -1,15 +1,15 @@
 import { Injectable } from '@angular/core';
 import { FlagFileContent } from '../models/flag.models';
 
-type WritableFileStream = {
+interface WritableFileStream {
   write: (data: string) => Promise<void>;
   close: () => Promise<void>;
-};
+}
 
-type FileHandle = {
+interface FileHandle {
   getFile: () => Promise<File>;
   createWritable: () => Promise<WritableFileStream>;
-};
+}
 
 type WindowWithFilePicker = Window & {
   showOpenFilePicker?: (options?: unknown) => Promise<FileHandle[]>;

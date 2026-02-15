@@ -50,12 +50,12 @@ import { FlagSchemaAdapter, TimeWindowBounds } from '../../services/flag-schema-
 
 export type EditorMode = 'easy' | 'advanced' | 'json';
 
-type TimeWindowFormState = {
+interface TimeWindowFormState {
   startDate: Date | null;
   startTime: Date | null;
   endDate: Date | null;
   endTime: Date | null;
-};
+}
 
 @Component({
   selector: 'app-flag-editor',
@@ -93,7 +93,7 @@ export class FlagEditorComponent implements OnInit, OnChanges {
   readonly flag = input<FlagEntry | null>(null);
   readonly existingKeys = input<string[]>([]);
   readonly save = output<{ key: string; flag: FlagDefinition; originalKey?: string }>();
-  readonly cancel = output<void>();
+  readonly cancelled = output<void>();
   readonly maximize = output<void>();
 
   form!: FormGroup;
@@ -645,7 +645,7 @@ export class FlagEditorComponent implements OnInit, OnChanges {
   }
 
   onCancel(): void {
-    this.cancel.emit();
+    this.cancelled.emit();
   }
 
   onMaximize(): void {
@@ -982,7 +982,7 @@ export class FlagEditorComponent implements OnInit, OnChanges {
   }
 
   // Environment mode helpers
-  private getDefaultValueForType(flagType: FlagType, enabled: boolean = true): unknown {
+  private getDefaultValueForType(flagType: FlagType, enabled = true): unknown {
     switch (flagType) {
       case 'boolean':
         return enabled;

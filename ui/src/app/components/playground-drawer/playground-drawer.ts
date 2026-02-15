@@ -18,7 +18,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { EvaluationContext } from '@openfeature/web-sdk';
-import { Evaluator, FlagEntry, inferFlagType } from '../../models/flag.models';
+import { Evaluator, FlagEntry } from '../../models/flag.models';
 import { PlaygroundServer } from '../../models/playground.models';
 import { PlaygroundEvaluatorService } from '../../services/playground-evaluator.service';
 import { EvaluationResult } from '../../services/playground-evaluation.types';

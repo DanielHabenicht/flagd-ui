@@ -1,4 +1,5 @@
 @if (!inline()) {
+  <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events, @angular-eslint/template/interactive-supports-focus -->
   <div class="panel-backdrop" (click)="onCancel()"></div>
 }
 <aside class="side-panel" [class.inline-panel]="inline()">
@@ -62,7 +63,7 @@
 
       @if (editorMode() === 'easy' || editorMode() === 'advanced') {
         <div class="form-field">
-          <label>Flag Type</label>
+          <span class="field-label">Flag Type</span>
           <mat-button-toggle-group
             class="flag-type-toggle-group"
             [value]="form.get('flagType')!.value"
@@ -83,7 +84,7 @@
             <div class="environment-mode">
               <div class="global-time-window-section">
                 <div class="easy-time-window-header">
-                  <label>Global Active Time Window</label>
+                  <span class="section-label">Global Active Time Window</span>
                   @if (!globalEnvironmentTimeEnabled()) {
                     <button
                       mat-stroked-button
@@ -105,7 +106,7 @@
 
                 @if (globalEnvironmentTimeEnabled()) {
                   <div class="easy-time-window-section">
-                    <label class="time-window-label">Activate after</label>
+                    <span class="time-window-label">Activate after</span>
                     <div class="form-row">
                       <mat-form-field appearance="outline" class="full-width">
                         <mat-label>From Date</mat-label>
@@ -136,7 +137,7 @@
                       </mat-form-field>
                     </div>
 
-                    <label class="time-window-label">Activate till</label>
+                    <span class="time-window-label">Activate till</span>
                     <div class="form-row">
                       <mat-form-field appearance="outline" class="full-width">
                         <mat-label>Till Date</mat-label>
@@ -257,7 +258,7 @@
                         @for (env of filteredEnvironments(); track env.name) {
                           <div class="environment-value-item">
                             <div class="environment-header-row">
-                              <label class="environment-label">{{ env.displayName }}</label>
+                              <span class="environment-label">{{ env.displayName }}</span>
                               @if (!hasEnvironmentTimeWindow(env.name.toLowerCase())) {
                                 <button
                                   mat-stroked-button
@@ -279,7 +280,7 @@
 
                             @if (hasEnvironmentTimeWindow(env.name.toLowerCase())) {
                               <div class="easy-time-window-section">
-                                <label class="time-window-label">Activate after</label>
+                                <span class="time-window-label">Activate after</span>
                                 <div class="form-row">
                                   <mat-form-field appearance="outline" class="full-width">
                                     <mat-label>From Date</mat-label>
@@ -330,7 +331,7 @@
                                   </mat-form-field>
                                 </div>
 
-                                <label class="time-window-label">Activate till</label>
+                                <span class="time-window-label">Activate till</span>
                                 <div class="form-row">
                                   <mat-form-field appearance="outline" class="full-width">
                                     <mat-label>Till Date</mat-label>
@@ -488,7 +489,7 @@
                       @for (env of filteredEnvironments(); track env.name) {
                         <div class="environment-value-item">
                           <div class="environment-header-row">
-                            <label class="environment-label">{{ env.displayName }}</label>
+                            <span class="environment-label">{{ env.displayName }}</span>
                             @if (!hasEnvironmentTimeWindow(env.name.toLowerCase())) {
                               <button
                                 mat-stroked-button
@@ -510,7 +511,7 @@
 
                           @if (hasEnvironmentTimeWindow(env.name.toLowerCase())) {
                             <div class="easy-time-window-section">
-                              <label class="time-window-label">Activate after</label>
+                              <span class="time-window-label">Activate after</span>
                               <div class="form-row">
                                 <mat-form-field appearance="outline" class="full-width">
                                   <mat-label>From Date</mat-label>
@@ -561,7 +562,7 @@
                                 </mat-form-field>
                               </div>
 
-                              <label class="time-window-label">Activate till</label>
+                              <span class="time-window-label">Activate till</span>
                               <div class="form-row">
                                 <mat-form-field appearance="outline" class="full-width">
                                   <mat-label>Till Date</mat-label>
@@ -706,13 +707,13 @@
 
             <div class="easy-time-window-section">
               <div class="easy-time-window-header">
-                <label>Active Time Window</label>
+                <span class="section-label">Active Time Window</span>
                 <button mat-stroked-button type="button" (click)="resetEasyTimeWindow()">
                   Reset
                 </button>
               </div>
 
-              <label class="time-window-label">Activate after</label>
+              <span class="time-window-label">Activate after</span>
               <div class="form-row">
                 <mat-form-field appearance="outline" class="full-width">
                   <mat-label>From Date</mat-label>
@@ -743,7 +744,7 @@
                 </mat-form-field>
               </div>
 
-              <label class="time-window-label">Activate till</label>
+              <span class="time-window-label">Activate till</span>
               <div class="form-row">
                 <mat-form-field appearance="outline" class="full-width">
                   <mat-label>Till Date</mat-label>
@@ -847,7 +848,7 @@
       @if (editorMode() === 'json') {
         <div class="json-mode">
           <div class="json-mode-header">
-            <label class="section-label">Flag Definition</label>
+            <span class="section-label">Flag Definition</span>
             <button mat-stroked-button type="button" (click)="formatJson()">Format</button>
           </div>
           <mat-form-field appearance="outline" class="full-width">

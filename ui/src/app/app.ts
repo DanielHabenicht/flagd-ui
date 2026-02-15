@@ -233,8 +233,7 @@ export class App implements OnDestroy {
     const files = event.dataTransfer?.files;
     if (!files) return;
 
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
+    for (const file of Array.from(files)) {
       if (!file.name.endsWith('.json')) continue;
 
       const reader = new FileReader();
