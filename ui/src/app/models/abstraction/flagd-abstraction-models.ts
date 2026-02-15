@@ -10,8 +10,8 @@ export type FlagType = 'boolean' | 'string' | 'number' | 'object';
  * Represents a time window constraint (e.g., flag is on between 2pm-5pm)
  */
 export interface TimeWindow {
-  startTime?: number; // Unix timestamp
-  endTime?: number; // Unix timestamp
+  startTime?: Date;
+  endTime?: Date;
 }
 
 /**

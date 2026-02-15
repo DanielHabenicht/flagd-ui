@@ -1,6 +1,11 @@
 import { FlagdSchema } from '../generated/flagd-schema';
 import { DisplayFlag, Environment, FlagState, FlagType } from './flagd-abstraction-models';
 import { JSONLOGIC_IN_OPERATOR, JSONLOGIC_VAR_PROPERTY } from './flagd-constants';
+import {
+  TimeWindowExporter,
+  TimeWindowImporter,
+  FlagTypeConverter,
+} from './flagd-schema-abstraction-converters';
 
 /**
  * Abstraction layer for FlagdSchema
@@ -29,16 +34,21 @@ export class FlagdSchemaAbstraction {
    * The default variant name for non-boolean flags
    */
   private static readonly DEFAULT_VARIANT = 'default';
+
+  /**
+   * Context variable for timestamp comparisons in JsonLogic
+   */
+  private static readonly TIMESTAMP_CONTEXT_VAR = '$flagd.timestamp';
   /**
    * Factory method to create a FlagdSchemaAbstraction from a FlagdSchema
    */
   static fromSchema(schema: FlagdSchema): FlagdSchemaAbstraction {
-    const newInstance = new FlagdSchemaAbstraction(schema);
+    const newInstance = new FlagdSchemaAbstraction();
     if (schema.metadata) {
       newInstance.metadata = schema.metadata;
     }
 
-    // Extract environments from evaluators
+    // Extract environments from evaluators FIRST
     if (schema.$evaluators) {
       for (const [key, evaluator] of Object.entries(schema.$evaluators)) {
         // Check if this is an environment evaluator (pattern: "isXxx")
@@ -94,6 +104,38 @@ export class FlagdSchemaAbstraction {
         displayFlag.metadata = flagDef.metadata;
       }
 
+      // Parse time windows from targeting and populate perEnvironmentDefinitions
+      if (typeof flagDef.targeting === 'object' && flagDef.targeting !== null) {
+        const targeting = flagDef.targeting as Record<string, unknown>;
+        const timingResult = TimeWindowImporter.parseEnvironmentTimingTargeting(targeting);
+
+        const perEnvDefs: Record<string, any> = {};
+        const environments = newInstance.getEnvironments();
+
+        for (const timeBoundsEntry of Object.entries(timingResult.perEnvironment)) {
+          const envName = timeBoundsEntry[0];
+          const timeBounds = timeBoundsEntry[1];
+
+          // Find the environment with this name (case-insensitive)
+          const matchedEnv = environments.find(
+            (e) => e.displayName.toLowerCase() === envName.toLowerCase(),
+          );
+          if (matchedEnv && (timeBounds.start !== undefined || timeBounds.end !== undefined)) {
+            perEnvDefs[matchedEnv.displayName] = {
+              value: FlagTypeConverter.getDefaultValueForType(flagType),
+              timeWindow: {
+                startTime: timeBounds.start,
+                endTime: timeBounds.end,
+              },
+            };
+          }
+        }
+
+        if (Object.keys(perEnvDefs).length > 0) {
+          (displayFlag as any).perEnvironmentDefinitions = perEnvDefs;
+        }
+      }
+
       newInstance.flagsMap[flagKey] = displayFlag;
     }
     return newInstance;
@@ -115,6 +157,7 @@ export class FlagdSchemaAbstraction {
    * Internal representation of flags, keyed by flag key, with associated DisplayFlagEntry for easy access and updates
    */
   private flagsMap: Record<string, DisplayFlag> = {};
+
   private metadata?: Record<string, string | number | boolean>;
 
   private constructor() {
@@ -190,6 +233,15 @@ export class FlagdSchemaAbstraction {
 
       if (displayFlag.metadata && Object.keys(displayFlag.metadata).length > 0) {
         flagDef.metadata = displayFlag.metadata;
+      }
+
+      // Reconstruct targeting from perEnvironmentDefinitions
+      const perEnvDefs = (displayFlag as any).perEnvironmentDefinitions;
+      if (perEnvDefs && Object.keys(perEnvDefs).length > 0) {
+        const targeting = TimeWindowExporter.buildTargetingFromTimeWindows(perEnvDefs);
+        if (targeting) {
+          flagDef.targeting = targeting;
+        }
       }
 
       flags[flagKey] = flagDef;
