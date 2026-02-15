@@ -52,7 +52,7 @@ export class App implements OnDestroy {
   private readonly navigationCollapseWidth = 1280;
   readonly globalLoading = inject(GlobalLoadingService);
   readonly themeMode = this.ngxsStore.selectSignal(UiPreferencesState.themeMode);
-  
+
   // FlagStore selectors
   readonly currentFlagsFileName = this.ngxsStore.selectSignal(FlagStoreState.currentFlagsFileName);
   readonly currentFlagsFile = this.ngxsStore.selectSignal(FlagStoreState.currentFlagsFile);
