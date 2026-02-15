@@ -113,7 +113,7 @@ test('creates a flags-file from the sidebar form', async ({ page }) => {
   await page.goto('/');
 
   await page.getByRole('button', { name: 'Create flags-file' }).click();
-  await page.getByLabel('File name').fill('new-project.flagd.json');
+  await page.getByRole('dialog', { name: 'Add Flag File' }).getByLabel('File name').fill('new-project.flagd.json');
   await page.getByRole('dialog', { name: 'Add Flag File' }).getByRole('button', { name: 'Create' }).click();
 
   await expect(page).toHaveURL(/\/flags-files\/local\/new-project.flagd.json$/);
