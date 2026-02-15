@@ -43,25 +43,25 @@ interface BaseFlagProps {
  */
 export interface BooleanFlag extends BaseFlagProps {
   type: 'boolean';
-  value: boolean;
+  value: boolean | null;
   perEnvironmentDefinitions?: Record<string, EnvironmentDefinition<boolean>>;
 }
 
 export interface StringFlag extends BaseFlagProps {
   type: 'string';
-  value: string;
+  value: string | null;
   perEnvironmentDefinitions?: Record<string, EnvironmentDefinition<string>>;
 }
 
 export interface NumberFlag extends BaseFlagProps {
   type: 'number';
-  value: number;
+  value: number | null;
   perEnvironmentDefinitions?: Record<string, EnvironmentDefinition<number>>;
 }
 
 export interface ObjectFlag extends BaseFlagProps {
   type: 'object';
-  value: object;
+  value: object | null;
   perEnvironmentDefinitions?: Record<string, EnvironmentDefinition<object>>;
 }
 
