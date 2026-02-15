@@ -1,4 +1,4 @@
-import { FlagdSchemaAbstraction } from './flagd-schema-translator.interface';
+import { FlagdSchemaAbstraction } from './flagd-schema-abstraction';
 import { FlagdSchema } from '../generated/flagd-schema';
 
 describe('FlagdSchemaAbstraction', () => {
@@ -8,7 +8,7 @@ describe('FlagdSchemaAbstraction', () => {
         flags: {},
       };
 
-      const abstraction = new FlagdSchemaAbstraction(schema);
+      const abstraction = FlagdSchemaAbstraction.fromSchema(schema);
       expect(abstraction).toBeDefined();
     });
 
@@ -21,7 +21,7 @@ describe('FlagdSchemaAbstraction', () => {
         },
       };
 
-      const abstraction = new FlagdSchemaAbstraction(schema);
+      const abstraction = FlagdSchemaAbstraction.fromSchema(schema);
       expect(abstraction).toBeDefined();
     });
 
@@ -38,7 +38,7 @@ describe('FlagdSchemaAbstraction', () => {
         },
       };
 
-      const abstraction = new FlagdSchemaAbstraction(schema);
+      const abstraction = FlagdSchemaAbstraction.fromSchema(schema);
       const environments = abstraction.getEnvironments();
 
       expect(environments).toHaveLength(2);
@@ -57,7 +57,7 @@ describe('FlagdSchemaAbstraction', () => {
     it('should throw when flags property is missing', () => {
       const schema = {} as FlagdSchema;
 
-      expect(() => new FlagdSchemaAbstraction(schema)).toThrow();
+      expect(() => FlagdSchemaAbstraction.fromSchema(schema)).toThrow();
     });
 
     it('should throw when flags is null', () => {
@@ -65,7 +65,7 @@ describe('FlagdSchemaAbstraction', () => {
         flags: null as any,
       };
 
-      expect(() => new FlagdSchemaAbstraction(schema)).toThrow();
+      expect(() => FlagdSchemaAbstraction.fromSchema(schema)).toThrow();
     });
   });
 
@@ -84,7 +84,7 @@ describe('FlagdSchemaAbstraction', () => {
         },
       };
 
-      const abstraction = new FlagdSchemaAbstraction(schema);
+      const abstraction = FlagdSchemaAbstraction.fromSchema(schema);
       const flags = abstraction.getFlags();
 
       expect(flags).toHaveLength(1);
@@ -106,7 +106,7 @@ describe('FlagdSchemaAbstraction', () => {
         },
       };
 
-      const abstraction = new FlagdSchemaAbstraction(schema);
+      const abstraction = FlagdSchemaAbstraction.fromSchema(schema);
       const flags = abstraction.getFlags();
 
       expect(flags[0].value).toBe(null);
@@ -129,7 +129,7 @@ describe('FlagdSchemaAbstraction', () => {
         },
       };
 
-      const abstraction = new FlagdSchemaAbstraction(schema);
+      const abstraction = FlagdSchemaAbstraction.fromSchema(schema);
       const flags = abstraction.getFlags();
 
       expect(flags).toHaveLength(1);
@@ -154,7 +154,7 @@ describe('FlagdSchemaAbstraction', () => {
         },
       };
 
-      const abstraction = new FlagdSchemaAbstraction(schema);
+      const abstraction = FlagdSchemaAbstraction.fromSchema(schema);
       const flags = abstraction.getFlags();
 
       expect(flags).toHaveLength(1);
@@ -178,7 +178,7 @@ describe('FlagdSchemaAbstraction', () => {
         },
       };
 
-      const abstraction = new FlagdSchemaAbstraction(schema);
+      const abstraction = FlagdSchemaAbstraction.fromSchema(schema);
       const flags = abstraction.getFlags();
 
       expect(flags).toHaveLength(1);
@@ -206,7 +206,7 @@ describe('FlagdSchemaAbstraction', () => {
         },
       };
 
-      const abstraction = new FlagdSchemaAbstraction(schema);
+      const abstraction = FlagdSchemaAbstraction.fromSchema(schema);
       const flags = abstraction.getFlags();
 
       expect(flags[0].metadata).toEqual({
@@ -231,7 +231,7 @@ describe('FlagdSchemaAbstraction', () => {
         },
       };
 
-      const abstraction = new FlagdSchemaAbstraction(schema);
+      const abstraction = FlagdSchemaAbstraction.fromSchema(schema);
       const flags = abstraction.getFlags();
 
       expect(flags[0].state).toBe('DISABLED');
@@ -260,13 +260,22 @@ describe('FlagdSchemaAbstraction', () => {
         },
       };
 
-      const abstraction = new FlagdSchemaAbstraction(schema);
+      const abstraction = FlagdSchemaAbstraction.fromSchema(schema);
       const flags = abstraction.getFlags();
 
       expect(flags).toHaveLength(3);
       expect(flags.map((f) => f.type)).toContain('boolean');
       expect(flags.map((f) => f.type)).toContain('string');
       expect(flags.map((f) => f.type)).toContain('number');
+    });
+  });
+  describe('empty', () => {
+    it('should create an empty instance with no flags', () => {
+      const abstraction = FlagdSchemaAbstraction.empty();
+
+      expect(abstraction).toBeDefined();
+      expect(abstraction.getFlags()).toHaveLength(0);
+      expect(abstraction.getEnvironments()).toHaveLength(0);
     });
   });
 });

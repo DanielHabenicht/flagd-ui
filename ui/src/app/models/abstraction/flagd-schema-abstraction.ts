@@ -9,6 +9,20 @@ import { DisplayFlag, Environment, FlagState, FlagType } from './flagd-abstracti
  */
 export class FlagdSchemaAbstraction {
   /**
+   * Factory method to create a FlagdSchemaAbstraction from a FlagdSchema
+   */
+  static fromSchema(schema: FlagdSchema): FlagdSchemaAbstraction {
+    return new FlagdSchemaAbstraction(schema);
+  }
+
+  /**
+   * Factory method to create an empty FlagdSchemaAbstraction with no flags or environments
+   */
+  static empty(): FlagdSchemaAbstraction {
+    return new FlagdSchemaAbstraction({ flags: {} });
+  }
+
+  /**
    * Mapping of environment aliases to their display names for easy lookup and management
    */
   private environmentAliases: Record<string, string[]> = {};
@@ -19,7 +33,7 @@ export class FlagdSchemaAbstraction {
   private flagsMap: Record<string, DisplayFlag> = {};
   private metadata?: Record<string, string | number | boolean>;
 
-  constructor(schema: FlagdSchema) {
+  private constructor(schema: FlagdSchema) {
     // Store metadata if present
     if (schema.metadata) {
       this.metadata = schema.metadata;
@@ -115,7 +129,48 @@ export class FlagdSchemaAbstraction {
    * Generate a FlagdSchema from the internal state
    */
   generateSchema(): FlagdSchema {
-    // return schema;
-    throw new Error('Not implemented');
+    // Build evaluators from environment aliases
+    const evaluators: Record<string, Record<string, unknown>> = {};
+    for (const [envName, aliases] of Object.entries(this.environmentAliases)) {
+      const refKey = 'is' + envName.charAt(0).toUpperCase() + envName.slice(1);
+      evaluators[refKey] = {
+        in: [{ var: 'environment' }, aliases],
+      };
+    }
+
+    // Build flags from flagsMap
+    const flags: Record<string, Record<string, unknown>> = {};
+    for (const [flagKey, displayFlag] of Object.entries(this.flagsMap)) {
+      const variants: Record<string, unknown> = {};
+
+      // For now, create a single variant with the current value
+      variants[displayFlag.type === 'boolean' ? 'on' : 'default'] = displayFlag.value;
+
+      const flagDef: Record<string, unknown> = {
+        state: displayFlag.state,
+        variants,
+      };
+
+      if (displayFlag.metadata && Object.keys(displayFlag.metadata).length > 0) {
+        flagDef.metadata = displayFlag.metadata;
+      }
+
+      flags[flagKey] = flagDef;
+    }
+
+    // Build schema
+    const schema: FlagdSchema = {
+      flags,
+    };
+
+    if (Object.keys(evaluators).length > 0) {
+      schema.$evaluators = evaluators;
+    }
+
+    if (this.metadata && Object.keys(this.metadata).length > 0) {
+      schema.metadata = this.metadata;
+    }
+
+    return schema;
   }
 }
