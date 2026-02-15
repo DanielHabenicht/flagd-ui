@@ -60,6 +60,21 @@
         </mat-form-field>
       </div>
 
+      @if (editorMode() === 'easy' || editorMode() === 'advanced') {
+        <div class="form-field">
+          <label>Flag Type</label>
+          <mat-button-toggle-group
+            [value]="form.get('flagType')!.value"
+            (change)="onFlagTypeToggleChange($event.value)"
+          >
+            <mat-button-toggle value="boolean">Boolean</mat-button-toggle>
+            <mat-button-toggle value="string">String</mat-button-toggle>
+            <mat-button-toggle value="number">Number</mat-button-toggle>
+            <mat-button-toggle value="object">Object</mat-button-toggle>
+          </mat-button-toggle-group>
+        </div>
+      }
+
       <!-- ==================== EASY MODE ==================== -->
       @if (editorMode() === 'easy') {
         <div class="easy-mode">
@@ -158,19 +173,6 @@
                 }
               </div>
 
-              <div class="form-field">
-                <label>Flag Type</label>
-                <mat-button-toggle-group
-                  [value]="form.get('flagType')!.value"
-                  (change)="form.get('flagType')!.setValue($event.value); onEnvironmentTypeChange()"
-                >
-                  <mat-button-toggle value="boolean">Boolean</mat-button-toggle>
-                  <mat-button-toggle value="string">String</mat-button-toggle>
-                  <mat-button-toggle value="number">Number</mat-button-toggle>
-                  <mat-button-toggle value="object">Object</mat-button-toggle>
-                </mat-button-toggle-group>
-              </div>
-
               @if (showGlobalEnvironmentValueOnly()) {
                 <div class="global-environment-value-section">
                   <h3>Global Value</h3>
@@ -179,12 +181,7 @@
                   </p>
 
                   @if (form.get('flagType')!.value === 'boolean') {
-                    <mat-slide-toggle
-                      [checked]="getGlobalEnvironmentValue() === true"
-                      (change)="onGlobalEnvironmentValueChange($event.checked)"
-                    >
-                      {{ getGlobalEnvironmentValue() === true ? 'ON' : 'OFF' }}
-                    </mat-slide-toggle>
+                    <ng-container *ngTemplateOutlet="easyModeGlobalBooleanSwitch"></ng-container>
                   }
 
                   @if (form.get('flagType')!.value === 'string') {
@@ -697,33 +694,12 @@
               }
             </div>
           } @else {
-            <p class="environment-info-message">
-              No environments are defined for this flags-file yet. This flag applies to all
-              environments.
-            </p>
-
-            <div class="form-field">
-              <label>Flag Type</label>
-              <mat-button-toggle-group
-                [value]="form.get('easyType')!.value"
-                (change)="form.get('easyType')!.setValue($event.value); onEasyTypeChange()"
-              >
-                <mat-button-toggle value="boolean">Boolean</mat-button-toggle>
-                <mat-button-toggle value="string">String</mat-button-toggle>
-              </mat-button-toggle-group>
-            </div>
-
             @if (form.get('easyType')!.value === 'boolean') {
               <div class="global-environment-value-section">
                 <h3>Global Value</h3>
                 <p class="hint-text">This sets the default value while no environments exist.</p>
 
-                <mat-slide-toggle
-                  [checked]="form.get('defaultVariant')!.value === 'on'"
-                  (change)="onEasyDefaultChange($event.checked ? 'on' : 'off')"
-                >
-                  {{ form.get('defaultVariant')!.value === 'on' ? 'ON' : 'OFF' }}
-                </mat-slide-toggle>
+                <ng-container *ngTemplateOutlet="easyModeGlobalBooleanSwitch"></ng-container>
               </div>
             }
 
@@ -837,16 +813,6 @@
       <!-- ==================== ADVANCED MODE ==================== -->
       @if (editorMode() === 'advanced') {
         <div class="advanced-mode">
-          <mat-form-field appearance="outline" class="full-width">
-            <mat-label>Flag Type</mat-label>
-            <mat-select formControlName="flagType" (selectionChange)="onTypeChange()">
-              <mat-option value="boolean">Boolean</mat-option>
-              <mat-option value="string">String</mat-option>
-              <mat-option value="number">Number</mat-option>
-              <mat-option value="object">Object</mat-option>
-            </mat-select>
-          </mat-form-field>
-
           <app-variants-editor
             [flagType]="form.get('flagType')!.value"
             [variants]="variants()"
@@ -905,6 +871,15 @@
         </div>
       }
     </div>
+
+    <ng-template #easyModeGlobalBooleanSwitch>
+      <mat-slide-toggle
+        [checked]="isEasyModeGlobalBooleanOn()"
+        (change)="onEasyModeGlobalBooleanChange($event.checked)"
+      >
+        {{ getEasyModeGlobalBooleanLabel() }}
+      </mat-slide-toggle>
+    </ng-template>
 
     <!-- ==================== ACTIONS ==================== -->
     <div class="panel-actions">

@@ -400,6 +400,34 @@ export class FlagEditorComponent implements OnInit, OnChanges {
     }
   }
 
+  onFlagTypeToggleChange(value: FlagType): void {
+    const mode = this.editorMode();
+
+    if (mode === 'advanced') {
+      this.form.get('flagType')!.setValue(value);
+      this.onTypeChange();
+      return;
+    }
+
+    if (mode !== 'easy') return;
+
+    if (this.hasEnvironments()) {
+      this.form.get('flagType')!.setValue(value);
+      this.onEnvironmentTypeChange();
+      return;
+    }
+
+    if (value === 'boolean' || value === 'string') {
+      this.form.get('easyType')!.setValue(value);
+      this.onEasyTypeChange();
+      return;
+    }
+
+    this.form.get('flagType')!.setValue(value);
+    this.onTypeChange();
+    this.editorMode.set('advanced');
+  }
+
   onEasyStringValueChange(): void {
     const onValue = this.form.get('easyStringOnValue')!.value ?? '';
     const offValue = this.form.get('easyStringOffValue')!.value ?? '';
@@ -411,6 +439,27 @@ export class FlagEditorComponent implements OnInit, OnChanges {
 
   onEasyDefaultChange(value: string): void {
     this.form.get('defaultVariant')!.setValue(value);
+  }
+
+  isEasyModeGlobalBooleanOn(): boolean {
+    if (this.hasEnvironments()) {
+      return this.getGlobalEnvironmentValue() === true;
+    }
+
+    return this.form.get('defaultVariant')!.value === 'on';
+  }
+
+  onEasyModeGlobalBooleanChange(checked: boolean): void {
+    if (this.hasEnvironments()) {
+      this.onGlobalEnvironmentValueChange(checked);
+      return;
+    }
+
+    this.onEasyDefaultChange(checked ? 'on' : 'off');
+  }
+
+  getEasyModeGlobalBooleanLabel(): string {
+    return this.isEasyModeGlobalBooleanOn() ? 'ON' : 'OFF';
   }
 
   resetEasyTimeWindow(): void {
