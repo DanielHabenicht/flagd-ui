@@ -175,100 +175,107 @@
                 }
               </div>
 
-              @if (showGlobalEnvironmentValueOnly()) {
-                <!-- Default/Environment Values Section with Expansion Panel -->
-                <mat-expansion-panel
-                  [expanded]="!allEnvironmentsSameValue()"
-                  (beforeClose)="
-                    !canCollapseEnvironmentOverrides() ? $event.preventDefault() : null
-                  "
-                  [hideToggle]="false"
-                >
-                  <mat-expansion-panel-header>
-                    <mat-panel-title>
-                      {{ allEnvironmentsSameValue() ? 'Default Value' : 'Environment Values' }}
-                    </mat-panel-title>
-                  </mat-expansion-panel-header>
-
-                  <!-- Default Value Display (visible when collapsed and all same) -->
+              <!-- Default/Environment Values Section with Expansion Panel -->
+              <mat-expansion-panel [expanded]="true" [hideToggle]="true">
+                <mat-expansion-panel-header>
+                  <mat-panel-title>
+                    {{ 'Environments' }}
+                  </mat-panel-title>
                   @if (allEnvironmentsSameValue()) {
-                    <div class="default-value-section">
-                      <p class="hint-text">
-                        All environments use the same value. Edit below or expand to customize per
-                        environment.
-                      </p>
-
-                      @if (form.get('flagType')!.value === 'boolean') {
-                        <ng-container
-                          *ngTemplateOutlet="easyModeGlobalBooleanSwitch"
-                        ></ng-container>
-                      }
-
-                      @if (form.get('flagType')!.value === 'string') {
-                        <mat-form-field appearance="outline" class="full-width">
-                          <mat-label>String Value</mat-label>
-                          <input
-                            matInput
-                            [value]="$any(getGlobalEnvironmentValue() ?? '')"
-                            (input)="onGlobalEnvironmentValueChange($any($event.target).value)"
-                            placeholder="Enter value"
-                          />
-                        </mat-form-field>
-                      }
-
-                      @if (form.get('flagType')!.value === 'number') {
-                        <mat-form-field appearance="outline" class="full-width">
-                          <mat-label>Number Value</mat-label>
-                          <input
-                            matInput
-                            type="number"
-                            [value]="+$any(getGlobalEnvironmentValue() ?? 0)"
-                            (input)="onGlobalEnvironmentValueChange(+$any($event.target).value)"
-                            placeholder="Enter number"
-                          />
-                        </mat-form-field>
-                      }
-
-                      @if (form.get('flagType')!.value === 'object') {
-                        <mat-form-field appearance="outline" class="full-width">
-                          <mat-label>JSON Object</mat-label>
-                          <textarea
-                            matInput
-                            [value]="JSON.stringify(getGlobalEnvironmentValue() ?? {}, null, 2)"
-                            (input)="
-                              onGlobalEnvironmentValueChange(
-                                JSON.parse($any($event.target).value || '{}')
-                              )
-                            "
-                            rows="4"
-                            placeholder="{}"
-                          ></textarea>
-                        </mat-form-field>
-                      }
-                    </div>
+                    <button
+                      mat-button
+                      type="button"
+                      (click)="
+                        $event.stopPropagation();
+                        showEnvironmentOverrides.set(!showEnvironmentOverrides())
+                      "
+                      [title]="
+                        showEnvironmentOverrides()
+                          ? 'Use same value for all environments'
+                          : 'Customize per environment'
+                      "
+                      class="environment-toggle-button"
+                    >
+                      <mat-icon>{{
+                        showEnvironmentOverrides() ? 'unfold_less' : 'unfold_more'
+                      }}</mat-icon>
+                      {{
+                        showEnvironmentOverrides()
+                          ? 'Use same for all'
+                          : 'Customize per environment'
+                      }}
+                    </button>
                   }
+                </mat-expansion-panel-header>
 
-                  <!-- Environment-Specific Overrides (visible when expanded or values differ) -->
+                <!-- Default Value Display (visible when all same and not customizing) -->
+                @if (allEnvironmentsSameValue() && !showEnvironmentOverrides()) {
+                  <div class="default-value-section">
+                    @if (form.get('flagType')!.value === 'boolean') {
+                      <ng-container *ngTemplateOutlet="easyModeGlobalBooleanSwitch"></ng-container>
+                    }
+
+                    @if (form.get('flagType')!.value === 'string') {
+                      <mat-form-field appearance="outline" class="full-width">
+                        <mat-label>String Value</mat-label>
+                        <input
+                          matInput
+                          [value]="$any(getGlobalEnvironmentValue() ?? '')"
+                          (input)="onGlobalEnvironmentValueChange($any($event.target).value)"
+                          placeholder="Enter value"
+                        />
+                      </mat-form-field>
+                    }
+
+                    @if (form.get('flagType')!.value === 'number') {
+                      <mat-form-field appearance="outline" class="full-width">
+                        <mat-label>Number Value</mat-label>
+                        <input
+                          matInput
+                          type="number"
+                          [value]="+$any(getGlobalEnvironmentValue() ?? 0)"
+                          (input)="onGlobalEnvironmentValueChange(+$any($event.target).value)"
+                          placeholder="Enter number"
+                        />
+                      </mat-form-field>
+                    }
+
+                    @if (form.get('flagType')!.value === 'object') {
+                      <mat-form-field appearance="outline" class="full-width">
+                        <mat-label>JSON Object</mat-label>
+                        <textarea
+                          matInput
+                          [value]="JSON.stringify(getGlobalEnvironmentValue() ?? {}, null, 2)"
+                          (input)="
+                            onGlobalEnvironmentValueChange(
+                              JSON.parse($any($event.target).value || '{}')
+                            )
+                          "
+                          rows="4"
+                          placeholder="{}"
+                        ></textarea>
+                      </mat-form-field>
+                    }
+                    <p class="hint-text">All environments use the same value.</p>
+                  </div>
+                }
+
+                <!-- Environment-Specific Overrides (visible when expanded or values differ) -->
+                @if (!allEnvironmentsSameValue() || showEnvironmentOverrides()) {
                   <div class="environment-values-section">
-                    <p class="hint-text">
-                      @if (!allEnvironmentsSameValue()) {
-                        Environments have different values. Configure each one:
-                      } @else {
-                        Optional: edit each environment individually
-                      }
-                    </p>
-
-                    <mat-form-field appearance="outline" class="full-width environment-filter">
-                      <mat-label>Filter environments</mat-label>
-                      <input
-                        matInput
-                        [value]="environmentFilter()"
-                        (input)="onEnvironmentFilterInput($event)"
-                        placeholder="Search by name or alias"
-                        autocomplete="off"
-                      />
-                      <mat-icon matSuffix>search</mat-icon>
-                    </mat-form-field>
+                    @if (hasMultipleEnvironments()) {
+                      <mat-form-field appearance="outline" class="full-width environment-filter">
+                        <mat-label>Filter environments</mat-label>
+                        <input
+                          matInput
+                          [value]="environmentFilter()"
+                          (input)="onEnvironmentFilterInput($event)"
+                          placeholder="Search by name or alias"
+                          autocomplete="off"
+                        />
+                        <mat-icon matSuffix>search</mat-icon>
+                      </mat-form-field>
+                    }
 
                     @if (filteredEnvironments().length === 0) {
                       <p class="hint-text">No environments match the current filter.</p>
@@ -483,236 +490,8 @@
                       </div>
                     }
                   </div>
-                </mat-expansion-panel>
-              } @else {
-                <div class="environment-values-section">
-                  <h3>Environment Values</h3>
-                  <p class="hint-text">Configure the value for each environment</p>
-
-                  <mat-form-field appearance="outline" class="full-width environment-filter">
-                    <mat-label>Filter environments</mat-label>
-                    <input
-                      matInput
-                      [value]="environmentFilter()"
-                      (input)="onEnvironmentFilterInput($event)"
-                      placeholder="Search by name or alias"
-                      autocomplete="off"
-                    />
-                    <mat-icon matSuffix>search</mat-icon>
-                  </mat-form-field>
-
-                  @if (filteredEnvironments().length === 0) {
-                    <p class="hint-text">No environments match the current filter.</p>
-                  } @else {
-                    <div class="environment-values-list">
-                      @for (env of filteredEnvironments(); track env.name) {
-                        <div class="environment-value-item">
-                          <div class="environment-header-row">
-                            <span class="environment-label">{{ env.displayName }}</span>
-                            @if (!hasEnvironmentTimeWindow(env.name.toLowerCase())) {
-                              <button
-                                mat-stroked-button
-                                type="button"
-                                (click)="addEnvironmentTimeWindow(env.name.toLowerCase())"
-                              >
-                                Add Time Window
-                              </button>
-                            } @else {
-                              <button
-                                mat-stroked-button
-                                type="button"
-                                (click)="removeEnvironmentTimeWindow(env.name.toLowerCase())"
-                              >
-                                Remove Time Window
-                              </button>
-                            }
-                          </div>
-
-                          @if (hasEnvironmentTimeWindow(env.name.toLowerCase())) {
-                            <div class="easy-time-window-section">
-                              <span class="time-window-label">Activate after</span>
-                              <div class="form-row">
-                                <mat-form-field appearance="outline" class="full-width">
-                                  <mat-label>From Date</mat-label>
-                                  <input
-                                    matInput
-                                    [matDatepicker]="envStartDatePicker"
-                                    [ngModel]="
-                                      getEnvironmentTimeWindow(env.name.toLowerCase()).startDate
-                                    "
-                                    [ngModelOptions]="{ standalone: true }"
-                                    (ngModelChange)="
-                                      onEnvironmentTimeWindowChange(
-                                        env.name.toLowerCase(),
-                                        'startDate',
-                                        $event
-                                      )
-                                    "
-                                  />
-                                  <mat-datepicker-toggle
-                                    matIconSuffix
-                                    [for]="envStartDatePicker"
-                                  ></mat-datepicker-toggle>
-                                  <mat-datepicker #envStartDatePicker></mat-datepicker>
-                                </mat-form-field>
-
-                                <mat-form-field appearance="outline" class="full-width">
-                                  <mat-label>From Time</mat-label>
-                                  <input
-                                    matInput
-                                    [matTimepicker]="envStartTimePicker"
-                                    [ngModel]="
-                                      getEnvironmentTimeWindow(env.name.toLowerCase()).startTime
-                                    "
-                                    [ngModelOptions]="{ standalone: true }"
-                                    (ngModelChange)="
-                                      onEnvironmentTimeWindowChange(
-                                        env.name.toLowerCase(),
-                                        'startTime',
-                                        $event
-                                      )
-                                    "
-                                  />
-                                  <mat-timepicker-toggle
-                                    matIconSuffix
-                                    [for]="envStartTimePicker"
-                                  ></mat-timepicker-toggle>
-                                  <mat-timepicker #envStartTimePicker></mat-timepicker>
-                                </mat-form-field>
-                              </div>
-
-                              <span class="time-window-label">Activate till</span>
-                              <div class="form-row">
-                                <mat-form-field appearance="outline" class="full-width">
-                                  <mat-label>Till Date</mat-label>
-                                  <input
-                                    matInput
-                                    [matDatepicker]="envEndDatePicker"
-                                    [ngModel]="
-                                      getEnvironmentTimeWindow(env.name.toLowerCase()).endDate
-                                    "
-                                    [ngModelOptions]="{ standalone: true }"
-                                    (ngModelChange)="
-                                      onEnvironmentTimeWindowChange(
-                                        env.name.toLowerCase(),
-                                        'endDate',
-                                        $event
-                                      )
-                                    "
-                                  />
-                                  <mat-datepicker-toggle
-                                    matIconSuffix
-                                    [for]="envEndDatePicker"
-                                  ></mat-datepicker-toggle>
-                                  <mat-datepicker #envEndDatePicker></mat-datepicker>
-                                </mat-form-field>
-
-                                <mat-form-field appearance="outline" class="full-width">
-                                  <mat-label>Till Time</mat-label>
-                                  <input
-                                    matInput
-                                    [matTimepicker]="envEndTimePicker"
-                                    [ngModel]="
-                                      getEnvironmentTimeWindow(env.name.toLowerCase()).endTime
-                                    "
-                                    [ngModelOptions]="{ standalone: true }"
-                                    (ngModelChange)="
-                                      onEnvironmentTimeWindowChange(
-                                        env.name.toLowerCase(),
-                                        'endTime',
-                                        $event
-                                      )
-                                    "
-                                  />
-                                  <mat-timepicker-toggle
-                                    matIconSuffix
-                                    [for]="envEndTimePicker"
-                                  ></mat-timepicker-toggle>
-                                  <mat-timepicker #envEndTimePicker></mat-timepicker>
-                                </mat-form-field>
-                              </div>
-                            </div>
-                          }
-
-                          @if (form.get('flagType')!.value === 'boolean') {
-                            <mat-slide-toggle
-                              [checked]="environmentStates()[env.name.toLowerCase()] === true"
-                              (change)="
-                                onEnvironmentValueChange(env.name.toLowerCase(), $event.checked)
-                              "
-                            >
-                              {{
-                                environmentStates()[env.name.toLowerCase()] === true ? 'ON' : 'OFF'
-                              }}
-                            </mat-slide-toggle>
-                          }
-
-                          @if (form.get('flagType')!.value === 'string') {
-                            <mat-form-field appearance="outline" class="full-width">
-                              <mat-label>String Value</mat-label>
-                              <input
-                                matInput
-                                [value]="environmentStates()[env.name.toLowerCase()] || ''"
-                                (input)="
-                                  onEnvironmentValueChange(
-                                    env.name.toLowerCase(),
-                                    $any($event.target).value
-                                  )
-                                "
-                                placeholder="Enter value"
-                              />
-                            </mat-form-field>
-                          }
-
-                          @if (form.get('flagType')!.value === 'number') {
-                            <mat-form-field appearance="outline" class="full-width">
-                              <mat-label>Number Value</mat-label>
-                              <input
-                                matInput
-                                type="number"
-                                [value]="environmentStates()[env.name.toLowerCase()] || 0"
-                                (input)="
-                                  onEnvironmentValueChange(
-                                    env.name.toLowerCase(),
-                                    +$any($event.target).value
-                                  )
-                                "
-                                placeholder="Enter number"
-                              />
-                            </mat-form-field>
-                          }
-
-                          @if (form.get('flagType')!.value === 'object') {
-                            <mat-form-field appearance="outline" class="full-width">
-                              <mat-label>JSON Object</mat-label>
-                              <textarea
-                                matInput
-                                [value]="
-                                  environmentStates()[env.name.toLowerCase()]
-                                    ? JSON.stringify(
-                                        environmentStates()[env.name.toLowerCase()],
-                                        null,
-                                        2
-                                      )
-                                    : '{}'
-                                "
-                                (input)="
-                                  onEnvironmentValueChange(
-                                    env.name.toLowerCase(),
-                                    JSON.parse($any($event.target).value || '{}')
-                                  )
-                                "
-                                rows="4"
-                                placeholder="{}"
-                              ></textarea>
-                            </mat-form-field>
-                          }
-                        </div>
-                      }
-                    </div>
-                  }
-                </div>
-              }
+                }
+              </mat-expansion-panel>
             </div>
           } @else {
             @if (form.get('easyType')!.value === 'boolean') {

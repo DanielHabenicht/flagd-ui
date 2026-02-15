@@ -128,6 +128,7 @@ export class FlagEditorComponent implements OnInit, OnChanges {
     });
   });
   readonly hasEnvironments = computed(() => this.environments().length > 0);
+  readonly hasMultipleEnvironments = computed(() => this.environments().length > 4);
   readonly hasDefinitionTargeting = computed(() => {
     const flag = this.flag();
     if (!flag?.targeting) return false;
@@ -151,6 +152,8 @@ export class FlagEditorComponent implements OnInit, OnChanges {
   });
 
   readonly canCollapseEnvironmentOverrides = computed(() => this.allEnvironmentsSameValue());
+
+  showEnvironmentOverrides = signal(false);
 
   // JSON editor state
   rawJson = '';

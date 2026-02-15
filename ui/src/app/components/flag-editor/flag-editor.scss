@@ -277,6 +277,14 @@
   mat-expansion-panel {
     background: var(--color-surface);
     border: 1px solid var(--color-border);
+
+    mat-expansion-panel-header {
+      pointer-events: none;
+
+      button {
+        pointer-events: auto;
+      }
+    }
   }
 
   .environment-values-section {
