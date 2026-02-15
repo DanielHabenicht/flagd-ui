@@ -1,6 +1,7 @@
 import { Component, computed, effect, HostListener, inject, OnInit, signal } from '@angular/core';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute } from '@angular/router';
 import { Store } from '@ngxs/store';
+import { Navigate } from '@ngxs/router-plugin';
 import { MatTableModule } from '@angular/material/table';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -41,7 +42,6 @@ import {
 export class FlagsFileDetailComponent implements OnInit {
   private readonly ngxsStore = inject(Store);
   private readonly route = inject(ActivatedRoute);
-  private readonly router = inject(Router);
   private readonly inlineEditorMinWidth = 1280;
   private readonly keepEditorOpenAfterSaveMinWidth = 1920;
   private readonly initialWideLayout =
@@ -321,11 +321,19 @@ export class FlagsFileDetailComponent implements OnInit {
 
     const backendId = this.route.snapshot.paramMap.get('backendId');
     if (backendId) {
-      this.router.navigate(['/flags-files', 'remote', backendId, name, 'settings']);
+      this.ngxsStore.dispatch(
+        new Navigate(['/flags-files', 'remote', backendId, name, 'settings'], undefined, {
+          queryParamsHandling: 'merge',
+        }),
+      );
       return;
     }
 
-    this.router.navigate(['/flags-files', 'local', name, 'settings']);
+    this.ngxsStore.dispatch(
+      new Navigate(['/flags-files', 'local', name, 'settings'], undefined, {
+        queryParamsHandling: 'merge',
+      }),
+    );
   }
 
   private navigateToEditRoute(flagKey: string | null): void {
@@ -336,11 +344,23 @@ export class FlagsFileDetailComponent implements OnInit {
     const targetFlagKey = flagKey ?? 'new';
 
     if (backendId) {
-      this.router.navigate(['/flags-files', 'remote', backendId, name, 'edit', targetFlagKey]);
+      this.ngxsStore.dispatch(
+        new Navigate(
+          ['/flags-files', 'remote', backendId, name, 'edit', targetFlagKey],
+          undefined,
+          {
+            queryParamsHandling: 'merge',
+          },
+        ),
+      );
       return;
     }
 
-    this.router.navigate(['/flags-files', 'local', name, 'edit', targetFlagKey]);
+    this.ngxsStore.dispatch(
+      new Navigate(['/flags-files', 'local', name, 'edit', targetFlagKey], undefined, {
+        queryParamsHandling: 'merge',
+      }),
+    );
   }
 
   private getSearchText(flag: FlagEntry): string {

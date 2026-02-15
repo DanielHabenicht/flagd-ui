@@ -1,6 +1,6 @@
 import { inject, Injectable } from '@angular/core';
 import { Action, Selector, State, StateContext } from '@ngxs/store';
-import { Router } from '@angular/router';
+import { Navigate } from '@ngxs/router-plugin';
 import { catchError, forkJoin, from, Observable, of, switchMap, tap } from 'rxjs';
 import {
   BackendInstance,
@@ -71,7 +71,6 @@ export interface FlagStoreStateModel {
 @Injectable()
 export class FlagStoreState {
   private readonly remoteApi = inject(RemoteApi);
-  private readonly router = inject(Router);
   private readonly fileSystemAccess = inject(FileSystemAccess);
 
   @Selector()
@@ -230,7 +229,7 @@ export class FlagStoreState {
     });
 
     if (isCurrentRemovedBackend) {
-      void this.router.navigate(['/']);
+      ctx.dispatch(new Navigate(['/'], undefined, { queryParamsHandling: 'merge' }));
     }
   }
 
@@ -460,7 +459,11 @@ export class FlagStoreState {
 
     return ctx.dispatch(new LoadFlagsFiles()).pipe(
       tap(() => {
-        void this.router.navigate(['/flags-files', 'local', action.name]);
+        ctx.dispatch(
+          new Navigate(['/flags-files', 'local', action.name], undefined, {
+            queryParamsHandling: 'merge',
+          }),
+        );
       }),
       switchMap(() => of(void 0)),
     );
@@ -479,7 +482,11 @@ export class FlagStoreState {
       tap(() => {
         const backend = state.backends.find((entry) => entry.url === action.backendUrl);
         if (backend) {
-          void this.router.navigate(['/flags-files', 'remote', backend.id, action.name]);
+          ctx.dispatch(
+            new Navigate(['/flags-files', 'remote', backend.id, action.name], undefined, {
+              queryParamsHandling: 'merge',
+            }),
+          );
         }
       }),
       switchMap(() => of(void 0)),
@@ -527,7 +534,7 @@ export class FlagStoreState {
       });
 
       if (isCurrent) {
-        void this.router.navigate(['/']);
+        ctx.dispatch(new Navigate(['/'], undefined, { queryParamsHandling: 'merge' }));
       }
 
       return ctx.dispatch(new LoadFlagsFiles()).pipe(switchMap(() => of(void 0)));
@@ -542,7 +549,7 @@ export class FlagStoreState {
             currentMetadata: undefined,
             currentEvaluators: undefined,
           });
-          void this.router.navigate(['/']);
+          ctx.dispatch(new Navigate(['/'], undefined, { queryParamsHandling: 'merge' }));
         }
         return ctx.dispatch(new LoadFlagsFiles());
       }),
@@ -657,7 +664,11 @@ export class FlagStoreState {
 
     return ctx.dispatch(new LoadFlagsFiles()).pipe(
       tap(() => {
-        void this.router.navigate(['/flags-files', 'local', action.name]);
+        ctx.dispatch(
+          new Navigate(['/flags-files', 'local', action.name], undefined, {
+            queryParamsHandling: 'merge',
+          }),
+        );
       }),
       switchMap(() => of(void 0)),
     );
