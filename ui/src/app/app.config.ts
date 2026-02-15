@@ -23,7 +23,8 @@ export const appConfig: ApplicationConfig = {
       [FlagStoreState, UiPreferencesState, PlaygroundPreferencesState],
       withNgxsStoragePlugin({
         keys: [
-          'flagStore.localProjects',
+          'flagStore.localFlagsFiles',
+          'flagStore.localFileOrigins',
           'flagStore.backends',
           'uiPreferences.themeMode',
           'playgroundPreferences.servers',

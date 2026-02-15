@@ -49,7 +49,29 @@
       </div>
     </mat-tab>
 
-    <!-- Tab 3: Connect backend -->
+    <!-- Tab 3: Open from disk -->
+    <mat-tab label="From Disk">
+      <div class="tab-content">
+        <p class="tab-description">
+          Open a local <code>.flagd.json</code> file via browser file access. Changes will be saved
+          back to that file while this tab stays open.
+        </p>
+        @if (!supportsDiskPicker) {
+          <div class="error-message">
+            Direct disk file access is not supported in this browser. Use drag &amp; drop or import
+            from URL instead.
+          </div>
+        }
+        @if (diskLoading) {
+          <mat-progress-bar mode="indeterminate"></mat-progress-bar>
+        }
+        @if (diskError) {
+          <div class="error-message">{{ diskError }}</div>
+        }
+      </div>
+    </mat-tab>
+
+    <!-- Tab 4: Connect backend -->
     <mat-tab label="Connect Backend">
       <div class="tab-content">
         <p class="tab-description">

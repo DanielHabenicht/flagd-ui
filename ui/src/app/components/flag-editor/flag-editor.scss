@@ -125,6 +125,12 @@
   color: var(--color-text);
 }
 
+.flag-type-toggle-group {
+  align-self: flex-start;
+  width: auto;
+  max-width: 100%;
+}
+
 .form-row {
   display: grid;
   grid-template-columns: 1fr 1fr;

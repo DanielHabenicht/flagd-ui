@@ -1,12 +1,14 @@
 export type FlagState = 'ENABLED' | 'DISABLED';
 export type FlagType = 'boolean' | 'string' | 'number' | 'object';
 export type FlagsFileSource = 'local' | 'remote';
+export type LocalFlagsFileOrigin = 'browser' | 'disk';
 export type MetadataMap = Record<string, string | number | boolean>;
 
 export interface FlagsFileEntry {
   name: string;
   source: FlagsFileSource;
   backendUrl?: string;
+  localOrigin?: LocalFlagsFileOrigin;
 }
 
 export interface BackendInstance {

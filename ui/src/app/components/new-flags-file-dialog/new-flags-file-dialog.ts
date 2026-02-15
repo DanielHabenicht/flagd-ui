@@ -12,6 +12,7 @@ import { FlagStore } from '../../services/flag-store';
 import { BackendRegistry } from '../../services/backend-registry';
 import { RemoteApi } from '../../services/remote-api';
 import { FlagFileContent } from '../../models/flag.models';
+import { FileSystemAccess } from '../../services/file-system-access';
 
 @Component({
   selector: 'app-new-flags-file-dialog',
@@ -35,6 +36,7 @@ export class NewFlagsFileDialogComponent {
   private readonly http = inject(HttpClient);
   private readonly backendRegistry = inject(BackendRegistry);
   private readonly remoteApi = inject(RemoteApi);
+  private readonly fileSystemAccess = inject(FileSystemAccess);
 
   // Empty flags-file tab
   flagsFileName = '';
@@ -46,6 +48,11 @@ export class NewFlagsFileDialogComponent {
 
   // Tabs
   selectedTabIndex = 0;
+
+  // From disk tab
+  diskLoading = false;
+  diskError = '';
+  readonly supportsDiskPicker = this.fileSystemAccess.isOpenFilePickerSupported();
 
   readonly sampleFiles = [
     {
@@ -99,6 +106,9 @@ export class NewFlagsFileDialogComponent {
     if (this.selectedTabIndex === 1) {
       return 'Import';
     }
+    if (this.selectedTabIndex === 2) {
+      return 'Open';
+    }
     return this.discoveredFiles.length ? 'Create' : 'Discover';
   }
 
@@ -109,6 +119,9 @@ export class NewFlagsFileDialogComponent {
     if (this.selectedTabIndex === 1) {
       return 'download';
     }
+    if (this.selectedTabIndex === 2) {
+      return 'folder_open';
+    }
     return this.discoveredFiles.length ? 'cloud' : 'search';
   }
 
@@ -118,6 +131,9 @@ export class NewFlagsFileDialogComponent {
     }
     if (this.selectedTabIndex === 1) {
       return !this.fileUrl.trim() || this.urlLoading;
+    }
+    if (this.selectedTabIndex === 2) {
+      return this.diskLoading || !this.supportsDiskPicker;
     }
     return !this.backendUrl.trim() || this.backendLoading;
   }
@@ -133,6 +149,10 @@ export class NewFlagsFileDialogComponent {
     }
     if (this.selectedTabIndex === 1) {
       this.importFromUrl();
+      return;
+    }
+    if (this.selectedTabIndex === 2) {
+      void this.importFromDisk();
       return;
     }
     if (this.discoveredFiles.length) {
@@ -187,6 +207,36 @@ export class NewFlagsFileDialogComponent {
         this.urlLoading = false;
       },
     });
+  }
+
+  async importFromDisk(): Promise<void> {
+    if (!this.supportsDiskPicker) {
+      this.diskError = 'This browser does not support direct disk file access.';
+      return;
+    }
+
+    this.diskLoading = true;
+    this.diskError = '';
+
+    try {
+      const result = await this.fileSystemAccess.pickAndBindFlagsFile();
+      if (!result) {
+        this.diskLoading = false;
+        return;
+      }
+
+      this.store.importLocalFlagsFile(result.name, result.content, 'disk');
+      this.dialogRef.close();
+    } catch (error) {
+      this.diskLoading = false;
+
+      const message = error instanceof Error ? error.message : 'Failed to open local file';
+      if (message.includes('aborted') || message.includes('The user aborted a request')) {
+        return;
+      }
+
+      this.diskError = message;
+    }
   }
 
   discoverBackend(): void {

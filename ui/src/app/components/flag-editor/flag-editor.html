@@ -64,6 +64,7 @@
         <div class="form-field">
           <label>Flag Type</label>
           <mat-button-toggle-group
+            class="flag-type-toggle-group"
             [value]="form.get('flagType')!.value"
             (change)="onFlagTypeToggleChange($event.value)"
           >

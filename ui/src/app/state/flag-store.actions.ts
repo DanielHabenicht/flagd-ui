@@ -3,6 +3,7 @@ import {
   FlagsFileEntry,
   FlagDefinition,
   FlagFileContent,
+  LocalFlagsFileOrigin,
   MetadataMap,
 } from '../models/flag.models';
 
@@ -78,6 +79,7 @@ export class ImportLocalFlagsFile {
   constructor(
     readonly name: string,
     readonly content: FlagFileContent,
+    readonly origin: LocalFlagsFileOrigin = 'browser',
   ) {}
 }
 

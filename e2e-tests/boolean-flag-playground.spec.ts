@@ -12,8 +12,11 @@ test('creates file and boolean flag, evaluates in playground, then switches valu
     await page.goto('/');
 
     await page.getByRole('button', { name: 'Create flags-file' }).click();
-    await page.getByLabel('File name').fill(fileName);
-    await page.getByRole('dialog', { name: 'Add Flag File' }).getByRole('button', { name: 'Create' }).click();
+    const createFileDialog = page.getByRole('dialog', { name: 'Add Flag File' });
+    await createFileDialog.getByLabel('File name').fill(fileName);
+    const createFileButton = createFileDialog.getByRole('button', { name: 'Create' });
+    await expect(createFileButton).toBeEnabled();
+    await createFileButton.click();
 
     await expect(page).toHaveURL(new RegExp(`/flags-files/local/${fileName}$`));
     await expect(page.getByRole('heading', { name: fileName })).toBeVisible();

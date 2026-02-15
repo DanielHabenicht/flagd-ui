@@ -42,7 +42,8 @@ export class FlagsFileListComponent implements OnInit {
 
   openNewFlagsFileDialog(): void {
     this.dialog.open(NewFlagsFileDialogComponent, {
-      width: '520px',
+      width: '760px',
+      maxWidth: '95vw',
     });
   }
 

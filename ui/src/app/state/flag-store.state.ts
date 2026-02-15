@@ -1,7 +1,7 @@
 import { inject, Injectable } from '@angular/core';
 import { Action, Selector, State, StateContext } from '@ngxs/store';
 import { Router } from '@angular/router';
-import { catchError, forkJoin, Observable, of, switchMap, tap } from 'rxjs';
+import { catchError, forkJoin, from, Observable, of, switchMap, tap } from 'rxjs';
 import {
   BackendInstance,
   Environment,
@@ -12,9 +12,11 @@ import {
   FlagEntry,
   FlagFileContent,
   FileGroup,
+  LocalFlagsFileOrigin,
   MetadataMap,
 } from '../models/flag.models';
 import { RemoteApi } from '../services/remote-api';
+import { FileSystemAccess } from '../services/file-system-access';
 import {
   AddBackend,
   CreateLocalFlagsFile,
@@ -46,6 +48,7 @@ export interface FlagStoreStateModel {
   error: string | null;
   hasDefaultBackend: boolean;
   localFlagsFiles: Record<string, FlagFileContent>;
+  localFileOrigins: Record<string, LocalFlagsFileOrigin>;
   backends: BackendInstance[];
 }
 
@@ -61,6 +64,7 @@ export interface FlagStoreStateModel {
     error: null,
     hasDefaultBackend: false,
     localFlagsFiles: {},
+    localFileOrigins: {},
     backends: [],
   },
 })
@@ -68,6 +72,7 @@ export interface FlagStoreStateModel {
 export class FlagStoreState {
   private readonly remoteApi = inject(RemoteApi);
   private readonly router = inject(Router);
+  private readonly fileSystemAccess = inject(FileSystemAccess);
 
   @Selector()
   static flagsFiles(state: FlagStoreStateModel): FlagsFileEntry[] {
@@ -143,9 +148,23 @@ export class FlagStoreState {
       }
     }
 
-    const localEntries = state.flagsFiles.filter((flagsFile) => flagsFile.source === 'local');
-    if (localEntries.length > 0) {
-      groups.push({ label: 'Local Files', icon: 'computer', entries: localEntries });
+    const localDiskEntries = state.flagsFiles.filter(
+      (flagsFile) => flagsFile.source === 'local' && flagsFile.localOrigin === 'disk',
+    );
+    if (localDiskEntries.length > 0) {
+      groups.push({ label: 'Local Files (Disk)', icon: 'save', entries: localDiskEntries });
+    }
+
+    const localBrowserEntries = state.flagsFiles.filter(
+      (flagsFile) =>
+        flagsFile.source === 'local' && (flagsFile.localOrigin ?? 'browser') !== 'disk',
+    );
+    if (localBrowserEntries.length > 0) {
+      groups.push({
+        label: 'Local Files (Browser)',
+        icon: 'language',
+        entries: localBrowserEntries,
+      });
     }
 
     return groups;
@@ -239,6 +258,10 @@ export class FlagStoreState {
         ...state.localFlagsFiles,
         [action.name]: { flags: {} },
       },
+      localFileOrigins: {
+        ...state.localFileOrigins,
+        [action.name]: 'browser',
+      },
     });
   }
 
@@ -254,8 +277,13 @@ export class FlagStoreState {
     }
 
     const nextLocalFlagsFiles = { ...state.localFlagsFiles };
+    const nextLocalFileOrigins = { ...state.localFileOrigins };
     delete nextLocalFlagsFiles[action.name];
-    ctx.patchState({ localFlagsFiles: nextLocalFlagsFiles });
+    delete nextLocalFileOrigins[action.name];
+    ctx.patchState({
+      localFlagsFiles: nextLocalFlagsFiles,
+      localFileOrigins: nextLocalFileOrigins,
+    });
   }
 
   @Action(LoadFlagsFiles)
@@ -265,7 +293,11 @@ export class FlagStoreState {
 
     const localEntries: FlagsFileEntry[] = Object.keys(state.localFlagsFiles)
       .sort()
-      .map((name) => ({ name, source: 'local' as const }));
+      .map((name) => ({
+        name,
+        source: 'local' as const,
+        localOrigin: state.localFileOrigins[name] ?? 'browser',
+      }));
 
     if (state.backends.length === 0) {
       ctx.patchState({ flagsFiles: localEntries, loading: false });
@@ -415,6 +447,10 @@ export class FlagStoreState {
         ...state.localFlagsFiles,
         [action.name]: { flags: {} },
       },
+      localFileOrigins: {
+        ...state.localFileOrigins,
+        [action.name]: 'browser',
+      },
     });
 
     return ctx.dispatch(new LoadFlagsFiles()).pipe(
@@ -467,10 +503,14 @@ export class FlagStoreState {
 
     if (action.entry.source === 'local') {
       const nextLocalFlagsFiles = { ...state.localFlagsFiles };
+      const nextLocalFileOrigins = { ...state.localFileOrigins };
       delete nextLocalFlagsFiles[action.entry.name];
+      delete nextLocalFileOrigins[action.entry.name];
+      this.fileSystemAccess.unbindFlagsFile(action.entry.name);
 
       ctx.patchState({
         localFlagsFiles: nextLocalFlagsFiles,
+        localFileOrigins: nextLocalFileOrigins,
         ...(isCurrent
           ? {
               currentFlagsFile: null,
@@ -604,6 +644,10 @@ export class FlagStoreState {
         ...state.localFlagsFiles,
         [action.name]: action.content,
       },
+      localFileOrigins: {
+        ...state.localFileOrigins,
+        [action.name]: action.origin,
+      },
     });
 
     return ctx.dispatch(new LoadFlagsFiles()).pipe(
@@ -680,7 +724,17 @@ export class FlagStoreState {
         },
         loading: false,
       });
-      return;
+
+      return from(this.fileSystemAccess.persistBoundFlagsFile(flagsFile.name, content)).pipe(
+        switchMap(() => of(void 0)),
+        catchError((err) => {
+          ctx.patchState({
+            error: `${errorMessage}: failed to write local file to disk`,
+          });
+          console.error('Failed to write local file to disk', err);
+          return of(void 0);
+        }),
+      );
     }
 
     return this.remoteApi.updateFlagsFile(flagsFile.backendUrl!, flagsFile.name, content).pipe(

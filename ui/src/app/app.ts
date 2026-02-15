@@ -112,7 +112,7 @@ export class App implements OnDestroy {
     if (!flagsFile) return null;
 
     if (flagsFile.source === 'local') {
-      return 'Local Files';
+      return flagsFile.localOrigin === 'disk' ? 'Local Files · Disk' : 'Local Files · Browser';
     }
 
     const backend = this.backendRegistry
@@ -244,7 +244,7 @@ export class App implements OnDestroy {
           if (!content.flags || typeof content.flags !== 'object') return;
           let name = file.name.replace(/\.flagd\.json$/, '').replace(/\.json$/, '');
           if (!name) name = 'imported';
-          this.store.importLocalFlagsFile(name, content);
+          this.store.importLocalFlagsFile(name, content, 'browser');
         } catch {
           console.error(`Failed to parse ${file.name}`);
         }

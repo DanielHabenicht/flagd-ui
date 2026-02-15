@@ -9,6 +9,7 @@ import {
   Evaluator,
   FileGroup,
   Environment,
+  LocalFlagsFileOrigin,
 } from '../models/flag.models';
 import {
   CreateLocalFlagsFile,
@@ -81,8 +82,12 @@ export class FlagStore {
     this.ngxsStore.dispatch(new RenameFlag(oldKey, newKey, flag));
   }
 
-  importLocalFlagsFile(name: string, content: FlagFileContent): void {
-    this.ngxsStore.dispatch(new ImportLocalFlagsFile(name, content));
+  importLocalFlagsFile(
+    name: string,
+    content: FlagFileContent,
+    origin: LocalFlagsFileOrigin = 'browser',
+  ): void {
+    this.ngxsStore.dispatch(new ImportLocalFlagsFile(name, content, origin));
   }
 
   saveFlagsFileMetadata(metadata: MetadataMap | undefined): void {
