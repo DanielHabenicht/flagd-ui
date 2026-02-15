@@ -805,10 +805,12 @@
             }
           }
 
-          <app-metadata-editor
-            [metadata]="metadata()"
-            (metadataChange)="onMetadataChange($event)"
-          />
+          @if (showMetadata()) {
+            <app-metadata-editor
+              [metadata]="metadata()"
+              (metadataChange)="onMetadataChange($event)"
+            />
+          }
         </div>
       }
 
@@ -837,10 +839,12 @@
             (targetingChange)="onTargetingChange($event)"
           />
 
-          <app-metadata-editor
-            [metadata]="metadata()"
-            (metadataChange)="onMetadataChange($event)"
-          />
+          @if (showMetadata()) {
+            <app-metadata-editor
+              [metadata]="metadata()"
+              (metadataChange)="onMetadataChange($event)"
+            />
+          }
         </div>
       }
 

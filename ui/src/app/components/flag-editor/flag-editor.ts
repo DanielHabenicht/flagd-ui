@@ -93,6 +93,7 @@ export class FlagEditorComponent implements OnInit, OnChanges {
   readonly maximizeTitle = input('Open editor as page');
   readonly flag = input<FlagEntry | null>(null);
   readonly existingKeys = input<string[]>([]);
+  readonly showMetadata = input(false);
   readonly save = output<{ key: string; flag: FlagDefinition; originalKey?: string }>();
   readonly cancelled = output<void>();
   readonly maximize = output<void>();
