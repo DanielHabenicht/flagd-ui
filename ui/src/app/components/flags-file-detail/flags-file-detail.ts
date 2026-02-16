@@ -12,7 +12,8 @@ import { MatSortModule, Sort } from '@angular/material/sort';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { FlagEditorComponent } from '../flag-editor/flag-editor';
-import { FlagDefinition, FlagEntry, inferFlagType } from '../../models/flag.models';
+import { FlagEntry, FlagDefinition, inferFlagType } from '../../models/flag.models';
+import { DisplayFlag } from '../../models/abstraction/flagd-abstraction-models';
 import { FlagStoreState } from '../../state/flag-store.state';
 import {
   SelectFlagsFileByRoute,
@@ -58,6 +59,28 @@ export class FlagsFileDetailComponent implements OnInit {
 
   showEditor = signal(false);
   editingFlag = signal<FlagEntry | null>(null);
+  readonly editingDisplayFlag = computed(() => {
+    const entry = this.editingFlag();
+    if (!entry) return null;
+
+    // Infer flag type from variants
+    let flagType: 'boolean' | 'string' | 'number' | 'object' = 'object';
+    const variantValues = Object.values(entry.variants ?? {});
+    if (variantValues.length > 0) {
+      const first = variantValues[0];
+      if (typeof first === 'boolean') flagType = 'boolean';
+      else if (typeof first === 'number') flagType = 'number';
+      else if (typeof first === 'string') flagType = 'string';
+    }
+
+    return {
+      key: entry.key,
+      type: flagType,
+      state: entry.state,
+      value: entry.defaultVariant ? entry.variants[entry.defaultVariant] : null,
+      metadata: entry.metadata,
+    } as DisplayFlag;
+  });
   isWideLayout = signal(this.initialWideLayout);
   readonly selectedFlagKey = computed(() => this.editingFlag()?.key ?? null);
   readonly existingFlagKeys = computed(() => this.flagEntries().map((f) => f.key));
@@ -251,17 +274,29 @@ export class FlagsFileDetailComponent implements OnInit {
     this.editingFlag.set(null);
   }
 
-  onSaveFlag(event: { key: string; flag: FlagDefinition; originalKey?: string }): void {
+  onSaveFlag(event: { key: string; flag: DisplayFlag; originalKey?: string }): void {
+    // Convert DisplayFlag back to FlagDefinition for the store
+    const variants: Record<string, unknown> = {};
+    const variantKey = event.flag.type === 'boolean' ? 'on' : 'default';
+    variants[variantKey] = event.flag.value;
+
+    const flagDefinition = {
+      state: event.flag.state,
+      variants,
+      defaultVariant: variantKey,
+      ...(event.flag.metadata && { metadata: event.flag.metadata }),
+    };
+
     if (event.originalKey && event.originalKey !== event.key) {
-      this.ngxsStore.dispatch(new RenameFlag(event.originalKey, event.key, event.flag));
+      this.ngxsStore.dispatch(new RenameFlag(event.originalKey, event.key, flagDefinition));
     } else {
-      this.ngxsStore.dispatch(new SaveFlag(event.key, event.flag));
+      this.ngxsStore.dispatch(new SaveFlag(event.key, flagDefinition));
     }
 
     if (window.innerWidth >= this.keepEditorOpenAfterSaveMinWidth) {
       this.editingFlag.set({
         key: event.key,
-        ...event.flag,
+        ...flagDefinition,
       });
       this.showEditor.set(true);
       return;

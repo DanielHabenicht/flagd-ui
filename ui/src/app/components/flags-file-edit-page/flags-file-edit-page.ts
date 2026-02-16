@@ -3,7 +3,8 @@ import { ActivatedRoute } from '@angular/router';
 import { Store } from '@ngxs/store';
 import { Navigate } from '@ngxs/router-plugin';
 import { FlagEditorComponent } from '../flag-editor/flag-editor';
-import { FlagDefinition, FlagEntry } from '../../models/flag.models';
+import { FlagEntry } from '../../models/flag.models';
+import { DisplayFlag } from '../../models/abstraction/flagd-abstraction-models';
 import { FlagStoreState } from '../../state/flag-store.state';
 import { SelectFlagsFileByRoute, SaveFlag, RenameFlag } from '../../state/flag-store.actions';
 
@@ -25,6 +26,28 @@ export class FlagsFileEditPageComponent implements OnInit {
   readonly currentEvaluators = this.ngxsStore.selectSignal(FlagStoreState.currentEvaluators);
 
   editingFlag = signal<FlagEntry | null>(null);
+  readonly editingDisplayFlag = computed(() => {
+    const entry = this.editingFlag();
+    if (!entry) return null;
+
+    // Infer flag type from variants
+    let flagType: 'boolean' | 'string' | 'number' | 'object' = 'object';
+    const variantValues = Object.values(entry.variants ?? {});
+    if (variantValues.length > 0) {
+      const first = variantValues[0];
+      if (typeof first === 'boolean') flagType = 'boolean';
+      else if (typeof first === 'number') flagType = 'number';
+      else if (typeof first === 'string') flagType = 'string';
+    }
+
+    return {
+      key: entry.key,
+      type: flagType,
+      state: entry.state,
+      value: entry.defaultVariant ? entry.variants[entry.defaultVariant] : null,
+      metadata: entry.metadata,
+    } as DisplayFlag;
+  });
   readonly existingFlagKeys = computed(() => this.flagEntries().map((f) => f.key));
   readonly selectedFlagKey = computed(() => {
     const editingKey = this.editingFlag()?.key;
@@ -64,11 +87,23 @@ export class FlagsFileEditPageComponent implements OnInit {
     });
   }
 
-  onSaveFlag(event: { key: string; flag: FlagDefinition; originalKey?: string }): void {
+  onSaveFlag(event: { key: string; flag: DisplayFlag; originalKey?: string }): void {
+    // Convert DisplayFlag back to FlagDefinition for the store
+    const variants: Record<string, unknown> = {};
+    const variantKey = event.flag.type === 'boolean' ? 'on' : 'default';
+    variants[variantKey] = event.flag.value;
+
+    const flagDefinition = {
+      state: event.flag.state,
+      variants,
+      defaultVariant: variantKey,
+      ...(event.flag.metadata && { metadata: event.flag.metadata }),
+    };
+
     if (event.originalKey && event.originalKey !== event.key) {
-      this.ngxsStore.dispatch(new RenameFlag(event.originalKey, event.key, event.flag));
+      this.ngxsStore.dispatch(new RenameFlag(event.originalKey, event.key, flagDefinition));
     } else {
-      this.ngxsStore.dispatch(new SaveFlag(event.key, event.flag));
+      this.ngxsStore.dispatch(new SaveFlag(event.key, flagDefinition));
     }
 
     if (window.innerWidth < this.keepEditorOpenAfterSaveMinWidth) {
@@ -76,11 +111,8 @@ export class FlagsFileEditPageComponent implements OnInit {
       return;
     }
 
-    this.editingFlag.set({
-      key: event.key,
-      ...event.flag,
-    });
-
+    // Navigate to the edit route for the newly saved flag
+    // The component will automatically update via the route effect
     this.navigateToEditRoute(event.key);
   }
 

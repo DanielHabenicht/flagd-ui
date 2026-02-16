@@ -32,21 +32,15 @@ import { MatTimepickerModule } from '@angular/material/timepicker';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import {
-  FlagDefinition,
-  FlagEntry,
   FlagState,
   FlagType,
-  MetadataMap,
-  inferFlagType,
-  getDefaultVariants,
-  generateEnvironmentVariants,
-  isEnvironmentBasedFlag,
-  extractEnvironmentStates,
-} from '../../models/flag.models';
-import { VariantRow } from '../variants-editor/variants-editor';
+  DisplayFlag,
+  ValueDefinition,
+  TimeWindowValue,
+} from '../../models/abstraction/flagd-abstraction-models';
 import { MetadataEditorComponent } from '../metadata-editor/metadata-editor';
 import { Store } from '@ngxs/store';
-import { FlagSchemaAdapter, TimeWindowBounds } from '../../services/flag-schema-adapter';
+import { FlagSchemaAdapter } from '../../services/flag-schema-adapter';
 import { FlagStoreState } from '../../state/flag-store.state';
 
 export type EditorMode = 'interactive' | 'json';
@@ -90,22 +84,22 @@ export class FlagEditorComponent implements OnInit, OnChanges {
   readonly allowMaximize = input(false);
   readonly maximizeIcon = input('open_in_full');
   readonly maximizeTitle = input('Open editor as page');
-  readonly flag = input<FlagEntry | null>(null);
+  readonly flag = input<DisplayFlag | null>(null);
   readonly existingKeys = input<string[]>([]);
   readonly showMetadata = input(false);
-  readonly save = output<{ key: string; flag: FlagDefinition; originalKey?: string }>();
+  readonly save = output<{ key: string; flag: DisplayFlag; originalKey?: string }>();
   readonly cancelled = output<void>();
   readonly maximize = output<void>();
 
   form!: FormGroup;
-  variants = signal<VariantRow[]>([]);
-  targeting = signal<Record<string, unknown> | undefined>(undefined);
-  metadata = signal<MetadataMap | undefined>(undefined);
+  flagValue = signal<unknown>(null);
+  perEnvironmentDefinitions = signal<Record<string, ValueDefinition<unknown>>>({});
+  globalTimeWindow = signal<TimeWindowValue<unknown> | undefined>(undefined);
+  flagType = signal<FlagType>('boolean');
+  metadata = signal<Record<string, string | number | boolean> | undefined>(undefined);
   editorMode = signal<EditorMode>('interactive');
 
   // Environment mode state
-  defaultFallbackValue = signal<unknown>(undefined);
-  environmentStates = signal<Record<string, unknown>>({});
   environmentTimeWindows = signal<Record<string, TimeWindowFormState>>({});
   globalEnvironmentTimeEnabled = signal(false);
   environmentFilter = signal('');
@@ -121,7 +115,7 @@ export class FlagEditorComponent implements OnInit, OnChanges {
 
     return allEnvironments.filter((environment) => {
       const aliases = Array.isArray(environment.aliases) ? environment.aliases : [];
-      const haystack = [environment.displayName, environment.name, ...aliases]
+      const haystack = [environment.displayName, ...aliases]
         .filter((value): value is string => typeof value === 'string')
         .map((value) => value.toLowerCase());
       return haystack.some((value) => value.includes(filterValue));
@@ -130,27 +124,24 @@ export class FlagEditorComponent implements OnInit, OnChanges {
   readonly hasEnvironments = computed(() => this.environments().length > 0);
   readonly hasMultipleEnvironments = computed(() => this.environments().length > 4);
   readonly hasDefinitionTargeting = computed(() => {
-    const flag = this.flag();
-    if (!flag?.targeting) return false;
-    return Object.keys(flag.targeting).length > 0;
+    const perEnvDefs = this.perEnvironmentDefinitions();
+    const globalTW = this.globalTimeWindow();
+    return Object.keys(perEnvDefs).length > 0 || !!globalTW;
   });
   readonly showGlobalEnvironmentValueOnly = computed(() => !this.hasDefinitionTargeting());
 
-  readonly allEnvironmentsSameValue = computed(() => {
+  readonly canCollapseEnvironmentOverrides = computed(() => {
     const environments = this.environments();
     if (environments.length === 0) return true;
 
-    const states = this.environmentStates();
-    const fallback = this.defaultFallbackValue();
+    const perEnvDefs = this.perEnvironmentDefinitions();
+    const globalValue = this.flagValue();
 
     return environments.every((env) => {
-      const envValue = states[env.name.toLowerCase()];
-      // Use JSON.stringify for deep comparison
-      return JSON.stringify(envValue) === JSON.stringify(fallback);
+      const envDef = perEnvDefs[env.displayName];
+      return !envDef || JSON.stringify(envDef.value) === JSON.stringify(globalValue);
     });
   });
-
-  readonly canCollapseEnvironmentOverrides = computed(() => this.allEnvironmentsSameValue());
 
   showEnvironmentOverrides = signal(false);
   showGlobalTimeWindow = signal(false);
@@ -162,27 +153,15 @@ export class FlagEditorComponent implements OnInit, OnChanges {
 
   readonly isEditing = computed(() => this.flag() !== null);
 
-  readonly variantNames = computed(() =>
-    this.variants()
-      .map((v) => v.name)
-      .filter(Boolean),
-  );
-
   readonly interactiveModeAvailable = computed(() => {
     if (this.hasEnvironments()) return true;
 
-    const variants = this.variants();
-    const targeting = this.targeting();
-    const flagType = this.form?.get('flagType')?.value as FlagType | undefined;
+    const flagType = this.flagType();
+    const globalTW = this.globalTimeWindow();
 
-    if (!flagType || (flagType !== 'boolean' && flagType !== 'string')) return false;
-    if (
-      targeting &&
-      Object.keys(targeting).length > 0 &&
-      !this.isInteractiveTimeTargeting(targeting)
-    )
-      return false;
-    return this.isSimpleFlagStructure(flagType, variants);
+    if (!(flagType === 'boolean' || flagType === 'string')) return false;
+    if (globalTW) return true; // Can still edit simple time windows
+    return true;
   });
 
   keyAlreadyExists(): boolean {
@@ -199,19 +178,19 @@ export class FlagEditorComponent implements OnInit, OnChanges {
       return this.isJsonSaveValid();
     }
 
-    return this.variantNames().length > 0;
+    return true;
   }
 
   ngOnInit(): void {
     const f = this.flag();
 
-    const initialType: FlagType = f ? inferFlagType(f.variants) : 'boolean';
-    const initialVariants: VariantRow[] = f
-      ? Object.entries(f.variants).map(([name, value]) => ({ name, value }))
-      : getDefaultVariants(initialType);
+    const initialType: FlagType = f?.type ?? 'boolean';
+    const initialValue = f?.value ?? this.getDefaultValueForType(initialType);
 
-    this.variants.set(initialVariants);
-    this.targeting.set(f?.targeting);
+    this.flagType.set(initialType);
+    this.flagValue.set(initialValue);
+    this.perEnvironmentDefinitions.set(f?.perEnvironmentDefinitions ?? {});
+    this.globalTimeWindow.set(f?.globalTimeWindow);
     this.metadata.set(f?.metadata);
 
     this.form = new FormGroup({
@@ -222,36 +201,28 @@ export class FlagEditorComponent implements OnInit, OnChanges {
       ]),
       state: new FormControl<FlagState>(f?.state ?? 'ENABLED', { nonNullable: true }),
       flagType: new FormControl<FlagType>(initialType, { nonNullable: true }),
-      defaultVariant: new FormControl<string>(f?.defaultVariant ?? ''),
-      // Interactive mode fields
-      interactiveType: new FormControl<'boolean' | 'string'>(
-        initialType === 'boolean' || initialType === 'string' ? initialType : 'boolean',
+      // Value controls for different types
+      booleanValue: new FormControl<boolean>(
+        initialType === 'boolean' ? ((initialValue as boolean) ?? false) : false,
         { nonNullable: true },
       ),
-      interactiveStringValue: new FormControl<string>(
-        initialType === 'string' && initialVariants.length > 0
-          ? String(initialVariants[0]?.value ?? '')
-          : '',
+      stringValue: new FormControl<string>(
+        initialType === 'string' ? String(initialValue ?? '') : '',
       ),
-      interactiveStringOnValue: new FormControl<string>(
-        initialType === 'string'
-          ? String(initialVariants.find((variant) => variant.name === 'on')?.value ?? '')
-          : '',
+      numberValue: new FormControl<number>(
+        initialType === 'number' ? ((initialValue as number) ?? 0) : 0,
+        { nonNullable: true },
       ),
-      interactiveStringOffValue: new FormControl<string>(
-        initialType === 'string'
-          ? String(initialVariants.find((variant) => variant.name === 'off')?.value ?? '')
-          : '',
+      objectValue: new FormControl<string>(
+        initialType === 'object' && initialValue && typeof initialValue === 'object'
+          ? JSON.stringify(initialValue, null, 2)
+          : '{}',
       ),
-      // Default fallback value controls
-      defaultBooleanValue: new FormControl<boolean>(false, { nonNullable: true }),
-      defaultStringValue: new FormControl<string>(''),
-      defaultNumberValue: new FormControl<number>(0, { nonNullable: true }),
-      defaultObjectValue: new FormControl<string>('{}'),
-      interactiveStartDate: new FormControl<Date | null>(null),
-      interactiveStartTime: new FormControl<Date | null>(null),
-      interactiveEndDate: new FormControl<Date | null>(null),
-      interactiveEndTime: new FormControl<Date | null>(null),
+      // Global time window
+      globalStartDate: new FormControl<Date | null>(null),
+      globalStartTime: new FormControl<Date | null>(null),
+      globalEndDate: new FormControl<Date | null>(null),
+      globalEndTime: new FormControl<Date | null>(null),
     });
 
     this.applyFlagToForm(f);
@@ -262,124 +233,89 @@ export class FlagEditorComponent implements OnInit, OnChanges {
     this.applyFlagToForm(this.flag());
   }
 
-  private applyFlagToForm(f: FlagEntry | null): void {
-    const nextType: FlagType = f ? inferFlagType(f.variants) : 'boolean';
-    const nextVariants: VariantRow[] = f
-      ? Object.entries(f.variants).map(([name, value]) => ({ name, value }))
-      : getDefaultVariants(nextType);
-
-    this.variants.set(nextVariants);
-    this.targeting.set(f?.targeting);
-    this.metadata.set(f?.metadata);
-
-    const envs = this.environments();
-    const isEnvironmentFlag = !!f && envs.length > 0 && isEnvironmentBasedFlag(f, envs);
-
-    if (envs.length > 0) {
-      if (isEnvironmentFlag) {
-        const extractedStates = extractEnvironmentStates(f!, envs, nextType);
-        this.environmentStates.set(extractedStates);
-        // Set the default/fallback value from the variant specified in defaultVariant
-        const defaultVariantName = f!.defaultVariant || 'off';
-        const defaultVariantValue = f!.variants[defaultVariantName];
-        this.defaultFallbackValue.set(defaultVariantValue);
-      } else {
-        const defaultValue = this.getDefaultValueForType(nextType);
-        this.defaultFallbackValue.set(defaultValue);
-        const defaultStates: Record<string, unknown> = {};
-        for (const env of envs) {
-          defaultStates[env.name.toLowerCase()] = defaultValue;
-        }
-        this.environmentStates.set(defaultStates);
-      }
+  private applyFlagToForm(f: DisplayFlag | null): void {
+    if (!f) {
+      this.form.reset({ state: 'ENABLED', flagType: 'boolean' });
+      this.flagType.set('boolean');
+      this.flagValue.set(this.getDefaultValueForType('boolean'));
+      this.perEnvironmentDefinitions.set({});
+      this.globalTimeWindow.set(undefined);
+      this.metadata.set(undefined);
+      return;
     }
 
-    const parsedInteractiveTimeTargeting = this.parseInteractiveTimeTargeting(f?.targeting);
-    const parsedEnvironmentTiming = this.parseEnvironmentTimingTargeting(f?.targeting);
+    const flagType = f.type;
+    const shouldShowEnvironments = this.hasEnvironments();
 
-    const globalTimeBounds = isEnvironmentFlag
-      ? parsedEnvironmentTiming.global
-      : parsedInteractiveTimeTargeting;
+    this.flagType.set(flagType);
+    this.flagValue.set(f.value);
+    this.perEnvironmentDefinitions.set(f.perEnvironmentDefinitions ?? {});
+    this.globalTimeWindow.set(f.globalTimeWindow);
+    this.metadata.set(f.metadata);
 
-    const hasGlobalTimeWindow =
-      !!globalTimeBounds &&
-      (globalTimeBounds.start !== undefined || globalTimeBounds.end !== undefined);
+    // Update form value controls based on type
+    const valueByType: Record<FlagType, unknown> = {
+      boolean: flagType === 'boolean' ? ((f.value as boolean) ?? false) : false,
+      string: flagType === 'string' ? String(f.value ?? '') : '',
+      number: flagType === 'number' ? ((f.value as number) ?? 0) : 0,
+      object:
+        flagType === 'object' && f.value && typeof f.value === 'object'
+          ? JSON.stringify(f.value, null, 2)
+          : '{}',
+    };
 
-    this.globalEnvironmentTimeEnabled.set(hasGlobalTimeWindow);
-    this.showGlobalTimeWindow.set(hasGlobalTimeWindow);
-
-    const environmentTimeWindows: Record<string, TimeWindowFormState> = {};
-    for (const env of envs) {
-      const envName = env.name.toLowerCase();
-      const bounds = parsedEnvironmentTiming.perEnvironment[envName];
-      if (bounds && (bounds.start !== undefined || bounds.end !== undefined)) {
-        environmentTimeWindows[envName] = this.timeWindowStateFromBounds(bounds);
-      }
+    // Update global time window from globalTimeWindow
+    let globalStartDate: Date | null = null;
+    let globalEndDate: Date | null = null;
+    if (f.globalTimeWindow?.timeWindow) {
+      const tw = f.globalTimeWindow.timeWindow;
+      globalStartDate = tw.startTime ?? null;
+      globalEndDate = tw.endTime ?? null;
     }
-    this.environmentTimeWindows.set(environmentTimeWindows);
 
-    const defaultValue = this.defaultFallbackValue();
     this.form.patchValue(
       {
-        key: f?.key ?? '',
-        state: f?.state ?? 'ENABLED',
-        flagType: nextType,
-        defaultVariant: f?.defaultVariant ?? '',
-        interactiveType: nextType === 'boolean' || nextType === 'string' ? nextType : 'boolean',
-        interactiveStringValue:
-          nextType === 'string' && nextVariants.length > 0
-            ? String(nextVariants[0]?.value ?? '')
-            : '',
-        interactiveStringOnValue:
-          nextType === 'string'
-            ? String(nextVariants.find((variant) => variant.name === 'on')?.value ?? '')
-            : '',
-        interactiveStringOffValue:
-          nextType === 'string'
-            ? String(nextVariants.find((variant) => variant.name === 'off')?.value ?? '')
-            : '',
-        defaultBooleanValue: defaultValue === true ? true : false,
-        defaultStringValue: typeof defaultValue === 'string' ? defaultValue : '',
-        defaultNumberValue: typeof defaultValue === 'number' ? defaultValue : 0,
-        defaultObjectValue:
-          typeof defaultValue === 'object' &&
-          defaultValue !== null &&
-          !(defaultValue instanceof Array)
-            ? JSON.stringify(defaultValue, null, 2)
-            : '{}',
-        interactiveStartDate: this.parseTimestampDate(globalTimeBounds?.start),
-        interactiveStartTime: this.parseTimestampDate(globalTimeBounds?.start),
-        interactiveEndDate: this.parseTimestampDate(globalTimeBounds?.end),
-        interactiveEndTime: this.parseTimestampDate(globalTimeBounds?.end),
+        key: f.key,
+        state: f.state,
+        flagType: flagType,
+        booleanValue: valueByType.boolean,
+        stringValue: valueByType.string,
+        numberValue: valueByType.number,
+        objectValue: valueByType.object,
+        globalStartDate,
+        globalStartTime: globalStartDate,
+        globalEndDate,
+        globalEndTime: globalEndDate,
       },
       { emitEvent: false },
     );
 
     this.form.get('key')?.updateValueAndValidity({ emitEvent: false });
 
-    this.updateInteractiveStringValidators();
-
     // Determine editor mode
-    if (f) {
-      if (isEnvironmentFlag) {
-        this.editorMode.set('interactive');
-      } else {
-        const isSimpleType = nextType === 'boolean' || nextType === 'string';
-        const hasUnsupportedTargeting =
-          !!f.targeting &&
-          Object.keys(f.targeting).length > 0 &&
-          !this.isInteractiveTimeTargeting(f.targeting);
-        const isSimpleVariants = this.isSimpleFlagStructure(nextType, nextVariants);
-
-        if (isSimpleType && !hasUnsupportedTargeting && isSimpleVariants) {
-          this.editorMode.set('interactive');
-        } else {
-          this.editorMode.set('json');
-        }
-      }
-    } else {
+    if (shouldShowEnvironments && Object.keys(this.perEnvironmentDefinitions()).length > 0) {
       this.editorMode.set('interactive');
+    } else if (this.globalTimeWindow()) {
+      this.editorMode.set('interactive');
+    } else {
+      this.editorMode.set('interactive'); // Default to interactive for simple flags
     }
+
+    // Load time windows from perEnvironmentDefinitions
+    const envTimeWindows: Record<string, TimeWindowFormState> = {};
+    for (const [envName, envDef] of Object.entries(this.perEnvironmentDefinitions())) {
+      if (envDef.timeWindow) {
+        envTimeWindows[envName.toLowerCase()] = {
+          startDate: envDef.timeWindow.startTime ?? null,
+          startTime: envDef.timeWindow.startTime ?? null,
+          endDate: envDef.timeWindow.endTime ?? null,
+          endTime: envDef.timeWindow.endTime ?? null,
+        };
+      }
+    }
+    this.environmentTimeWindows.set(envTimeWindows);
+    this.globalEnvironmentTimeEnabled.set(!!f.globalTimeWindow?.timeWindow);
+    this.showGlobalTimeWindow.set(!!f.globalTimeWindow?.timeWindow);
 
     this.form.markAsPristine();
     this.form.markAsUntouched();
@@ -413,104 +349,103 @@ export class FlagEditorComponent implements OnInit, OnChanges {
 
   // --- Interactive mode ---
 
-  onInteractiveTypeChange(): void {
-    const interactiveType = this.form.get('interactiveType')!.value as 'boolean' | 'string';
-    this.form.get('flagType')!.setValue(interactiveType);
-    this.updateInteractiveStringValidators();
-    if (interactiveType === 'boolean') {
-      this.variants.set(getDefaultVariants('boolean'));
-      this.form.get('defaultVariant')!.setValue('on');
+  onFlagTypeChange(newTypeValue?: FlagType): void {
+    const newType = (newTypeValue ?? this.form.get('flagType')!.value) as FlagType;
+    this.form.patchValue({ flagType: newType });
+    this.flagType.set(newType);
+    this.flagValue.set(this.getDefaultValueForType(newType));
+
+    // Update form controls for the new type
+    const newValue = this.getDefaultValueForType(newType);
+    this.form.patchValue({
+      booleanValue: newType === 'boolean' ? (newValue as boolean) : false,
+      stringValue: newType === 'string' ? String(newValue ?? '') : '',
+      numberValue: newType === 'number' ? (newValue as number) : 0,
+      objectValue: newType === 'object' ? JSON.stringify(newValue, null, 2) : '{}',
+    });
+  }
+
+  onValueChange(eventValue?: unknown): void {
+    const flagType = this.flagType();
+    let newValue: unknown;
+
+    if (eventValue !== undefined) {
+      // Value passed from event (e.g., checkbox checked, input value)
+      // Update the corresponding form control
+      switch (flagType) {
+        case 'boolean':
+          this.form.patchValue({ booleanValue: eventValue });
+          newValue = eventValue;
+          break;
+        case 'string':
+          this.form.patchValue({ stringValue: eventValue });
+          newValue = eventValue;
+          break;
+        case 'number':
+          this.form.patchValue({ numberValue: eventValue });
+          newValue = eventValue;
+          break;
+        case 'object':
+          this.form.patchValue({ objectValue: eventValue });
+          try {
+            newValue = JSON.parse(String(eventValue));
+          } catch {
+            newValue = {};
+          }
+          break;
+      }
     } else {
-      this.variants.set([
-        { name: 'on', value: '' },
-        { name: 'off', value: '' },
-      ]);
-      this.form.get('defaultVariant')!.setValue('on');
-      this.form.get('interactiveStringValue')!.setValue('');
-      this.form.get('interactiveStringOnValue')!.setValue('');
-      this.form.get('interactiveStringOffValue')!.setValue('');
-    }
-  }
-
-  onFlagTypeToggleChange(value: FlagType): void {
-    const mode = this.editorMode();
-
-    if (mode !== 'interactive') return;
-
-    if (this.hasEnvironments()) {
-      this.form.get('flagType')!.setValue(value);
-      this.onEnvironmentTypeChange();
-      return;
-    }
-
-    if (value === 'boolean' || value === 'string') {
-      this.form.get('interactiveType')!.setValue(value);
-      this.onInteractiveTypeChange();
-      return;
+      // Read from form (for environment value changes)
+      switch (flagType) {
+        case 'boolean':
+          newValue = this.form.get('booleanValue')!.value;
+          break;
+        case 'string':
+          newValue = this.form.get('stringValue')!.value;
+          break;
+        case 'number':
+          newValue = this.form.get('numberValue')!.value;
+          break;
+        case 'object': {
+          const objStr = this.form.get('objectValue')!.value;
+          try {
+            newValue = JSON.parse(objStr);
+          } catch {
+            newValue = {};
+          }
+          break;
+        }
+      }
     }
 
-    // For other types in interactive mode without environments, update variants and switch to JSON if needed
-    this.form.get('flagType')!.setValue(value);
-    this.onTypeChange();
+    this.flagValue.set(newValue);
   }
 
-  onInteractiveStringValueChange(): void {
-    const onValue = this.form.get('interactiveStringOnValue')!.value ?? '';
-    const offValue = this.form.get('interactiveStringOffValue')!.value ?? '';
-    this.variants.set([
-      { name: 'on', value: onValue },
-      { name: 'off', value: offValue },
-    ]);
+  onMetadataChange(metadata: Record<string, string | number | boolean> | undefined): void {
+    this.metadata.set(metadata);
   }
 
-  onInteractiveDefaultChange(value: string): void {
-    this.form.get('defaultVariant')!.setValue(value);
-  }
-
-  isInteractiveModeGlobalBooleanOn(): boolean {
-    if (this.hasEnvironments()) {
-      return this.getGlobalEnvironmentValue() === true;
-    }
-
-    return this.form.get('defaultVariant')!.value === 'on';
-  }
-
-  onInteractiveModeGlobalBooleanChange(checked: boolean): void {
-    if (this.hasEnvironments()) {
-      this.onGlobalEnvironmentValueChange(checked);
-      return;
-    }
-
-    this.onInteractiveDefaultChange(checked ? 'on' : 'off');
-  }
-
-  getInteractiveModeGlobalBooleanLabel(): string {
-    return this.isInteractiveModeGlobalBooleanOn() ? 'ON' : 'OFF';
-  }
-
-  resetInteractiveTimeWindow(): void {
-    this.form.get('interactiveStartDate')!.setValue(null);
-    this.form.get('interactiveStartTime')!.setValue(null);
-    this.form.get('interactiveEndDate')!.setValue(null);
-    this.form.get('interactiveEndTime')!.setValue(null);
-  }
-
-  addGlobalEnvironmentTimeWindow(): void {
+addGlobalEnvironmentTimeWindow(): void {
     this.globalEnvironmentTimeEnabled.set(true);
   }
 
   removeGlobalEnvironmentTimeWindow(): void {
     this.globalEnvironmentTimeEnabled.set(false);
-    this.resetInteractiveTimeWindow();
+    this.form.patchValue({
+      globalStartDate: null,
+      globalStartTime: null,
+      globalEndDate: null,
+      globalEndTime: null,
+    });
   }
 
-  hasEnvironmentTimeWindow(envName: string): boolean {
-    return !!this.environmentTimeWindows()[envName.toLowerCase()];
+  hasEnvironmentTimeWindow(envDisplayName: string): boolean {
+    return !!this.environmentTimeWindows()[envDisplayName.toLowerCase()];
   }
 
-  getEnvironmentTimeWindow(envName: string): TimeWindowFormState {
+  getEnvironmentTimeWindow(envDisplayName: string): TimeWindowFormState {
     return (
-      this.environmentTimeWindows()[envName.toLowerCase()] ?? {
+      this.environmentTimeWindows()[envDisplayName.toLowerCase()] ?? {
         startDate: null,
         startTime: null,
         endDate: null,
@@ -519,8 +454,8 @@ export class FlagEditorComponent implements OnInit, OnChanges {
     );
   }
 
-  addEnvironmentTimeWindow(envName: string): void {
-    const key = envName.toLowerCase();
+  addEnvironmentTimeWindow(envDisplayName: string): void {
+    const key = envDisplayName.toLowerCase();
     const windows = { ...this.environmentTimeWindows() };
     windows[key] = windows[key] ?? {
       startDate: null,
@@ -531,19 +466,19 @@ export class FlagEditorComponent implements OnInit, OnChanges {
     this.environmentTimeWindows.set(windows);
   }
 
-  removeEnvironmentTimeWindow(envName: string): void {
-    const key = envName.toLowerCase();
+  removeEnvironmentTimeWindow(envDisplayName: string): void {
+    const key = envDisplayName.toLowerCase();
     const windows = { ...this.environmentTimeWindows() };
     delete windows[key];
     this.environmentTimeWindows.set(windows);
   }
 
   onEnvironmentTimeWindowChange(
-    envName: string,
+    envDisplayName: string,
     field: keyof TimeWindowFormState,
     value: Date | null,
   ): void {
-    const key = envName.toLowerCase();
+    const key = envDisplayName.toLowerCase();
     const windows = { ...this.environmentTimeWindows() };
     const current = windows[key] ?? {
       startDate: null,
@@ -558,16 +493,24 @@ export class FlagEditorComponent implements OnInit, OnChanges {
     this.environmentTimeWindows.set(windows);
   }
 
-  // --- Type and variants ---
-
-  onTypeChange(): void {
-    const newType = this.form.get('flagType')!.value as FlagType;
-    this.variants.set(getDefaultVariants(newType));
-    this.form.get('defaultVariant')!.setValue('');
+  onEnvironmentValueChange(envDisplayName: string, value: unknown): void {
+    const perEnvDefs = { ...this.perEnvironmentDefinitions() };
+    const existing = perEnvDefs[envDisplayName];
+    perEnvDefs[envDisplayName] = {
+      value,
+      timeWindow: existing?.timeWindow,
+    };
+    this.perEnvironmentDefinitions.set(perEnvDefs);
   }
 
-  onMetadataChange(metadata: MetadataMap | undefined): void {
-    this.metadata.set(metadata);
+  getEnvironmentValue(envDisplayName: string): unknown {
+    const perEnvDef = this.perEnvironmentDefinitions()[envDisplayName];
+    return perEnvDef?.value ?? this.flagValue();
+  }
+
+  onEnvironmentFilterInput(event: Event): void {
+    const target = event.target as HTMLInputElement | null;
+    this.environmentFilter.set(target?.value ?? '');
   }
 
   // --- JSON mode ---
@@ -598,59 +541,105 @@ export class FlagEditorComponent implements OnInit, OnChanges {
       return;
     }
 
-    if (mode === 'interactive') {
-      if (this.hasEnvironments()) {
-        if (!this.isCurrentModeFormValid() || this.keyAlreadyExists() || !key) return;
-
-        const flag = this.buildEnvironmentBasedFlag();
-
-        this.save.emit({
-          key,
-          flag,
-          originalKey: this.flag()?.key,
-        });
-        return;
-      }
-    }
-
     if (!this.isCurrentModeFormValid() || this.keyAlreadyExists() || !key) return;
 
-    const variantsObj: Record<string, unknown> = {};
-    for (const v of this.variants()) {
-      if (v.name) {
-        variantsObj[v.name] = v.value;
+    // Collect current values
+    const flagType = this.flagType();
+    let currentValue: unknown;
+
+    switch (flagType) {
+      case 'boolean':
+        currentValue = this.form.get('booleanValue')!.value;
+        break;
+      case 'string':
+        currentValue = this.form.get('stringValue')!.value;
+        break;
+      case 'number':
+        currentValue = this.form.get('numberValue')!.value;
+        break;
+      case 'object': {
+        const objStr = this.form.get('objectValue')!.value;
+        try {
+          currentValue = JSON.parse(objStr);
+        } catch {
+          currentValue = {};
+        }
+        break;
       }
     }
 
-    if (Object.keys(variantsObj).length === 0) return;
+    // Build global time window if enabled
+    let globalTimeWindow: TimeWindowValue<unknown> | undefined;
+    if (this.globalEnvironmentTimeEnabled()) {
+      const globalStartDate = this.form.get('globalStartDate')?.value;
+      const globalStartTime = this.form.get('globalStartTime')?.value;
+      const globalEndDate = this.form.get('globalEndDate')?.value;
+      const globalEndTime = this.form.get('globalEndTime')?.value;
 
-    const flag: FlagDefinition = {
-      state: this.form.get('state')!.value,
-      variants: variantsObj,
-    };
+      const startDate = this.combineDateAndTime(globalStartDate, globalStartTime);
+      const endDate = this.combineDateAndTime(globalEndDate, globalEndTime);
 
-    const defaultVariant = this.form.get('defaultVariant')!.value;
-    if (defaultVariant) {
-      flag.defaultVariant = defaultVariant;
-    }
-
-    if (mode === 'interactive') {
-      const t = this.targeting();
-      if (t && Object.keys(t).length > 0) {
-        flag.targeting = t;
+      if (startDate || endDate) {
+        const timeWindow: Record<string, Date | undefined> = {};
+        if (startDate) {
+          timeWindow['startTime'] = startDate;
+        }
+        if (endDate) {
+          timeWindow['endTime'] = endDate;
+        }
+        globalTimeWindow = {
+          value: currentValue,
+          timeWindow: timeWindow as unknown as TimeWindowValue<unknown>['timeWindow'],
+        };
       }
-    } else {
-      flag.targeting = undefined;
     }
 
-    const metadata = this.metadata();
-    if (metadata && Object.keys(metadata).length > 0) {
-      flag.metadata = metadata;
+    // Build environment definitions
+    const perEnvDefs: Record<string, ValueDefinition<unknown>> = {};
+    for (const [envName, envDef] of Object.entries(this.perEnvironmentDefinitions())) {
+      const timeWindowState = this.environmentTimeWindows()[envName.toLowerCase()];
+      let timeWindow: Record<string, Date | undefined> | undefined;
+
+      if (timeWindowState && (timeWindowState.startDate || timeWindowState.endDate)) {
+        const startDate = this.combineDateAndTime(
+          timeWindowState.startDate,
+          timeWindowState.startTime,
+        );
+        const endDate = this.combineDateAndTime(timeWindowState.endDate, timeWindowState.endTime);
+
+        if (startDate || endDate) {
+          timeWindow = {};
+          if (startDate) {
+            timeWindow['startTime'] = startDate;
+          }
+          if (endDate) {
+            timeWindow['endTime'] = endDate;
+          }
+        }
+      }
+
+      perEnvDefs[envName] = {
+        value: envDef.value,
+        ...(timeWindow && {
+          timeWindow: timeWindow as unknown as ValueDefinition<unknown>['timeWindow'],
+        }),
+      };
     }
+
+    const displayFlag: DisplayFlag = {
+      key,
+      type: flagType,
+      state: this.form.get('state')!.value as FlagState,
+      value: currentValue,
+      ...(Object.keys(perEnvDefs).length > 0 && { perEnvironmentDefinitions: perEnvDefs }),
+      ...(globalTimeWindow && { globalTimeWindow }),
+      ...(this.metadata() &&
+        Object.keys(this.metadata()!).length > 0 && { metadata: this.metadata() }),
+    } as DisplayFlag;
 
     this.save.emit({
       key,
-      flag,
+      flag: displayFlag,
       originalKey: this.flag()?.key,
     });
   }
@@ -665,85 +654,144 @@ export class FlagEditorComponent implements OnInit, OnChanges {
 
   // --- Private helpers ---
 
-  private isSimpleFlagStructure(type: FlagType, variants: VariantRow[]): boolean {
-    if (variants.length !== 2) return false;
-    const names = variants.map((v) => v.name).sort();
-    if (names[0] !== 'off' || names[1] !== 'on') return false;
-
-    if (type === 'boolean') {
-      const values = new Map(variants.map((v) => [v.name, v.value]));
-      return values.get('on') === true && values.get('off') === false;
-    }
-    if (type === 'string') {
-      return variants.every((v) => typeof v.value === 'string');
-    }
-    return false;
-  }
-
   private syncToJson(): void {
-    const variantsObj: Record<string, unknown> = {};
-    for (const v of this.variants()) {
-      if (v.name) {
-        variantsObj[v.name] = v.value;
+    const flagType = this.flagType();
+    let value: unknown = this.flagValue();
+
+    switch (flagType) {
+      case 'boolean':
+        value = this.form.get('booleanValue')!.value;
+        break;
+      case 'string':
+        value = this.form.get('stringValue')!.value;
+        break;
+      case 'number':
+        value = this.form.get('numberValue')!.value;
+        break;
+      case 'object': {
+        const objStr = this.form.get('objectValue')!.value;
+        try {
+          value = JSON.parse(objStr);
+        } catch {
+          value = {};
+        }
+        break;
       }
     }
 
-    this.rawJson = this.schemaAdapter.serializeFlagDefinition({
+    // For now, serialize as minimal JSON representation
+    const displayFlag = {
+      key: this.form.get('key')!.value,
+      type: flagType,
       state: this.form.get('state')!.value,
-      variants: variantsObj,
-      defaultVariant: this.form.get('defaultVariant')!.value,
-      targeting: this.targeting(),
-      metadata: this.metadata(),
-    });
+      value,
+    } as DisplayFlag;
+
+    if (
+      this.perEnvironmentDefinitions() &&
+      Object.keys(this.perEnvironmentDefinitions()).length > 0
+    ) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (displayFlag as any).perEnvironmentDefinitions = this.perEnvironmentDefinitions();
+    }
+
+    if (this.globalTimeWindow()) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (displayFlag as any).globalTimeWindow = this.globalTimeWindow();
+    }
+
+    if (this.metadata()) {
+      displayFlag.metadata = this.metadata();
+    }
+
+    this.rawJson = JSON.stringify(displayFlag, null, 2);
     this.jsonError = null;
   }
 
   private applyJsonToForm(): boolean {
-    const result = this.schemaAdapter.parseEditorStateFromJson(this.rawJson);
-    if (!result.ok) {
-      this.jsonError = result.error;
+    try {
+      const parsed = JSON.parse(this.rawJson);
+
+      if (!parsed.key || !parsed.type || !parsed.state) {
+        this.jsonError = 'Missing required fields: key, type, state';
+        return false;
+      }
+
+      this.form.patchValue({
+        key: parsed.key,
+        flagType: parsed.type,
+        state: parsed.state,
+      });
+
+      this.flagType.set(parsed.type);
+      this.flagValue.set(parsed.value ?? null);
+      this.perEnvironmentDefinitions.set(parsed.perEnvironmentDefinitions ?? {});
+      this.globalTimeWindow.set(parsed.globalTimeWindow);
+      this.metadata.set(parsed.metadata);
+
+      // Update value form controls
+      this.form.patchValue({
+        booleanValue: parsed.type === 'boolean' ? parsed.value : false,
+        stringValue: parsed.type === 'string' ? String(parsed.value ?? '') : '',
+        numberValue: parsed.type === 'number' ? (parsed.value ?? 0) : 0,
+        objectValue: parsed.type === 'object' ? JSON.stringify(parsed.value ?? {}, null, 2) : '{}',
+      });
+
+      this.jsonError = null;
+      return true;
+    } catch (error) {
+      this.jsonError = `Invalid JSON: ${String(error)}`;
       return false;
     }
-
-    const parsed = result.value;
-    this.form.get('state')!.setValue(parsed.state);
-
-    if (parsed.variants) {
-      this.variants.set(parsed.variants as VariantRow[]);
-    }
-
-    if (parsed.flagType) {
-      this.form.get('flagType')!.setValue(parsed.flagType);
-    }
-
-    if (parsed.easyType) {
-      this.form.get('interactiveType')!.setValue(parsed.easyType);
-    }
-
-    if (parsed.hasDefaultVariant) {
-      this.form.get('defaultVariant')!.setValue(parsed.defaultVariant ?? '');
-    }
-
-    this.targeting.set(parsed.targeting);
-    this.metadata.set(parsed.metadata);
-
-    this.jsonError = null;
-    return true;
   }
 
   private saveFromJson(): void {
     const key = String(this.form.get('key')!.value ?? '').trim();
     if (!key || this.form.get('key')!.invalid || this.keyAlreadyExists()) return;
 
-    const result = this.schemaAdapter.parseFlagForSave(this.rawJson);
-    if (!result.ok) {
-      this.jsonError = result.error;
+    if (!this.applyJsonToForm()) {
       return;
     }
 
+    // Once parsed, save as DisplayFlag
+    const flagType = this.flagType();
+    let currentValue: unknown;
+
+    switch (flagType) {
+      case 'boolean':
+        currentValue = this.form.get('booleanValue')!.value;
+        break;
+      case 'string':
+        currentValue = this.form.get('stringValue')!.value;
+        break;
+      case 'number':
+        currentValue = this.form.get('numberValue')!.value;
+        break;
+      case 'object':
+        try {
+          currentValue = JSON.parse(this.form.get('objectValue')!.value);
+        } catch {
+          currentValue = {};
+        }
+        break;
+    }
+
+    const displayFlag: DisplayFlag = {
+      key,
+      type: flagType,
+      state: this.form.get('state')!.value as FlagState,
+      value: currentValue,
+      ...(Object.keys(this.perEnvironmentDefinitions()).length > 0 && {
+        perEnvironmentDefinitions: this.perEnvironmentDefinitions(),
+      }),
+      ...(this.globalTimeWindow() && { globalTimeWindow: this.globalTimeWindow() }),
+      ...(this.metadata() &&
+        Object.keys(this.metadata()!).length > 0 && { metadata: this.metadata() }),
+    } as DisplayFlag;
+
     this.save.emit({
       key,
-      flag: result.value,
+      flag: displayFlag,
       originalKey: this.flag()?.key,
     });
   }
@@ -754,76 +802,23 @@ export class FlagEditorComponent implements OnInit, OnChanges {
   }
 
   private buildEditorSnapshot(): string {
-    const key = String(this.form?.get('key')?.value ?? '').trim();
-    const state = this.form?.get('state')?.value ?? 'ENABLED';
-    const flagType = this.form?.get('flagType')?.value ?? 'boolean';
-    const defaultVariant = this.form?.get('defaultVariant')?.value ?? '';
-    const interactiveType = this.form?.get('interactiveType')?.value ?? 'boolean';
-    const interactiveStringValue = this.form?.get('interactiveStringValue')?.value ?? '';
-    const interactiveStringOnValue = this.form?.get('interactiveStringOnValue')?.value ?? '';
-    const interactiveStringOffValue = this.form?.get('interactiveStringOffValue')?.value ?? '';
-    const interactiveStartTime =
-      this.toTimestampString(
-        this.combineDateAndTime(
-          this.form?.get('interactiveStartDate')?.value ?? null,
-          this.form?.get('interactiveStartTime')?.value ?? null,
-        ),
-      ) ?? '';
-    const interactiveEndTime =
-      this.toTimestampString(
-        this.combineDateAndTime(
-          this.form?.get('interactiveEndDate')?.value ?? null,
-          this.form?.get('interactiveEndTime')?.value ?? null,
-        ),
-      ) ?? '';
-
     return JSON.stringify({
-      key,
-      state,
-      flagType,
-      defaultVariant,
-      interactiveType,
-      interactiveStringValue,
-      interactiveStringOnValue,
-      interactiveStringOffValue,
-      interactiveStartTime,
-      interactiveEndTime,
+      key: this.form?.get('key')?.value ?? '',
+      state: this.form?.get('state')?.value ?? 'ENABLED',
+      flagType: this.form?.get('flagType')?.value ?? 'boolean',
+      booleanValue: this.form?.get('booleanValue')?.value ?? false,
+      stringValue: this.form?.get('stringValue')?.value ?? '',
+      numberValue: this.form?.get('numberValue')?.value ?? 0,
+      objectValue: this.form?.get('objectValue')?.value ?? '{}',
+      flagValue: this.flagValue(),
+      perEnvironmentDefinitions: this.perEnvironmentDefinitions(),
+      globalTimeWindow: this.globalTimeWindow(),
+      metadata: this.metadata(),
       editorMode: this.editorMode(),
-      hasEnvironments: this.hasEnvironments(),
       globalEnvironmentTimeEnabled: this.globalEnvironmentTimeEnabled(),
-      defaultFallbackValue: this.defaultFallbackValue(),
-      environmentStates: this.environmentStates(),
-      environmentTimeWindows: this.serializeEnvironmentTimeWindows(),
-      variants: this.variants(),
-      targeting: this.targeting() ?? null,
-      metadata: this.metadata() ?? null,
+      environmentTimeWindows: this.environmentTimeWindows(),
       rawJson: this.rawJson.trim(),
     });
-  }
-
-  private updateInteractiveStringValidators(): void {
-    const interactiveType = this.form.get('interactiveType')!.value as 'boolean' | 'string';
-    const onControl = this.form.get('interactiveStringOnValue');
-    const offControl = this.form.get('interactiveStringOffValue');
-
-    if (!onControl || !offControl) return;
-
-    if (interactiveType === 'string') {
-      onControl.setValidators([this.nonWhitespaceRequiredValidator()]);
-    } else {
-      onControl.clearValidators();
-      offControl.clearValidators();
-    }
-
-    onControl.updateValueAndValidity({ emitEvent: false });
-    offControl.updateValueAndValidity({ emitEvent: false });
-  }
-
-  private nonWhitespaceRequiredValidator(): ValidatorFn {
-    return (control: AbstractControl): ValidationErrors | null => {
-      const value = String(control.value ?? '');
-      return value.trim().length > 0 ? null : { required: true };
-    };
   }
 
   private duplicateKeyValidator(): ValidatorFn {
@@ -839,65 +834,42 @@ export class FlagEditorComponent implements OnInit, OnChanges {
   }
 
   private isJsonSaveValid(): boolean {
-    const raw = this.rawJson.trim();
-    if (!raw) return false;
-
-    return this.schemaAdapter.isJsonSaveValid(raw);
+    try {
+      JSON.parse(this.rawJson);
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   private isCurrentModeFormValid(): boolean {
     const keyControl = this.form.get('key');
-    if (!keyControl || keyControl.invalid) return false;
+    return !!(keyControl && keyControl.valid);
+  }
 
-    const mode = this.editorMode();
-    if (
-      mode === 'interactive' &&
-      !this.hasEnvironments() &&
-      this.form.get('interactiveType')!.value === 'string'
-    ) {
-      const onValueControl = this.form.get('interactiveStringOnValue');
-      return !!onValueControl && onValueControl.valid;
+  private getDefaultValueForType(flagType: FlagType): unknown {
+    switch (flagType) {
+      case 'boolean':
+        return false;
+      case 'string':
+        return '';
+      case 'number':
+        return 0;
+      case 'object':
+        return {};
     }
-
-    return true;
-  }
-
-  private buildInteractiveTimeTargeting(): Record<string, unknown> | undefined {
-    return this.schemaAdapter.buildEasyTimeTargeting(this.getInteractiveTimeWindowBounds());
-  }
-
-  private isInteractiveTimeTargeting(targeting: Record<string, unknown>): boolean {
-    return this.schemaAdapter.isEasyTimeTargeting(targeting);
-  }
-
-  private parseInteractiveTimeTargeting(
-    targeting: Record<string, unknown> | undefined,
-  ): { start?: number; end?: number } | null {
-    return this.schemaAdapter.parseEasyTimeTargeting(targeting);
   }
 
   private parseTimestampDate(value: unknown): Date | null {
-    if (value === null || value === undefined) {
+    if (value === null || value === undefined || !(value instanceof Date)) {
       return null;
     }
-
-    if (typeof value === 'number' && Number.isFinite(value)) {
-      const timestampMs = value > 1_000_000_000_000 ? value : value * 1000;
-      const parsedFromNumber = new Date(timestampMs);
-      return Number.isNaN(parsedFromNumber.getTime()) ? null : parsedFromNumber;
-    }
-
-    return null;
+    return value;
   }
 
   private toTimestampString(value: unknown): string | null {
     if (!(value instanceof Date) || Number.isNaN(value.getTime())) return null;
     return value.toISOString();
-  }
-
-  private toUnixEpochSeconds(value: unknown): number | null {
-    if (!(value instanceof Date) || Number.isNaN(value.getTime())) return null;
-    return Math.floor(value.getTime() / 1000);
   }
 
   private combineDateAndTime(dateValue: unknown, timeValue: unknown): Date | null {
@@ -915,195 +887,7 @@ export class FlagEditorComponent implements OnInit, OnChanges {
     );
   }
 
-  private syncJsonState(state: FlagState): void {
-    const result = this.schemaAdapter.syncJsonState(this.rawJson, state);
-    if (result.ok) {
-      this.rawJson = result.value;
-      this.jsonError = null;
-      return;
-    }
-    this.jsonError = result.error;
-  }
-
-  // Environment mode helpers
-  private getDefaultValueForType(flagType: FlagType, enabled = true): unknown {
-    switch (flagType) {
-      case 'boolean':
-        return enabled;
-      case 'string':
-        return '';
-      case 'number':
-        return 0;
-      case 'object':
-        return {};
-    }
-  }
-
-  onEnvironmentValueChange(envName: string, value: unknown): void {
-    const states = { ...this.environmentStates() };
-    states[envName] = value;
-    this.environmentStates.set(states);
-  }
-
-  getGlobalEnvironmentValue(): unknown {
-    const environments = this.environments();
-    if (environments.length === 0) {
-      const flagType = this.form.get('flagType')?.value as FlagType;
-      return this.getDefaultValueForType(flagType ?? 'boolean');
-    }
-
-    const firstEnvironment = environments[0].name.toLowerCase();
-    const firstValue = this.environmentStates()[firstEnvironment];
-    if (firstValue !== undefined) return firstValue;
-
-    const flagType = this.form.get('flagType')?.value as FlagType;
-    return this.getDefaultValueForType(flagType ?? 'boolean');
-  }
-
-  getDefaultFallbackValue(): unknown {
-    return this.defaultFallbackValue();
-  }
-
-  onDefaultFallbackValueChange(value: unknown): void {
-    this.defaultFallbackValue.set(value);
-  }
-
-  onGlobalEnvironmentValueChange(value: unknown): void {
-    // This now just updates all environments at once (they share the same value)
-    const nextStates: Record<string, unknown> = {};
-    for (const env of this.environments()) {
-      nextStates[env.name.toLowerCase()] = value;
-    }
-    this.environmentStates.set(nextStates);
-  }
-
-  onEnvironmentTypeChange(): void {
-    const flagType = this.form.get('flagType')?.value as FlagType;
-    // Reset all environment values and default fallback to defaults for the new type
-    const defaultValue = this.getDefaultValueForType(flagType);
-    this.defaultFallbackValue.set(defaultValue);
-    const states: Record<string, unknown> = {};
-    for (const env of this.environments()) {
-      states[env.name.toLowerCase()] = defaultValue;
-    }
-    this.environmentStates.set(states);
-  }
-
-  onEnvironmentFilterInput(event: Event): void {
-    const target = event.target as HTMLInputElement | null;
-    this.environmentFilter.set(target?.value ?? '');
-  }
-
-  buildEnvironmentBasedFlag(): FlagDefinition {
-    const flagType = this.form.get('flagType')!.value as FlagType;
-    const envs = this.environments();
-    const states = this.environmentStates();
-
-    // Generate variants
-    const variants = generateEnvironmentVariants(envs, flagType, states);
-
-    // Generate targeting
-    const targeting = this.buildEnvironmentTimeAwareTargeting();
-
-    return {
-      state: this.form.get('state')!.value as FlagState,
-      variants,
-      defaultVariant: 'off',
-      targeting: Object.keys(targeting).length > 0 ? targeting : undefined,
-      metadata:
-        this.metadata() && Object.keys(this.metadata()!).length > 0 ? this.metadata() : undefined,
-    };
-  }
-
-  private buildEnvironmentTimeAwareTargeting(): Record<string, unknown> {
-    const perEnvironmentBounds: Record<string, TimeWindowBounds | null> = {};
-    for (const env of this.environments()) {
-      const envName = env.name.toLowerCase();
-      perEnvironmentBounds[envName] = this.getEnvironmentTimeWindowBounds(envName);
-    }
-
-    return this.schemaAdapter.buildEnvironmentTimeAwareTargeting(
-      this.environments(),
-      this.getGlobalTimeWindowBounds(),
-      perEnvironmentBounds,
-    );
-  }
-
-  private getInteractiveTimeWindowBounds(): TimeWindowBounds | null {
-    const startDate = this.form.get('interactiveStartDate')?.value ?? null;
-    const startTime = this.form.get('interactiveStartTime')?.value ?? null;
-    const endDate = this.form.get('interactiveEndDate')?.value ?? null;
-    const endTime = this.form.get('interactiveEndTime')?.value ?? null;
-
-    const start = this.toUnixEpochSeconds(this.combineDateAndTime(startDate, startTime));
-    const end = this.toUnixEpochSeconds(this.combineDateAndTime(endDate, endTime));
-
-    if (start === null && end === null) return null;
-
-    const bounds: TimeWindowBounds = {};
-    if (start !== null) bounds.start = start;
-    if (end !== null) bounds.end = end;
-    return bounds;
-  }
-
-  private getGlobalTimeWindowBounds(): TimeWindowBounds | null {
-    if (!this.globalEnvironmentTimeEnabled()) return null;
-
-    const startDate = this.form.get('interactiveStartDate')?.value ?? null;
-    const startTime = this.form.get('interactiveStartTime')?.value ?? null;
-    const endDate = this.form.get('interactiveEndDate')?.value ?? null;
-    const endTime = this.form.get('interactiveEndTime')?.value ?? null;
-
-    const start = this.toUnixEpochSeconds(this.combineDateAndTime(startDate, startTime));
-    const end = this.toUnixEpochSeconds(this.combineDateAndTime(endDate, endTime));
-
-    if (start === null && end === null) return null;
-
-    const bounds: TimeWindowBounds = {};
-    if (start !== null) bounds.start = start;
-    if (end !== null) bounds.end = end;
-    return bounds;
-  }
-
-  private getEnvironmentTimeWindowBounds(envName: string): TimeWindowBounds | null {
-    const state = this.environmentTimeWindows()[envName.toLowerCase()];
-    if (!state) return null;
-
-    const start = this.toUnixEpochSeconds(
-      this.combineDateAndTime(state.startDate, state.startTime),
-    );
-    const end = this.toUnixEpochSeconds(this.combineDateAndTime(state.endDate, state.endTime));
-
-    if (start === null && end === null) return null;
-
-    const bounds: TimeWindowBounds = {};
-    if (start !== null) bounds.start = start;
-    if (end !== null) bounds.end = end;
-    return bounds;
-  }
-
-  private parseEnvironmentTimingTargeting(targeting: Record<string, unknown> | undefined): {
-    global?: TimeWindowBounds;
-    perEnvironment: Record<string, TimeWindowBounds>;
-  } {
-    return this.schemaAdapter.parseEnvironmentTimingTargeting(targeting);
-  }
-
-  private timeWindowStateFromBounds(bounds: TimeWindowBounds): TimeWindowFormState {
-    return {
-      startDate: this.parseTimestampDate(bounds.start),
-      startTime: this.parseTimestampDate(bounds.start),
-      endDate: this.parseTimestampDate(bounds.end),
-      endTime: this.parseTimestampDate(bounds.end),
-    };
-  }
-
-  private serializeEnvironmentTimeWindows(): Record<string, TimeWindowBounds | null> {
-    const serialized: Record<string, TimeWindowBounds | null> = {};
-    for (const env of this.environments()) {
-      const envName = env.name.toLowerCase();
-      serialized[envName] = this.getEnvironmentTimeWindowBounds(envName);
-    }
-    return serialized;
+  private serializeEnvironmentTimeWindows(): Record<string, TimeWindowFormState> {
+    return this.environmentTimeWindows();
   }
 }

@@ -2,35 +2,48 @@ import { inject, Injectable } from '@angular/core';
 import { Action, Selector, State, StateContext } from '@ngxs/store';
 import { Navigate } from '@ngxs/router-plugin';
 import { catchError, forkJoin, from, Observable, of, switchMap, tap } from 'rxjs';
-import {
-  BackendInstance,
-  Environment,
-  Evaluator,
-  extractEnvironments,
-  FlagsFileEntry,
-  FlagDefinition,
-  FlagEntry,
-  FlagFileContent,
-  FileGroup,
-  LocalFlagsFileOrigin,
-  MetadataMap,
-} from '../models/flag.models';
 import { RemoteApi } from '../services/remote-api';
 import { FileSystemAccess } from '../services/file-system-access';
+import { FlagdSchemaAbstraction } from '../models/abstraction/flagd-schema-abstraction';
+import { DisplayFlag, Environment } from '../models/abstraction/flagd-abstraction-models';
+
+// Private file storage types - not exposed to consumers
+type FileSource = 'remote' | 'local-browser' | 'local-disk';
+
+interface FileMetadata {
+  name: string;
+  source: FileSource;
+  backendId?: string;
+}
+
+interface BackendInstance {
+  id: string;
+  url: string;
+  label: string;
+}
+
+interface ParsedFileState {
+  displayFlags: DisplayFlag[];
+  environments: Environment[];
+  metadata: Record<string, string | number | boolean> | undefined;
+}
+
+interface FileGroup {
+  label: string;
+  icon: string;
+  backendId?: string;
+  entries: FileMetadata[];
+}
 import {
   AddBackend,
-  CreateLocalFlagsFile,
-  CreateLocalFlagsFileEntry,
-  CreateRemoteFlagsFile,
+  CreateFlagsFile,
   DeleteFlag,
-  DeleteLocalFlagsFileEntry,
   DeleteFlagsFile,
   ImportLocalFlagsFile,
   LoadFlagsFiles,
   RemoveBackend,
   RenameFlag,
   SaveFlag,
-  SaveLocalFlagsFileContent,
   SaveFlagsFileMetadata,
   SelectFlagsFile,
   SelectFlagsFileByRoute,
@@ -39,33 +52,36 @@ import {
 } from './flag-store.actions';
 
 export interface FlagStoreStateModel {
-  flagsFiles: FlagsFileEntry[];
-  currentFlagsFile: FlagsFileEntry | null;
-  currentFlags: Record<string, FlagDefinition> | null;
-  currentEvaluators: Record<string, Evaluator> | undefined;
-  currentMetadata: MetadataMap | undefined;
+  // Unified file storage: metadata and content stored separately
+  files: FileMetadata[];
+  filesContent: Record<string, string>; // Map of file key to raw JSON string
+
+  // Backend connections
+  backends: BackendInstance[];
+
+  // Current file selection - stores file key
+  currentFileId: string | null;
+
+  // Cached parsed data from current file
+  currentFileParsed: ParsedFileState | null;
+
+  // Loading and error states
   loading: boolean;
   error: string | null;
   hasDefaultBackend: boolean;
-  localFlagsFiles: Record<string, FlagFileContent>;
-  localFileOrigins: Record<string, LocalFlagsFileOrigin>;
-  backends: BackendInstance[];
 }
 
 @State<FlagStoreStateModel>({
   name: 'flagStore',
   defaults: {
-    flagsFiles: [],
-    currentFlagsFile: null,
-    currentFlags: null,
-    currentEvaluators: undefined,
-    currentMetadata: undefined,
+    files: [],
+    filesContent: {},
+    backends: [],
+    currentFileId: null,
+    currentFileParsed: null,
     loading: false,
     error: null,
     hasDefaultBackend: false,
-    localFlagsFiles: {},
-    localFileOrigins: {},
-    backends: [],
   },
 })
 @Injectable()
@@ -74,28 +90,47 @@ export class FlagStoreState {
   private readonly fileSystemAccess = inject(FileSystemAccess);
 
   @Selector()
-  static flagsFiles(state: FlagStoreStateModel): FlagsFileEntry[] {
-    return state.flagsFiles;
+  static files(state: FlagStoreStateModel): FileMetadata[] {
+    return state.files;
   }
 
   @Selector()
-  static currentFlagsFile(state: FlagStoreStateModel): FlagsFileEntry | null {
-    return state.currentFlagsFile;
+  static currentFile(state: FlagStoreStateModel): FileMetadata | null {
+    if (!state.currentFileId) return null;
+    return state.files.find((f) => FlagStoreState.getFileKey(f) === state.currentFileId) || null;
+  }
+
+  // Backward compatibility aliases
+  @Selector()
+  static currentFlagsFile(state: FlagStoreStateModel): FileMetadata | null {
+    return FlagStoreState.currentFile(state);
   }
 
   @Selector()
-  static currentFlags(state: FlagStoreStateModel): Record<string, FlagDefinition> | null {
-    return state.currentFlags;
+  static currentFlagsFileName(state: FlagStoreStateModel): string | null {
+    return FlagStoreState.currentFileName(state);
   }
 
   @Selector()
-  static currentEvaluators(state: FlagStoreStateModel): Record<string, Evaluator> | undefined {
-    return state.currentEvaluators;
+  static currentFileParsed(state: FlagStoreStateModel): ParsedFileState | null {
+    return state.currentFileParsed;
   }
 
   @Selector()
-  static currentMetadata(state: FlagStoreStateModel): MetadataMap | undefined {
-    return state.currentMetadata;
+  static currentFlags(state: FlagStoreStateModel): DisplayFlag[] | null {
+    return state.currentFileParsed?.displayFlags || null;
+  }
+
+  @Selector()
+  static currentEnvironments(state: FlagStoreStateModel): Environment[] {
+    return state.currentFileParsed?.environments || [];
+  }
+
+  @Selector()
+  static currentMetadata(
+    state: FlagStoreStateModel,
+  ): Record<string, string | number | boolean> | undefined {
+    return state.currentFileParsed?.metadata;
   }
 
   @Selector()
@@ -119,23 +154,13 @@ export class FlagStoreState {
   }
 
   @Selector()
-  static currentEnvironments(state: FlagStoreStateModel): Environment[] {
-    return extractEnvironments(state.currentEvaluators);
-  }
-
-  @Selector()
-  static flagEntries(state: FlagStoreStateModel): FlagEntry[] {
-    if (!state.currentFlags) return [];
-    return Object.entries(state.currentFlags).map(([key, def]) => ({ key, ...def }));
-  }
-
-  @Selector()
   static fileGroups(state: FlagStoreStateModel): FileGroup[] {
     const groups: FileGroup[] = [];
 
+    // Group remote files by backend
     for (const backend of state.backends) {
-      const entries = state.flagsFiles.filter(
-        (flagsFile) => flagsFile.source === 'remote' && flagsFile.backendUrl === backend.url,
+      const entries = state.files.filter(
+        (file) => file.source === 'remote' && file.backendId === backend.id,
       );
       if (entries.length > 0) {
         groups.push({
@@ -147,16 +172,17 @@ export class FlagStoreState {
       }
     }
 
-    const localDiskEntries = state.flagsFiles.filter(
-      (flagsFile) => flagsFile.source === 'local' && flagsFile.localOrigin === 'disk',
+    // Group local disk files
+    const localDiskEntries = state.files.filter(
+      (file) => file.source === 'local-disk',
     );
     if (localDiskEntries.length > 0) {
       groups.push({ label: 'Local Files (Disk)', icon: 'save', entries: localDiskEntries });
     }
 
-    const localBrowserEntries = state.flagsFiles.filter(
-      (flagsFile) =>
-        flagsFile.source === 'local' && (flagsFile.localOrigin ?? 'browser') !== 'disk',
+    // Group local browser files
+    const localBrowserEntries = state.files.filter(
+      (file) => file.source === 'local-browser',
     );
     if (localBrowserEntries.length > 0) {
       groups.push({
@@ -170,13 +196,37 @@ export class FlagStoreState {
   }
 
   @Selector()
-  static localFlagsFiles(state: FlagStoreStateModel): Record<string, FlagFileContent> {
-    return state.localFlagsFiles;
+  static currentFileName(state: FlagStoreStateModel): string | null {
+    if (!state.currentFileId) return null;
+    const currentFile = state.files.find((f) => FlagStoreState.getFileKey(f) === state.currentFileId);
+    return currentFile?.name ?? null;
   }
 
   @Selector()
-  static currentFlagsFileName(state: FlagStoreStateModel): string | null {
-    return state.currentFlagsFile?.name ?? null;
+  static flagEntries(state: FlagStoreStateModel): (DisplayFlag & { key: string })[] {
+    return (state.currentFileParsed?.displayFlags ?? []).map((f) => ({
+      ...f,
+      key: f.key,
+    }));
+  }
+
+  @Selector()
+  static currentEvaluators(state: FlagStoreStateModel): Record<string, unknown> | undefined {
+    // Build evaluators from environments for backward compatibility
+    if (!state.currentFileParsed || !state.currentFileParsed.environments) {
+      return undefined;
+    }
+
+    const evaluators: Record<string, unknown> = {};
+    for (const env of state.currentFileParsed.environments) {
+      const envKey =
+        'is' + env.displayName.charAt(0).toUpperCase() + env.displayName.slice(1);
+      evaluators[envKey] = {
+        in: [{ var: 'environment' }, env.aliases],
+      };
+    }
+
+    return Object.keys(evaluators).length > 0 ? evaluators : undefined;
   }
 
   @Action(SetHasDefaultBackend)
@@ -208,22 +258,33 @@ export class FlagStoreState {
       return;
     }
 
-    const nextFlagsFiles = state.flagsFiles.filter(
-      (entry) => !(entry.source === 'remote' && entry.backendUrl === removedBackend.url),
+    // Remove all files from this backend
+    const nextFiles = state.files.filter(
+      (file) => !(file.source === 'remote' && file.backendId === removedBackend.id),
     );
+
+    // Remove content for deleted files
+    const nextContent: Record<string, string> = {};
+    for (const file of nextFiles) {
+      const fileKey = FlagStoreState.getFileKey(file);
+      if (state.filesContent[fileKey]) {
+        nextContent[fileKey] = state.filesContent[fileKey];
+      }
+    }
+
     const isCurrentRemovedBackend =
-      state.currentFlagsFile?.source === 'remote' &&
-      state.currentFlagsFile.backendUrl === removedBackend.url;
+      state.currentFileId &&
+      state.files.find((f) => FlagStoreState.getFileKey(f) === state.currentFileId)?.source === 'remote' &&
+      state.files.find((f) => FlagStoreState.getFileKey(f) === state.currentFileId)?.backendId === removedBackend.id;
 
     ctx.patchState({
       backends: state.backends.filter((backend) => backend.id !== action.id),
-      flagsFiles: nextFlagsFiles,
+      files: nextFiles,
+      filesContent: nextContent,
       ...(isCurrentRemovedBackend
         ? {
-            currentFlagsFile: null,
-            currentFlags: null,
-            currentEvaluators: undefined,
-            currentMetadata: undefined,
+            currentFileId: null,
+            currentFileParsed: null,
           }
         : {}),
     });
@@ -233,81 +294,29 @@ export class FlagStoreState {
     }
   }
 
-  @Action(SaveLocalFlagsFileContent)
-  saveLocalFlagsFileContent(
-    ctx: StateContext<FlagStoreStateModel>,
-    action: SaveLocalFlagsFileContent,
-  ): void {
-    const state = ctx.getState();
-    ctx.patchState({
-      localFlagsFiles: {
-        ...state.localFlagsFiles,
-        [action.name]: action.content,
-      },
-    });
-  }
-
-  @Action(CreateLocalFlagsFileEntry)
-  createLocalFlagsFileEntry(
-    ctx: StateContext<FlagStoreStateModel>,
-    action: CreateLocalFlagsFileEntry,
-  ): void {
-    const state = ctx.getState();
-    if (state.localFlagsFiles[action.name]) {
-      throw new Error(`Flags-file "${action.name}" already exists`);
-    }
-
-    ctx.patchState({
-      localFlagsFiles: {
-        ...state.localFlagsFiles,
-        [action.name]: { flags: {} },
-      },
-      localFileOrigins: {
-        ...state.localFileOrigins,
-        [action.name]: 'browser',
-      },
-    });
-  }
-
-  @Action(DeleteLocalFlagsFileEntry)
-  deleteLocalFlagsFileEntry(
-    ctx: StateContext<FlagStoreStateModel>,
-    action: DeleteLocalFlagsFileEntry,
-  ): void {
-    const state = ctx.getState();
-    const existing = state.localFlagsFiles[action.name];
-    if (!existing) {
-      throw new Error(`Flags-file "${action.name}" not found`);
-    }
-
-    const nextLocalFlagsFiles = { ...state.localFlagsFiles };
-    const nextLocalFileOrigins = { ...state.localFileOrigins };
-    delete nextLocalFlagsFiles[action.name];
-    delete nextLocalFileOrigins[action.name];
-    ctx.patchState({
-      localFlagsFiles: nextLocalFlagsFiles,
-      localFileOrigins: nextLocalFileOrigins,
-    });
-  }
-
   @Action(LoadFlagsFiles)
   loadFlagsFiles(ctx: StateContext<FlagStoreStateModel>): Observable<unknown> | void {
     const state = ctx.getState();
     ctx.patchState({ loading: true, error: null });
 
-    const localEntries: FlagsFileEntry[] = Object.keys(state.localFlagsFiles)
-      .sort()
-      .map((name) => ({
-        name,
-        source: 'local' as const,
-        localOrigin: state.localFileOrigins[name] ?? 'browser',
-      }));
+    // Load local files first - these are already stored in filesContent
+    const localFiles: FileMetadata[] = [];
+    const existingLocalIds = new Set<string>();
+
+    for (const fileKey of Object.keys(state.filesContent)) {
+      const file = state.files.find((f) => FlagStoreState.getFileKey(f) === fileKey && (f.source === 'local-browser' || f.source === 'local-disk'));
+      if (file) {
+        localFiles.push(file);
+        existingLocalIds.add(fileKey);
+      }
+    }
 
     if (state.backends.length === 0) {
-      ctx.patchState({ flagsFiles: localEntries, loading: false });
+      ctx.patchState({ files: localFiles, loading: false });
       return;
     }
 
+    // Load remote files from all backends
     const remoteRequests = state.backends.map((backend) =>
       this.remoteApi.listFlagsFiles(backend.url).pipe(
         catchError((err) => {
@@ -319,26 +328,27 @@ export class FlagStoreState {
 
     return forkJoin(remoteRequests).pipe(
       tap((results) => {
-        const remoteEntries: FlagsFileEntry[] = [];
+        const remoteFiles: FileMetadata[] = [];
+
         results.forEach((names, index) => {
           const backend = state.backends[index];
           names.forEach((name) => {
-            remoteEntries.push({
+            remoteFiles.push({
               name,
               source: 'remote',
-              backendUrl: backend.url,
+              backendId: backend.id,
             });
           });
         });
 
         ctx.patchState({
-          flagsFiles: [...localEntries, ...remoteEntries],
+          files: [...localFiles, ...remoteFiles],
           loading: false,
         });
       }),
       catchError((err) => {
         ctx.patchState({
-          flagsFiles: localEntries,
+          files: localFiles,
           error: 'Failed to load remote flags-files',
           loading: false,
         });
@@ -354,49 +364,60 @@ export class FlagStoreState {
     action: SelectFlagsFile,
   ): Observable<unknown> | void {
     const state = ctx.getState();
-    const current = state.currentFlagsFile;
+    const fileKey = action.fileId;
+    const file = state.files.find((f) => FlagStoreState.getFileKey(f) === fileKey);
 
-    const isSameFlagsFile =
-      current?.name === action.entry.name &&
-      current?.source === action.entry.source &&
-      (current?.backendUrl ?? '') === (action.entry.backendUrl ?? '');
+    if (!file) {
+      ctx.patchState({ error: `Flags-file not found` });
+      return;
+    }
 
-    if (isSameFlagsFile && (state.loading || state.currentFlags !== null)) {
+    // If already loaded, skip
+    if (state.currentFileId === fileKey && state.currentFileParsed !== null) {
       return;
     }
 
     ctx.patchState({
-      currentFlagsFile: action.entry,
+      currentFileId: fileKey,
       loading: true,
       error: null,
     });
 
-    if (action.entry.source === 'local') {
-      const content = state.localFlagsFiles[action.entry.name];
+    // For local files, content is already in filesContent
+    if (file.source === 'local-browser' || file.source === 'local-disk') {
+      const content = state.filesContent[fileKey];
+      if (content) {
+        this.parseAndLoadFile(ctx, fileKey, content, file);
+      } else {
+        ctx.patchState({
+          error: `File content not found for "${file.name}"`,
+          loading: false,
+        });
+      }
+      return;
+    }
+
+    // For remote files, fetch from backend
+    const backend = state.backends.find((b) => b.id === file.backendId);
+    if (!backend) {
       ctx.patchState({
-        currentFlags: content?.flags ?? {},
-        currentEvaluators: content?.$evaluators,
-        currentMetadata: content?.metadata,
+        error: `Backend not found for "${file.name}"`,
         loading: false,
       });
       return;
     }
 
-    return this.remoteApi.getFlagsFile(action.entry.backendUrl!, action.entry.name).pipe(
+    return this.remoteApi.getFlagsFile(backend.url, file.name).pipe(
       tap((res) => {
-        ctx.patchState({
-          currentFlags: res.flags ?? {},
-          currentEvaluators: res.$evaluators,
-          currentMetadata: res.metadata,
-          loading: false,
-        });
+        const contentString = JSON.stringify(res);
+        // Store the content and parse
+        const nextContent = { ...state.filesContent, [fileKey]: contentString };
+        ctx.patchState({ filesContent: nextContent });
+        this.parseAndLoadFile(ctx, fileKey, contentString, file);
       }),
       catchError((err) => {
         ctx.patchState({
-          error: `Failed to load flags-file "${action.entry.name}"`,
-          currentFlags: null,
-          currentEvaluators: undefined,
-          currentMetadata: undefined,
+          error: `Failed to load flags-file "${file.name}"`,
           loading: false,
         });
         console.error('Failed to load flags-file', err);
@@ -405,100 +426,157 @@ export class FlagStoreState {
     );
   }
 
+  private parseAndLoadFile(
+    ctx: StateContext<FlagStoreStateModel>,
+    fileKey: string,
+    contentString: string,
+    file: FileMetadata,
+  ): void {
+    try {
+      const schema = JSON.parse(contentString);
+      const abstraction = FlagdSchemaAbstraction.fromSchema(schema);
+
+      ctx.patchState({
+        currentFileParsed: {
+          displayFlags: abstraction.getFlags(),
+          environments: abstraction.getEnvironments(),
+          metadata: abstraction.getMetadata(),
+        },
+        loading: false,
+      });
+    } catch (err) {
+      ctx.patchState({
+        error: `Failed to parse flags-file "${file.name}": invalid JSON`,
+        currentFileParsed: null,
+        loading: false,
+      });
+      console.error('Failed to parse flags-file', err);
+    }
+  }
+
   @Action(SelectFlagsFileByRoute)
   selectFlagsFileByRoute(
     ctx: StateContext<FlagStoreStateModel>,
     action: SelectFlagsFileByRoute,
   ): Observable<unknown> | void {
+    const state = ctx.getState();
+
+    let file: FileMetadata | undefined;
+
     if (action.source === 'local') {
-      return ctx.dispatch(new SelectFlagsFile({ name: action.name, source: 'local' }));
+      file = state.files.find((f) => (f.source === 'local-browser' || f.source === 'local-disk') && f.name === action.name);
+    } else if (action.backendId && action.name) {
+      file = state.files.find(
+        (f) => f.source === 'remote' && f.backendId === action.backendId && f.name === action.name,
+      );
     }
 
-    if (!action.backendId) {
+    if (!file) {
+      ctx.patchState({
+        error: `Flags-file "${action.name}" not found`,
+        currentFileId: null,
+        currentFileParsed: null,
+      });
       return;
     }
 
-    const backend = ctx.getState().backends.find((entry) => entry.id === action.backendId);
-    if (!backend) {
-      ctx.patchState({ error: `Backend "${action.backendId}" not found` });
-      return;
-    }
-
-    return ctx.dispatch(
-      new SelectFlagsFile({
-        name: action.name,
-        source: 'remote',
-        backendUrl: backend.url,
-      }),
-    );
+    return ctx.dispatch(new SelectFlagsFile(FlagStoreState.getFileKey(file)));
   }
 
-  @Action(CreateLocalFlagsFile)
-  createLocalFlagsFile(
+  @Action(CreateFlagsFile)
+  createFlagsFile(
     ctx: StateContext<FlagStoreStateModel>,
-    action: CreateLocalFlagsFile,
+    action: CreateFlagsFile,
   ): Observable<unknown> {
     const state = ctx.getState();
 
-    if (state.localFlagsFiles[action.name]) {
+    // Validate backendId for remote files
+    if (action.source === 'remote' && !action.backendId) {
+      ctx.patchState({ error: 'Backend ID is required for remote files' });
+      return of(void 0);
+    }
+
+    // Check if file already exists
+    const existingFile = state.files.find(
+      (f) =>
+        f.name === action.name &&
+        (action.source === 'remote'
+          ? f.source === 'remote' && f.backendId === action.backendId
+          : f.source === action.source),
+    );
+
+    if (existingFile) {
       ctx.patchState({ error: `Flags-file "${action.name}" already exists` });
       return of(void 0);
     }
 
-    ctx.patchState({
-      error: null,
-      localFlagsFiles: {
-        ...state.localFlagsFiles,
-        [action.name]: { flags: {} },
-      },
-      localFileOrigins: {
-        ...state.localFileOrigins,
-        [action.name]: 'browser',
-      },
-    });
+    const initialContent = action.content || { flags: {} };
+    const contentString = JSON.stringify(initialContent);
 
-    return ctx.dispatch(new LoadFlagsFiles()).pipe(
-      tap(() => {
-        ctx.dispatch(
-          new Navigate(['/flags-files', 'local', action.name], undefined, {
-            queryParamsHandling: 'merge',
-          }),
-        );
-      }),
-      switchMap(() => of(void 0)),
-    );
-  }
+    if (action.source === 'local-browser' || action.source === 'local-disk') {
+      // Create local file
+      const newFile: FileMetadata = {
+        name: action.name,
+        source: action.source,
+      };
 
-  @Action(CreateRemoteFlagsFile)
-  createRemoteFlagsFile(
-    ctx: StateContext<FlagStoreStateModel>,
-    action: CreateRemoteFlagsFile,
-  ): Observable<unknown> {
-    const state = ctx.getState();
-    ctx.patchState({ loading: true, error: null });
+      const fileKey = FlagStoreState.getFileKey(newFile);
 
-    return this.remoteApi.createFlagsFile(action.backendUrl, action.name, { flags: {} }).pipe(
-      switchMap(() => ctx.dispatch(new LoadFlagsFiles())),
-      tap(() => {
-        const backend = state.backends.find((entry) => entry.url === action.backendUrl);
-        if (backend) {
+      ctx.patchState({
+        error: null,
+        files: [...state.files, newFile],
+        filesContent: {
+          ...state.filesContent,
+          [fileKey]: contentString,
+        },
+      });
+
+      return ctx.dispatch(new LoadFlagsFiles()).pipe(
+        tap(() => {
           ctx.dispatch(
-            new Navigate(['/flags-files', 'remote', backend.id, action.name], undefined, {
+            new Navigate(['/flags-files', 'local', action.name], undefined, {
               queryParamsHandling: 'merge',
             }),
           );
-        }
-      }),
-      switchMap(() => of(void 0)),
-      catchError((err) => {
+        }),
+        switchMap(() => of(void 0)),
+      );
+    } else if (action.source === 'remote' && action.backendId) {
+      // Create remote file
+      ctx.patchState({ loading: true, error: null });
+
+      const backend = state.backends.find((b) => b.id === action.backendId);
+      if (!backend) {
         ctx.patchState({
-          error: `Failed to create flags-file "${action.name}"`,
+          error: `Backend "${action.backendId}" not found`,
           loading: false,
         });
-        console.error('Failed to create flags-file', err);
         return of(void 0);
-      }),
-    );
+      }
+
+      return this.remoteApi.createFlagsFile(backend.url, action.name, initialContent).pipe(
+        switchMap(() => ctx.dispatch(new LoadFlagsFiles())),
+        tap(() => {
+          ctx.dispatch(
+            new Navigate(['/flags-files', 'remote', action.backendId, action.name], undefined, {
+              queryParamsHandling: 'merge',
+            }),
+          );
+        }),
+        switchMap(() => of(void 0)),
+        catchError((err) => {
+          ctx.patchState({
+            error: `Failed to create flags-file "${action.name}"`,
+            loading: false,
+          });
+          console.error('Failed to create flags-file', err);
+          return of(void 0);
+        }),
+      );
+    }
+
+    ctx.patchState({ error: 'Invalid file source' });
+    return of(void 0);
   }
 
   @Action(DeleteFlagsFile)
@@ -509,26 +587,33 @@ export class FlagStoreState {
     const state = ctx.getState();
     ctx.patchState({ loading: true, error: null });
 
-    const isCurrent =
-      state.currentFlagsFile?.name === action.entry.name &&
-      state.currentFlagsFile?.source === action.entry.source;
+    const file = state.files.find((f) => FlagStoreState.getFileKey(f) === action.fileId);
+    if (!file) {
+      ctx.patchState({
+        error: `Flags-file not found`,
+        loading: false,
+      });
+      return;
+    }
 
-    if (action.entry.source === 'local') {
-      const nextLocalFlagsFiles = { ...state.localFlagsFiles };
-      const nextLocalFileOrigins = { ...state.localFileOrigins };
-      delete nextLocalFlagsFiles[action.entry.name];
-      delete nextLocalFileOrigins[action.entry.name];
-      this.fileSystemAccess.unbindFlagsFile(action.entry.name);
+    const fileKey = FlagStoreState.getFileKey(file);
+    const isCurrent = state.currentFileId === fileKey;
+
+    if (file.source === 'local-browser' || file.source === 'local-disk') {
+      // For local files, remove from state and unbind from file system
+      const nextFiles = state.files.filter((f) => FlagStoreState.getFileKey(f) !== fileKey);
+      const nextContent = { ...state.filesContent };
+      delete nextContent[fileKey];
+
+      this.fileSystemAccess.unbindFlagsFile(file.name);
 
       ctx.patchState({
-        localFlagsFiles: nextLocalFlagsFiles,
-        localFileOrigins: nextLocalFileOrigins,
+        files: nextFiles,
+        filesContent: nextContent,
         ...(isCurrent
           ? {
-              currentFlagsFile: null,
-              currentFlags: null,
-              currentMetadata: undefined,
-              currentEvaluators: undefined,
+              currentFileId: null,
+              currentFileParsed: null,
             }
           : {}),
       });
@@ -540,14 +625,22 @@ export class FlagStoreState {
       return ctx.dispatch(new LoadFlagsFiles()).pipe(switchMap(() => of(void 0)));
     }
 
-    return this.remoteApi.deleteFlagsFile(action.entry.backendUrl!, action.entry.name).pipe(
+    // For remote files, delete via API
+    const backend = state.backends.find((b) => b.id === file.backendId);
+    if (!backend) {
+      ctx.patchState({
+        error: `Backend not found for file "${file.name}"`,
+        loading: false,
+      });
+      return;
+    }
+
+    return this.remoteApi.deleteFlagsFile(backend.url, file.name).pipe(
       switchMap(() => {
         if (isCurrent) {
           ctx.patchState({
-            currentFlagsFile: null,
-            currentFlags: null,
-            currentMetadata: undefined,
-            currentEvaluators: undefined,
+            currentFileId: null,
+            currentFileParsed: null,
           });
           ctx.dispatch(new Navigate(['/'], undefined, { queryParamsHandling: 'merge' }));
         }
@@ -556,7 +649,7 @@ export class FlagStoreState {
       switchMap(() => of(void 0)),
       catchError((err) => {
         ctx.patchState({
-          error: `Failed to delete flags-file "${action.entry.name}"`,
+          error: `Failed to delete flags-file "${file.name}"`,
           loading: false,
         });
         console.error('Failed to delete flags-file', err);
@@ -568,26 +661,31 @@ export class FlagStoreState {
   @Action(SaveFlag)
   saveFlag(ctx: StateContext<FlagStoreStateModel>, action: SaveFlag): Observable<unknown> | void {
     const state = ctx.getState();
-    const flagsFile = state.currentFlagsFile;
-    if (!flagsFile) return;
+    if (!state.currentFileId || !state.currentFileParsed) return;
 
-    const updatedFlags = {
-      ...(state.currentFlags ?? {}),
-      [action.key]: action.flag,
-    };
-    const metadata = state.currentMetadata;
-    const content = this.buildFlagsFileContent(updatedFlags, metadata, state.currentEvaluators);
+    const file = state.files.find((f) => FlagStoreState.getFileKey(f) === state.currentFileId);
+    if (!file) return;
 
-    return this.persistCurrentFlagsFileContent(
-      ctx,
-      flagsFile,
-      content,
-      {
-        currentFlags: updatedFlags,
-        currentMetadata: metadata,
-      },
-      `Failed to save flag "${action.key}"`,
-    );
+    // Get current file content and parse it
+    const contentString = state.filesContent[state.currentFileId];
+    if (!contentString) return;
+
+    try {
+      const schema = JSON.parse(contentString);
+      const abstraction = FlagdSchemaAbstraction.fromSchema(schema);
+
+      // Update the flag
+      abstraction.createOrUpdateFlag(action.flag);
+
+      // Export and persist
+      return this.persistAndParseFile(ctx, state.currentFileId, abstraction, file);
+    } catch (err) {
+      ctx.patchState({
+        error: `Failed to save flag "${action.flag.key}": ${err instanceof Error ? err.message : 'Unknown error'}`,
+      });
+      console.error('Failed to save flag', err);
+      return of(void 0);
+    }
   }
 
   @Action(DeleteFlag)
@@ -596,25 +694,31 @@ export class FlagStoreState {
     action: DeleteFlag,
   ): Observable<unknown> | void {
     const state = ctx.getState();
-    const flagsFile = state.currentFlagsFile;
-    if (!flagsFile || !state.currentFlags) return;
+    if (!state.currentFileId || !state.currentFileParsed) return;
 
-    const updatedFlags = { ...state.currentFlags };
-    delete updatedFlags[action.key];
+    const file = state.files.find((f) => FlagStoreState.getFileKey(f) === state.currentFileId);
+    if (!file) return;
 
-    const metadata = state.currentMetadata;
-    const content = this.buildFlagsFileContent(updatedFlags, metadata, state.currentEvaluators);
+    // Get current file content and parse it
+    const contentString = state.filesContent[state.currentFileId];
+    if (!contentString) return;
 
-    return this.persistCurrentFlagsFileContent(
-      ctx,
-      flagsFile,
-      content,
-      {
-        currentFlags: updatedFlags,
-        currentMetadata: metadata,
-      },
-      `Failed to delete flag "${action.key}"`,
-    );
+    try {
+      const schema = JSON.parse(contentString);
+      const abstraction = FlagdSchemaAbstraction.fromSchema(schema);
+
+      // Delete the flag
+      abstraction.deleteFlag(action.key);
+
+      // Export and persist
+      return this.persistAndParseFile(ctx, state.currentFileId, abstraction, file);
+    } catch (err) {
+      ctx.patchState({
+        error: `Failed to delete flag "${action.key}": ${err instanceof Error ? err.message : 'Unknown error'}`,
+      });
+      console.error('Failed to delete flag', err);
+      return of(void 0);
+    }
   }
 
   @Action(RenameFlag)
@@ -623,25 +727,109 @@ export class FlagStoreState {
     action: RenameFlag,
   ): Observable<unknown> | void {
     const state = ctx.getState();
-    const flagsFile = state.currentFlagsFile;
-    if (!flagsFile) return;
+    if (!state.currentFileId || !state.currentFileParsed) return;
 
-    const updatedFlags = { ...(state.currentFlags ?? {}) };
-    delete updatedFlags[action.oldKey];
-    updatedFlags[action.newKey] = action.flag;
+    const file = state.files.find((f) => FlagStoreState.getFileKey(f) === state.currentFileId);
+    if (!file) return;
 
-    const metadata = state.currentMetadata;
-    const content = this.buildFlagsFileContent(updatedFlags, metadata, state.currentEvaluators);
+    // Get current file content and parse it
+    const contentString = state.filesContent[state.currentFileId];
+    if (!contentString) return;
 
-    return this.persistCurrentFlagsFileContent(
-      ctx,
-      flagsFile,
-      content,
-      {
-        currentFlags: updatedFlags,
-        currentMetadata: metadata,
-      },
-      `Failed to rename flag "${action.oldKey}"`,
+    try {
+      const schema = JSON.parse(contentString);
+      const abstraction = FlagdSchemaAbstraction.fromSchema(schema);
+
+      // Update the flag with new key (previousKey triggers rename)
+      abstraction.createOrUpdateFlag(action.flag, action.oldKey);
+
+      // Export and persist
+      return this.persistAndParseFile(ctx, state.currentFileId, abstraction, file);
+    } catch (err) {
+      ctx.patchState({
+        error: `Failed to rename flag "${action.oldKey}": ${err instanceof Error ? err.message : 'Unknown error'}`,
+      });
+      console.error('Failed to rename flag', err);
+      return of(void 0);
+    }
+  }
+
+  private persistAndParseFile(
+    ctx: StateContext<FlagStoreStateModel>,
+    fileKey: string,
+    abstraction: FlagdSchemaAbstraction,
+    file: FileMetadata,
+  ): Observable<unknown> | void {
+    const state = ctx.getState();
+    ctx.patchState({ loading: true, error: null });
+
+    const updatedSchema = abstraction.exportSchema();
+    const contentString = JSON.stringify(updatedSchema);
+
+    const nextContent = {
+      ...state.filesContent,
+      [fileKey]: contentString,
+    };
+
+    if (file.source === 'local-browser' || file.source === 'local-disk') {
+      // For local files, just update and trigger filesystem write
+      ctx.patchState({
+        filesContent: nextContent,
+        currentFileParsed: {
+          displayFlags: abstraction.getFlags(),
+          environments: abstraction.getEnvironments(),
+          metadata: abstraction.getMetadata(),
+        },
+      });
+
+      // Parse the content for file system storage
+      const fileContent = JSON.parse(contentString);
+      return from(this.fileSystemAccess.persistBoundFlagsFile(file.name, fileContent)).pipe(
+        tap(() => {
+          ctx.patchState({ loading: false });
+        }),
+        catchError((err) => {
+          ctx.patchState({
+            error: `Failed to write changes to disk`,
+            loading: false,
+          });
+          console.error('Failed to write file to disk', err);
+          return of(void 0);
+        }),
+      );
+    }
+
+    // For remote files, update via API
+    const backend = state.backends.find((b) => b.id === file.backendId);
+    if (!backend) {
+      ctx.patchState({
+        error: `Backend not found`,
+        loading: false,
+      });
+      return of(void 0);
+    }
+
+    const fileContent = JSON.parse(contentString);
+    return this.remoteApi.updateFlagsFile(backend.url, file.name, fileContent).pipe(
+      tap(() => {
+        ctx.patchState({
+          filesContent: nextContent,
+          currentFileParsed: {
+            displayFlags: abstraction.getFlags(),
+            environments: abstraction.getEnvironments(),
+            metadata: abstraction.getMetadata(),
+          },
+          loading: false,
+        });
+      }),
+      catchError((err) => {
+        ctx.patchState({
+          error: `Failed to save changes to backend`,
+          loading: false,
+        });
+        console.error('Failed to update file on backend', err);
+        return of(void 0);
+      }),
     );
   }
 
@@ -651,14 +839,27 @@ export class FlagStoreState {
     action: ImportLocalFlagsFile,
   ): Observable<unknown> {
     const state = ctx.getState();
+
+    // Check if file already exists
+    if (state.files.find((f) => (f.source === 'local-browser' || f.source === 'local-disk') && f.name === action.name)) {
+      ctx.patchState({ error: `Flags-file "${action.name}" already exists` });
+      return of(void 0);
+    }
+
+    const contentString = JSON.stringify(action.content);
+
+    const newFile: FileMetadata = {
+      name: action.name,
+      source: action.origin === 'disk' ? 'local-disk' : 'local-browser',
+    };
+
+    const fileKey = FlagStoreState.getFileKey(newFile);
+
     ctx.patchState({
-      localFlagsFiles: {
-        ...state.localFlagsFiles,
-        [action.name]: action.content,
-      },
-      localFileOrigins: {
-        ...state.localFileOrigins,
-        [action.name]: action.origin,
+      files: [...state.files, newFile],
+      filesContent: {
+        ...state.filesContent,
+        [fileKey]: contentString,
       },
     });
 
@@ -680,21 +881,31 @@ export class FlagStoreState {
     action: SaveFlagsFileMetadata,
   ): Observable<unknown> | void {
     const state = ctx.getState();
-    const flagsFile = state.currentFlagsFile;
-    const flags = state.currentFlags;
-    if (!flagsFile || !flags) return;
+    if (!state.currentFileId || !state.currentFileParsed) return;
 
-    const content = this.buildFlagsFileContent(flags, action.metadata, state.currentEvaluators);
+    const file = state.files.find((f) => FlagStoreState.getFileKey(f) === state.currentFileId);
+    if (!file) return;
 
-    return this.persistCurrentFlagsFileContent(
-      ctx,
-      flagsFile,
-      content,
-      {
-        currentMetadata: action.metadata,
-      },
-      'Failed to save flags-file metadata',
-    );
+    // Get current file content and parse it
+    const contentString = state.filesContent[state.currentFileId];
+    if (!contentString) return;
+
+    try {
+      const schema = JSON.parse(contentString);
+      const abstraction = FlagdSchemaAbstraction.fromSchema(schema);
+
+      // Update metadata
+      abstraction.setMetadata(action.metadata || {});
+
+      // Export and persist
+      return this.persistAndParseFile(ctx, state.currentFileId, abstraction, file);
+    } catch (err) {
+      ctx.patchState({
+        error: `Failed to save metadata: ${err instanceof Error ? err.message : 'Unknown error'}`,
+      });
+      console.error('Failed to save metadata', err);
+      return of(void 0);
+    }
   }
 
   @Action(UpdateEvaluators)
@@ -703,93 +914,42 @@ export class FlagStoreState {
     action: UpdateEvaluators,
   ): Observable<unknown> | void {
     const state = ctx.getState();
-    const flagsFile = state.currentFlagsFile;
-    if (!flagsFile) return;
+    if (!state.currentFileId || !state.currentFileParsed) return;
 
-    const flags = state.currentFlags ?? {};
-    const metadata = state.currentMetadata;
-    const content = this.buildFlagsFileContent(flags, metadata, action.evaluators);
+    const file = state.files.find((f) => FlagStoreState.getFileKey(f) === state.currentFileId);
+    if (!file) return;
 
-    return this.persistCurrentFlagsFileContent(
-      ctx,
-      flagsFile,
-      content,
-      {
-        currentEvaluators: action.evaluators,
-      },
-      'Failed to update environments',
-    );
-  }
+    // Get current file content and parse it
+    const contentString = state.filesContent[state.currentFileId];
+    if (!contentString) return;
 
-  private persistCurrentFlagsFileContent(
-    ctx: StateContext<FlagStoreStateModel>,
-    flagsFile: FlagsFileEntry,
-    content: FlagFileContent,
-    patch: Partial<FlagStoreStateModel>,
-    errorMessage: string,
-  ): Observable<unknown> | void {
-    const state = ctx.getState();
-    ctx.patchState({ loading: true, error: null });
+    try {
+      const schema = JSON.parse(contentString);
+      const abstraction = FlagdSchemaAbstraction.fromSchema(schema);
 
-    if (flagsFile.source === 'local') {
+      // Update environments from the action
+      if (action.environments) {
+        for (const env of action.environments) {
+          abstraction.createOrUpdateEnvironment(env);
+        }
+      }
+
+      // Export and persist
+      return this.persistAndParseFile(ctx, state.currentFileId, abstraction, file);
+    } catch (err) {
       ctx.patchState({
-        ...patch,
-        localFlagsFiles: {
-          ...state.localFlagsFiles,
-          [flagsFile.name]: content,
-        },
-        loading: false,
+        error: `Failed to update environments: ${err instanceof Error ? err.message : 'Unknown error'}`,
       });
-
-      return from(this.fileSystemAccess.persistBoundFlagsFile(flagsFile.name, content)).pipe(
-        switchMap(() => of(void 0)),
-        catchError((err) => {
-          ctx.patchState({
-            error: `${errorMessage}: failed to write local file to disk`,
-          });
-          console.error('Failed to write local file to disk', err);
-          return of(void 0);
-        }),
-      );
+      console.error('Failed to update environments', err);
+      return of(void 0);
     }
-
-    return this.remoteApi.updateFlagsFile(flagsFile.backendUrl!, flagsFile.name, content).pipe(
-      tap(() => {
-        ctx.patchState({
-          ...patch,
-          loading: false,
-        });
-      }),
-      catchError((err) => {
-        ctx.patchState({
-          error: errorMessage,
-          loading: false,
-        });
-        console.error(errorMessage, err);
-        return of(void 0);
-      }),
-    );
   }
 
-  private buildFlagsFileContent(
-    flags: Record<string, FlagDefinition>,
-    metadata: MetadataMap | undefined,
-    evaluators: Record<string, Evaluator> | undefined,
-  ): FlagFileContent {
-    const content: FlagFileContent = {
-      $schema: 'https://flagd.dev/schema/v0/flags.json',
-      flags,
-    };
-
-    if (evaluators && Object.keys(evaluators).length > 0) {
-      content.$evaluators = evaluators;
+  private static getFileKey(file: FileMetadata): string {
+    if (file.source === 'remote' && file.backendId) {
+      return `remote:${file.backendId}:${file.name}`;
     }
-
-    if (metadata && Object.keys(metadata).length > 0) {
-      content.metadata = metadata;
-    }
-
-    return content;
+    return `${file.source}:${file.name}`;
   }
 
   private normalizeBackendUrl(url: string): string {

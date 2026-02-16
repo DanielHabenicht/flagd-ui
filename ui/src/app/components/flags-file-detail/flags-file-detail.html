@@ -146,7 +146,7 @@
           <app-flag-editor
             [inline]="true"
             [allowMaximize]="true"
-            [flag]="editingFlag()"
+            [flag]="editingDisplayFlag()"
             [existingKeys]="existingFlagKeys()"
             (maximize)="openPageEditor()"
             (save)="onSaveFlag($event)"

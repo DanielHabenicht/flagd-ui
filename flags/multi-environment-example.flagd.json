@@ -478,87 +478,35 @@
   "$schema": "https://flagd.dev/schema/v0/flags.json",
   "flags": {
     "api-timeout-ms": {
-      "defaultVariant": "default",
+      "defaultVariant": "on",
       "state": "ENABLED",
-      "targeting": {
-        "if": [
-          {
-            "$ref": "isProduction"
-          },
-          "production",
-          {
-            "if": [
-              {
-                "$ref": "isStaging"
-              },
-              "staging",
-              {
-                "if": [
-                  {
-                    "$ref": "isDevelopment"
-                  },
-                  "development",
-                  "default"
-                ]
-              }
-            ]
-          }
-        ]
-      },
       "variants": {
-        "default": 5000,
-        "development": 1000,
-        "production": 5000,
-        "staging": 3000
+        "on": false
       }
     },
     "background-color": {
-      "defaultVariant": "blue",
+      "defaultVariant": "default",
       "state": "ENABLED",
-      "targeting": {
-        "if": [
-          {
-            "$ref": "isProduction"
-          },
-          "production",
-          {
-            "if": [
-              {
-                "$ref": "isStaging"
-              },
-              "staging",
-              {
-                "if": [
-                  {
-                    "$ref": "isDevelopment"
-                  },
-                  "development",
-                  "blue"
-                ]
-              }
-            ]
-          }
-        ]
-      },
       "variants": {
-        "blue": "#0000FF",
-        "development": "#00FF00",
-        "green": "#00FF00",
-        "production": "#FF0000",
-        "red": "#FF0000",
-        "staging": "#FFFF00",
-        "yellow": "#FFFF00"
+        "default": "#0000FF"
       }
     },
     "experimental-ai-features": {
-      "defaultVariant": "off",
+      "defaultVariant": "on",
       "state": "ENABLED",
       "targeting": {
         "if": [
           {
             "and": [
               {
-                "$ref": "isDevelopment"
+                "in": [
+                  {
+                    "var": "environment"
+                  },
+                  [
+                    "development"
+                  ]
+                ]
               },
               {
                 ">=": [
@@ -570,426 +518,19 @@
               }
             ]
           },
-          "development",
-          {
-            "if": [
-              {
-                "$ref": "isEnv001"
-              },
-              "env001",
-              {
-                "if": [
-                  {
-                    "$ref": "isEnv002"
-                  },
-                  "env002",
-                  {
-                    "if": [
-                      {
-                        "$ref": "isEnv003"
-                      },
-                      "env003",
-                      {
-                        "if": [
-                          {
-                            "$ref": "isEnv004"
-                          },
-                          "env004",
-                          {
-                            "if": [
-                              {
-                                "$ref": "isEnv005"
-                              },
-                              "env005",
-                              {
-                                "if": [
-                                  {
-                                    "$ref": "isEnv006"
-                                  },
-                                  "env006",
-                                  {
-                                    "if": [
-                                      {
-                                        "$ref": "isEnv007"
-                                      },
-                                      "env007",
-                                      {
-                                        "if": [
-                                          {
-                                            "$ref": "isEnv008"
-                                          },
-                                          "env008",
-                                          {
-                                            "if": [
-                                              {
-                                                "$ref": "isEnv009"
-                                              },
-                                              "env009",
-                                              {
-                                                "if": [
-                                                  {
-                                                    "$ref": "isEnv010"
-                                                  },
-                                                  "env010",
-                                                  {
-                                                    "if": [
-                                                      {
-                                                        "$ref": "isEnv011"
-                                                      },
-                                                      "env011",
-                                                      {
-                                                        "if": [
-                                                          {
-                                                            "$ref": "isEnv012"
-                                                          },
-                                                          "env012",
-                                                          {
-                                                            "if": [
-                                                              {
-                                                                "$ref": "isEnv013"
-                                                              },
-                                                              "env013",
-                                                              {
-                                                                "if": [
-                                                                  {
-                                                                    "$ref": "isEnv014"
-                                                                  },
-                                                                  "env014",
-                                                                  {
-                                                                    "if": [
-                                                                      {
-                                                                        "$ref": "isEnv015"
-                                                                      },
-                                                                      "env015",
-                                                                      {
-                                                                        "if": [
-                                                                          {
-                                                                            "$ref": "isEnv016"
-                                                                          },
-                                                                          "env016",
-                                                                          {
-                                                                            "if": [
-                                                                              {
-                                                                                "$ref": "isEnv017"
-                                                                              },
-                                                                              "env017",
-                                                                              {
-                                                                                "if": [
-                                                                                  {
-                                                                                    "$ref": "isEnv018"
-                                                                                  },
-                                                                                  "env018",
-                                                                                  {
-                                                                                    "if": [
-                                                                                      {
-                                                                                        "$ref": "isEnv019"
-                                                                                      },
-                                                                                      "env019",
-                                                                                      {
-                                                                                        "if": [
-                                                                                          {
-                                                                                            "$ref": "isEnv020"
-                                                                                          },
-                                                                                          "env020",
-                                                                                          {
-                                                                                            "if": [
-                                                                                              {
-                                                                                                "$ref": "isEnv021"
-                                                                                              },
-                                                                                              "env021",
-                                                                                              {
-                                                                                                "if": [
-                                                                                                  {
-                                                                                                    "$ref": "isEnv022"
-                                                                                                  },
-                                                                                                  "env022",
-                                                                                                  {
-                                                                                                    "if": [
-                                                                                                      {
-                                                                                                        "$ref": "isEnv023"
-                                                                                                      },
-                                                                                                      "env023",
-                                                                                                      {
-                                                                                                        "if": [
-                                                                                                          {
-                                                                                                            "$ref": "isEnv024"
-                                                                                                          },
-                                                                                                          "env024",
-                                                                                                          {
-                                                                                                            "if": [
-                                                                                                              {
-                                                                                                                "$ref": "isEnv025"
-                                                                                                              },
-                                                                                                              "env025",
-                                                                                                              {
-                                                                                                                "if": [
-                                                                                                                  {
-                                                                                                                    "$ref": "isEnv026"
-                                                                                                                  },
-                                                                                                                  "env026",
-                                                                                                                  {
-                                                                                                                    "if": [
-                                                                                                                      {
-                                                                                                                        "$ref": "isEnv027"
-                                                                                                                      },
-                                                                                                                      "env027",
-                                                                                                                      {
-                                                                                                                        "if": [
-                                                                                                                          {
-                                                                                                                            "$ref": "isEnv028"
-                                                                                                                          },
-                                                                                                                          "env028",
-                                                                                                                          {
-                                                                                                                            "if": [
-                                                                                                                              {
-                                                                                                                                "$ref": "isEnv029"
-                                                                                                                              },
-                                                                                                                              "env029",
-                                                                                                                              {
-                                                                                                                                "if": [
-                                                                                                                                  {
-                                                                                                                                    "$ref": "isEnv030"
-                                                                                                                                  },
-                                                                                                                                  "env030",
-                                                                                                                                  {
-                                                                                                                                    "if": [
-                                                                                                                                      {
-                                                                                                                                        "$ref": "isEnv031"
-                                                                                                                                      },
-                                                                                                                                      "env031",
-                                                                                                                                      {
-                                                                                                                                        "if": [
-                                                                                                                                          {
-                                                                                                                                            "$ref": "isEnv032"
-                                                                                                                                          },
-                                                                                                                                          "env032",
-                                                                                                                                          {
-                                                                                                                                            "if": [
-                                                                                                                                              {
-                                                                                                                                                "$ref": "isEnv033"
-                                                                                                                                              },
-                                                                                                                                              "env033",
-                                                                                                                                              {
-                                                                                                                                                "if": [
-                                                                                                                                                  {
-                                                                                                                                                    "$ref": "isEnv034"
-                                                                                                                                                  },
-                                                                                                                                                  "env034",
-                                                                                                                                                  {
-                                                                                                                                                    "if": [
-                                                                                                                                                      {
-                                                                                                                                                        "$ref": "isEnv035"
-                                                                                                                                                      },
-                                                                                                                                                      "env035",
-                                                                                                                                                      {
-                                                                                                                                                        "if": [
-                                                                                                                                                          {
-                                                                                                                                                            "$ref": "isEnv036"
-                                                                                                                                                          },
-                                                                                                                                                          "env036",
-                                                                                                                                                          {
-                                                                                                                                                            "if": [
-                                                                                                                                                              {
-                                                                                                                                                                "$ref": "isEnv037"
-                                                                                                                                                              },
-                                                                                                                                                              "env037",
-                                                                                                                                                              {
-                                                                                                                                                                "if": [
-                                                                                                                                                                  {
-                                                                                                                                                                    "$ref": "isEnv038"
-                                                                                                                                                                  },
-                                                                                                                                                                  "env038",
-                                                                                                                                                                  {
-                                                                                                                                                                    "if": [
-                                                                                                                                                                      {
-                                                                                                                                                                        "$ref": "isEnv039"
-                                                                                                                                                                      },
-                                                                                                                                                                      "env039",
-                                                                                                                                                                      {
-                                                                                                                                                                        "if": [
-                                                                                                                                                                          {
-                                                                                                                                                                            "$ref": "isEnv040"
-                                                                                                                                                                          },
-                                                                                                                                                                          "env040",
-                                                                                                                                                                          {
-                                                                                                                                                                            "if": [
-                                                                                                                                                                              {
-                                                                                                                                                                                "$ref": "isProduction"
-                                                                                                                                                                              },
-                                                                                                                                                                              "production",
-                                                                                                                                                                              {
-                                                                                                                                                                                "if": [
-                                                                                                                                                                                  {
-                                                                                                                                                                                    "$ref": "isStaging"
-                                                                                                                                                                                  },
-                                                                                                                                                                                  "staging",
-                                                                                                                                                                                  "off"
-                                                                                                                                                                                ]
-                                                                                                                                                                              }
-                                                                                                                                                                            ]
-                                                                                                                                                                          }
-                                                                                                                                                                        ]
-                                                                                                                                                                      }
-                                                                                                                                                                    ]
-                                                                                                                                                                  }
-                                                                                                                                                                ]
-                                                                                                                                                              }
-                                                                                                                                                            ]
-                                                                                                                                                          }
-                                                                                                                                                        ]
-                                                                                                                                                      }
-                                                                                                                                                    ]
-                                                                                                                                                  }
-                                                                                                                                                ]
-                                                                                                                                              }
-                                                                                                                                            ]
-                                                                                                                                          }
-                                                                                                                                        ]
-                                                                                                                                      }
-                                                                                                                                    ]
-                                                                                                                                  }
-                                                                                                                                ]
-                                                                                                                              }
-                                                                                                                            ]
-                                                                                                                          }
-                                                                                                                        ]
-                                                                                                                      }
-                                                                                                                    ]
-                                                                                                                  }
-                                                                                                                ]
-                                                                                                              }
-                                                                                                            ]
-                                                                                                          }
-                                                                                                        ]
-                                                                                                      }
-                                                                                                    ]
-                                                                                                  }
-                                                                                                ]
-                                                                                              }
-                                                                                            ]
-                                                                                          }
-                                                                                        ]
-                                                                                      }
-                                                                                    ]
-                                                                                  }
-                                                                                ]
-                                                                              }
-                                                                            ]
-                                                                          }
-                                                                        ]
-                                                                      }
-                                                                    ]
-                                                                  }
-                                                                ]
-                                                              }
-                                                            ]
-                                                          }
-                                                        ]
-                                                      }
-                                                    ]
-                                                  }
-                                                ]
-                                              }
-                                            ]
-                                          }
-                                        ]
-                                      }
-                                    ]
-                                  }
-                                ]
-                              }
-                            ]
-                          }
-                        ]
-                      }
-                    ]
-                  }
-                ]
-              }
-            ]
-          }
+          "on",
+          "off"
         ]
       },
       "variants": {
-        "development": true,
-        "env001": true,
-        "env002": true,
-        "env003": true,
-        "env004": true,
-        "env005": true,
-        "env006": true,
-        "env007": true,
-        "env008": true,
-        "env009": true,
-        "env010": true,
-        "env011": true,
-        "env012": true,
-        "env013": false,
-        "env014": true,
-        "env015": true,
-        "env016": true,
-        "env017": true,
-        "env018": true,
-        "env019": true,
-        "env020": true,
-        "env021": true,
-        "env022": true,
-        "env023": true,
-        "env024": true,
-        "env025": true,
-        "env026": true,
-        "env027": true,
-        "env028": true,
-        "env029": true,
-        "env030": true,
-        "env031": true,
-        "env032": true,
-        "env033": true,
-        "env034": true,
-        "env035": true,
-        "env036": true,
-        "env037": true,
-        "env038": true,
-        "env039": true,
-        "env040": true,
-        "off": false,
-        "production": false,
-        "staging": true
+        "on": false
       }
     },
     "new-checkout-flow": {
-      "defaultVariant": "off",
+      "defaultVariant": "on",
       "state": "ENABLED",
-      "targeting": {
-        "if": [
-          {
-            "$ref": "isProduction"
-          },
-          "production",
-          {
-            "if": [
-              {
-                "$ref": "isStaging"
-              },
-              "staging",
-              {
-                "if": [
-                  {
-                    "$ref": "isDevelopment"
-                  },
-                  "development",
-                  "off"
-                ]
-              }
-            ]
-          }
-        ]
-      },
       "variants": {
-        "development": false,
-        "off": false,
-        "production": true,
-        "staging": true
+        "on": false
       }
     }
   },

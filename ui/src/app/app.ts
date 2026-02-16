@@ -56,8 +56,8 @@ export class App implements OnDestroy {
   readonly themeMode = this.ngxsStore.selectSignal(UiPreferencesState.themeMode);
 
   // FlagStore selectors
-  readonly currentFlagsFileName = this.ngxsStore.selectSignal(FlagStoreState.currentFlagsFileName);
-  readonly currentFlagsFile = this.ngxsStore.selectSignal(FlagStoreState.currentFlagsFile);
+  readonly currentFlagsFileName = this.ngxsStore.selectSignal(FlagStoreState.currentFileName);
+  readonly currentFlagsFile = this.ngxsStore.selectSignal(FlagStoreState.currentFile);
   readonly prefersDark = signal(this.systemPrefersDark());
   readonly theme = computed<AppTheme>(() => {
     const mode = this.themeMode();
@@ -123,8 +123,8 @@ export class App implements OnDestroy {
 
     const backend = this.backendRegistry
       .getBackends()
-      .find((entry) => entry.url === flagsFile.backendUrl);
-    return backend?.label ?? flagsFile.backendUrl ?? 'Unknown Backend';
+      .find((entry) => entry.id === flagsFile.backendId);
+    return backend?.label ?? 'Unknown Backend';
   });
   readonly sourceBreadcrumbRoute = computed(() => ['/']);
   readonly flagsFileDetailRoute = computed(() => {

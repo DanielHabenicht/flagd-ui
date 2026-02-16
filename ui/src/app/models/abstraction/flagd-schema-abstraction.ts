@@ -117,26 +117,19 @@ export class FlagdSchemaAbstraction {
 
         // Handle global value definition
         if (timingResult.global && timingResult.global.timeWindow) {
-          const startTime =
-            timingResult.global.timeWindow.start !== undefined
-              ? new Date(timingResult.global.timeWindow.start * 1000)
-              : undefined;
-          const endTime =
-            timingResult.global.timeWindow.end !== undefined
-              ? new Date(timingResult.global.timeWindow.end * 1000)
-              : undefined;
-
-          if (startTime !== undefined || endTime !== undefined) {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const timeWindow: any = {};
-            if (startTime !== undefined) timeWindow.startTime = startTime;
-            if (endTime !== undefined) timeWindow.endTime = endTime;
-
-            displayFlag.globalTimeWindow = {
-              value: FlagTypeConverter.getDefaultValueForType(flagType) as any, // eslint-disable-line @typescript-eslint/no-explicit-any
-              timeWindow,
-            };
-          }
+          displayFlag.globalTimeWindow = {
+            value: FlagTypeConverter.getDefaultValueForType(flagType) as any, // eslint-disable-line @typescript-eslint/no-explicit-any
+            timeWindow: {
+              startTime:
+                timingResult.global.timeWindow.start !== undefined
+                  ? new Date(timingResult.global.timeWindow.start * 1000)
+                  : undefined,
+              endTime:
+                timingResult.global.timeWindow.end !== undefined
+                  ? new Date(timingResult.global.timeWindow.end * 1000)
+                  : undefined,
+            },
+          };
         }
 
         // Handle per-environment definitions
@@ -166,18 +159,10 @@ export class FlagdSchemaAbstraction {
 
             // Add time window if it exists
             if (envData.start !== undefined || envData.end !== undefined) {
-              const startTime =
-                envData.start !== undefined ? new Date(envData.start * 1000) : undefined;
-              const endTime = envData.end !== undefined ? new Date(envData.end * 1000) : undefined;
-
-              if (startTime !== undefined || endTime !== undefined) {
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                const timeWindow: any = {};
-                if (startTime !== undefined) timeWindow.startTime = startTime;
-                if (endTime !== undefined) timeWindow.endTime = endTime;
-
-                perEnvDefs[matchedEnv.displayName].timeWindow = timeWindow;
-              }
+              perEnvDefs[matchedEnv.displayName].timeWindow = {
+                startTime: envData.start !== undefined ? new Date(envData.start * 1000) : undefined,
+                endTime: envData.end !== undefined ? new Date(envData.end * 1000) : undefined,
+              };
             }
           }
         }

@@ -1,11 +1,13 @@
-import {
-  Evaluator,
-  FlagsFileEntry,
-  FlagDefinition,
-  FlagFileContent,
-  LocalFlagsFileOrigin,
-  MetadataMap,
-} from '../models/flag.models';
+import { DisplayFlag, Environment } from '../models/abstraction/flagd-abstraction-models';
+
+type FileSource = 'remote' | 'local-browser' | 'local-disk';
+
+interface FlagFileContent {
+  $schema?: string;
+  $evaluators?: Record<string, unknown>;
+  flags: Record<string, unknown>;
+  metadata?: Record<string, string | number | boolean>;
+}
 
 export class LoadFlagsFiles {
   static readonly type = '[FlagStore] Load Flags-Files';
@@ -14,7 +16,7 @@ export class LoadFlagsFiles {
 export class SelectFlagsFile {
   static readonly type = '[FlagStore] Select Flags-File';
 
-  constructor(readonly entry: FlagsFileEntry) {}
+  constructor(readonly fileId: string) {}
 }
 
 export class SelectFlagsFileByRoute {
@@ -27,34 +29,40 @@ export class SelectFlagsFileByRoute {
   ) {}
 }
 
-export class CreateLocalFlagsFile {
-  static readonly type = '[FlagStore] Create Local Flags-File';
-
-  constructor(readonly name: string) {}
-}
-
-export class CreateRemoteFlagsFile {
-  static readonly type = '[FlagStore] Create Remote Flags-File';
+export class CreateFlagsFile {
+  static readonly type = '[FlagStore] Create Flags-File';
 
   constructor(
-    readonly backendUrl: string,
     readonly name: string,
+    readonly source: FileSource,
+    readonly content?: FlagFileContent,
+    readonly backendId?: string,
   ) {}
 }
 
 export class DeleteFlagsFile {
   static readonly type = '[FlagStore] Delete Flags-File';
 
-  constructor(readonly entry: FlagsFileEntry) {}
+  constructor(readonly fileId: string) {}
 }
 
 export class SaveFlag {
   static readonly type = '[FlagStore] Save Flag';
 
-  constructor(
-    readonly key: string,
-    readonly flag: FlagDefinition,
-  ) {}
+  constructor(keyOrFlag: string | DisplayFlag, flag?: DisplayFlag) {
+    // Support both old and new signatures
+    if (typeof keyOrFlag === 'string' && flag) {
+      // Old signature: SaveFlag(key, flag)
+      this.flag = { ...flag, key: keyOrFlag } as DisplayFlag;
+    } else if (typeof keyOrFlag === 'object' && !flag) {
+      // New signature: SaveFlag(flag)
+      this.flag = keyOrFlag;
+    } else {
+      throw new Error('Invalid SaveFlag arguments');
+    }
+  }
+
+  readonly flag: DisplayFlag;
 }
 
 export class DeleteFlag {
@@ -66,11 +74,31 @@ export class DeleteFlag {
 export class RenameFlag {
   static readonly type = '[FlagStore] Rename Flag';
 
+  readonly oldKey: string;
+  readonly flag: DisplayFlag;
+
   constructor(
-    readonly oldKey: string,
-    readonly newKey: string,
-    readonly flag: FlagDefinition,
-  ) {}
+    oldKeyOrFlag: string | DisplayFlag,
+    flagOrNewKey?: DisplayFlag | string,
+    maybeFlagDef?: DisplayFlag,
+  ) {
+    // Support both old and new signatures
+    if (typeof oldKeyOrFlag === 'string' && typeof flagOrNewKey === 'string' && maybeFlagDef) {
+      // Old signature: RenameFlag(oldKey, newKey, flag)
+      this.oldKey = oldKeyOrFlag;
+      this.flag = { ...maybeFlagDef, key: flagOrNewKey } as DisplayFlag;
+    } else if (
+      typeof oldKeyOrFlag === 'string' &&
+      typeof flagOrNewKey === 'object' &&
+      !maybeFlagDef
+    ) {
+      // New signature: RenameFlag(oldKey, flag)
+      this.oldKey = oldKeyOrFlag;
+      this.flag = flagOrNewKey;
+    } else {
+      throw new Error('Invalid RenameFlag arguments');
+    }
+  }
 }
 
 export class ImportLocalFlagsFile {
@@ -79,20 +107,20 @@ export class ImportLocalFlagsFile {
   constructor(
     readonly name: string,
     readonly content: FlagFileContent,
-    readonly origin: LocalFlagsFileOrigin = 'browser',
+    readonly origin: 'browser' | 'disk' = 'browser',
   ) {}
 }
 
 export class SaveFlagsFileMetadata {
   static readonly type = '[FlagStore] Save Flags-File Metadata';
 
-  constructor(readonly metadata: MetadataMap | undefined) {}
+  constructor(readonly metadata: Record<string, string | number | boolean> | undefined) {}
 }
 
 export class UpdateEvaluators {
   static readonly type = '[FlagStore] Update Evaluators';
 
-  constructor(readonly evaluators: Record<string, Evaluator> | undefined) {}
+  constructor(readonly environments: Environment[]) {}
 }
 
 export class SetHasDefaultBackend {
@@ -114,25 +142,4 @@ export class RemoveBackend {
   static readonly type = '[FlagStore] Remove Backend';
 
   constructor(readonly id: string) {}
-}
-
-export class SaveLocalFlagsFileContent {
-  static readonly type = '[FlagStore] Save Local Flags-File Content';
-
-  constructor(
-    readonly name: string,
-    readonly content: FlagFileContent,
-  ) {}
-}
-
-export class CreateLocalFlagsFileEntry {
-  static readonly type = '[FlagStore] Create Local Flags-File Entry';
-
-  constructor(readonly name: string) {}
-}
-
-export class DeleteLocalFlagsFileEntry {
-  static readonly type = '[FlagStore] Delete Local Flags-File Entry';
-
-  constructor(readonly name: string) {}
 }

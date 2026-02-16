@@ -66,7 +66,7 @@
           <mat-button-toggle-group
             class="flag-type-toggle-group"
             [value]="form.get('flagType')!.value"
-            (change)="onFlagTypeToggleChange($event.value)"
+            (change)="onFlagTypeChange($event.value)"
           >
             <mat-button-toggle value="boolean">Boolean</mat-button-toggle>
             <mat-button-toggle value="string">String</mat-button-toggle>
@@ -84,10 +84,10 @@
 
           @if (form.get('flagType')!.value === 'boolean') {
             <mat-slide-toggle
-              [checked]="form.get('defaultBooleanValue')!.value"
-              (change)="onDefaultFallbackValueChange($event.checked)"
+              [checked]="form.get('booleanValue')!.value"
+              (change)="onValueChange($event.checked)"
             >
-              {{ form.get('defaultBooleanValue')!.value ? 'ON' : 'OFF' }}
+              {{ form.get('booleanValue')!.value ? 'ON' : 'OFF' }}
             </mat-slide-toggle>
           }
 
@@ -96,8 +96,8 @@
               <mat-label>String Value</mat-label>
               <input
                 matInput
-                [value]="form.get('defaultStringValue')!.value"
-                (input)="onDefaultFallbackValueChange($any($event.target).value)"
+                [value]="form.get('stringValue')!.value"
+                (input)="onValueChange($any($event.target).value)"
                 placeholder="Enter default value"
               />
             </mat-form-field>
@@ -109,8 +109,8 @@
               <input
                 matInput
                 type="number"
-                [value]="form.get('defaultNumberValue')!.value"
-                (input)="onDefaultFallbackValueChange(+$any($event.target).value)"
+                [value]="form.get('numberValue')!.value"
+                (input)="onValueChange(+$any($event.target).value)"
                 placeholder="Enter default number"
               />
             </mat-form-field>
@@ -121,10 +121,8 @@
               <mat-label>JSON Object</mat-label>
               <textarea
                 matInput
-                [value]="form.get('defaultObjectValue')!.value"
-                (input)="
-                  onDefaultFallbackValueChange(JSON.parse($any($event.target).value || '{}'))
-                "
+                [value]="form.get('objectValue')!.value"
+                (input)="onValueChange(JSON.parse($any($event.target).value || '{}'))"
                 rows="4"
                 placeholder="{}"
               ></textarea>
@@ -141,13 +139,13 @@
               <!-- Environment Overrides Panel -->
               <mat-expansion-panel
                 #environmentPanel
-                [expanded]="!allEnvironmentsSameValue() || showEnvironmentOverrides()"
+                [expanded]="!canCollapseEnvironmentOverrides() || showEnvironmentOverrides()"
                 [hideToggle]="true"
               >
                 <mat-expansion-panel-header>
                   <mat-panel-title>
                     {{
-                      allEnvironmentsSameValue()
+                      canCollapseEnvironmentOverrides()
                         ? 'No Environment Specific Override'
                         : 'Environment-Specific Overrides'
                     }}
@@ -161,7 +159,7 @@
                       environmentPanel.toggle()
                     "
                     [matTooltip]="
-                      allEnvironmentsSameValue()
+                      canCollapseEnvironmentOverrides()
                         ? 'All environments use the same value as the default. Click to customize per environment.'
                         : 'Some environments have custom values. Click to collapse.'
                     "
@@ -173,7 +171,7 @@
                     {{
                       showEnvironmentOverrides()
                         ? 'Hide'
-                        : allEnvironmentsSameValue()
+                        : canCollapseEnvironmentOverrides()
                           ? 'Customize per Environment'
                           : 'Show'
                     }}
@@ -200,15 +198,15 @@
                     <p class="hint-text">No environments match the current filter.</p>
                   } @else {
                     <div class="environment-values-list">
-                      @for (env of filteredEnvironments(); track env.name) {
+                      @for (env of filteredEnvironments(); track env.displayName) {
                         <div class="environment-value-item">
                           <div class="environment-header-row">
                             <span class="environment-label">{{ env.displayName }}</span>
-                            @if (!hasEnvironmentTimeWindow(env.name.toLowerCase())) {
+                            @if (!hasEnvironmentTimeWindow(env.displayName.toLowerCase())) {
                               <button
                                 mat-stroked-button
                                 type="button"
-                                (click)="addEnvironmentTimeWindow(env.name.toLowerCase())"
+                                (click)="addEnvironmentTimeWindow(env.displayName.toLowerCase())"
                               >
                                 Add Time Window
                               </button>
@@ -216,14 +214,14 @@
                               <button
                                 mat-stroked-button
                                 type="button"
-                                (click)="removeEnvironmentTimeWindow(env.name.toLowerCase())"
+                                (click)="removeEnvironmentTimeWindow(env.displayName.toLowerCase())"
                               >
                                 Remove Time Window
                               </button>
                             }
                           </div>
 
-                          @if (hasEnvironmentTimeWindow(env.name.toLowerCase())) {
+                          @if (hasEnvironmentTimeWindow(env.displayName.toLowerCase())) {
                             <div class="interactive-time-window-section">
                               <span class="time-window-label">Activate after</span>
                               <div class="form-row">
@@ -233,12 +231,13 @@
                                     matInput
                                     [matDatepicker]="envStartDatePicker"
                                     [ngModel]="
-                                      getEnvironmentTimeWindow(env.name.toLowerCase()).startDate
+                                      getEnvironmentTimeWindow(env.displayName.toLowerCase())
+                                        .startDate
                                     "
                                     [ngModelOptions]="{ standalone: true }"
                                     (ngModelChange)="
                                       onEnvironmentTimeWindowChange(
-                                        env.name.toLowerCase(),
+                                        env.displayName.toLowerCase(),
                                         'startDate',
                                         $event
                                       )
@@ -257,12 +256,13 @@
                                     matInput
                                     [matTimepicker]="envStartTimePicker"
                                     [ngModel]="
-                                      getEnvironmentTimeWindow(env.name.toLowerCase()).startTime
+                                      getEnvironmentTimeWindow(env.displayName.toLowerCase())
+                                        .startTime
                                     "
                                     [ngModelOptions]="{ standalone: true }"
                                     (ngModelChange)="
                                       onEnvironmentTimeWindowChange(
-                                        env.name.toLowerCase(),
+                                        env.displayName.toLowerCase(),
                                         'startTime',
                                         $event
                                       )
@@ -284,12 +284,13 @@
                                     matInput
                                     [matDatepicker]="envEndDatePicker"
                                     [ngModel]="
-                                      getEnvironmentTimeWindow(env.name.toLowerCase()).endDate
+                                      getEnvironmentTimeWindow(env.displayName.toLowerCase())
+                                        .endDate
                                     "
                                     [ngModelOptions]="{ standalone: true }"
                                     (ngModelChange)="
                                       onEnvironmentTimeWindowChange(
-                                        env.name.toLowerCase(),
+                                        env.displayName.toLowerCase(),
                                         'endDate',
                                         $event
                                       )
@@ -308,12 +309,13 @@
                                     matInput
                                     [matTimepicker]="envEndTimePicker"
                                     [ngModel]="
-                                      getEnvironmentTimeWindow(env.name.toLowerCase()).endTime
+                                      getEnvironmentTimeWindow(env.displayName.toLowerCase())
+                                        .endTime
                                     "
                                     [ngModelOptions]="{ standalone: true }"
                                     (ngModelChange)="
                                       onEnvironmentTimeWindowChange(
-                                        env.name.toLowerCase(),
+                                        env.displayName.toLowerCase(),
                                         'endTime',
                                         $event
                                       )
@@ -331,13 +333,15 @@
 
                           @if (form.get('flagType')!.value === 'boolean') {
                             <mat-slide-toggle
-                              [checked]="environmentStates()[env.name.toLowerCase()] === true"
-                              (change)="
-                                onEnvironmentValueChange(env.name.toLowerCase(), $event.checked)
+                              [checked]="
+                                perEnvironmentDefinitions()[env.displayName]?.value === true
                               "
+                              (change)="onEnvironmentValueChange(env.displayName, $event.checked)"
                             >
                               {{
-                                environmentStates()[env.name.toLowerCase()] === true ? 'ON' : 'OFF'
+                                perEnvironmentDefinitions()[env.displayName]?.value === true
+                                  ? 'ON'
+                                  : 'OFF'
                               }}
                             </mat-slide-toggle>
                           }
@@ -347,10 +351,12 @@
                               <mat-label>String Value</mat-label>
                               <input
                                 matInput
-                                [value]="environmentStates()[env.name.toLowerCase()] || ''"
+                                [value]="
+                                  $any(perEnvironmentDefinitions()[env.displayName]?.value) || ''
+                                "
                                 (input)="
                                   onEnvironmentValueChange(
-                                    env.name.toLowerCase(),
+                                    env.displayName,
                                     $any($event.target).value
                                   )
                                 "
@@ -365,10 +371,12 @@
                               <input
                                 matInput
                                 type="number"
-                                [value]="environmentStates()[env.name.toLowerCase()] || 0"
+                                [value]="
+                                  $any(perEnvironmentDefinitions()[env.displayName]?.value) || 0
+                                "
                                 (input)="
                                   onEnvironmentValueChange(
-                                    env.name.toLowerCase(),
+                                    env.displayName,
                                     +$any($event.target).value
                                   )
                                 "
@@ -383,9 +391,9 @@
                               <textarea
                                 matInput
                                 [value]="
-                                  environmentStates()[env.name.toLowerCase()]
+                                  perEnvironmentDefinitions()[env.displayName]?.value
                                     ? JSON.stringify(
-                                        environmentStates()[env.name.toLowerCase()],
+                                        perEnvironmentDefinitions()[env.displayName]?.value,
                                         null,
                                         2
                                       )
@@ -393,7 +401,7 @@
                                 "
                                 (input)="
                                   onEnvironmentValueChange(
-                                    env.name.toLowerCase(),
+                                    env.displayName,
                                     JSON.parse($any($event.target).value || '{}')
                                   )
                                 "
@@ -521,44 +529,17 @@
               </mat-expansion-panel>
             </div>
           } @else {
-            @if (form.get('interactiveType')!.value === 'boolean') {
+            @if (form.get('flagType')!.value === 'boolean') {
               <div class="global-environment-value-section">
                 <h3>Global Value</h3>
                 <p class="hint-text">This sets the default value while no environments exist.</p>
 
-                <ng-container *ngTemplateOutlet="interactiveModeGlobalBooleanSwitch"></ng-container>
-              </div>
-            }
-
-            @if (form.get('interactiveType')!.value === 'string') {
-              <div class="interactive-string-section">
-                <mat-form-field appearance="outline" class="full-width">
-                  <mat-label>On Value</mat-label>
-                  <textarea
-                    matInput
-                    formControlName="interactiveStringOnValue"
-                    placeholder="Enter value when ON"
-                    rows="3"
-                    (input)="onInteractiveStringValueChange()"
-                  ></textarea>
-                  @if (
-                    form.get('interactiveStringOnValue')!.invalid &&
-                    form.get('interactiveStringOnValue')!.touched
-                  ) {
-                    <mat-error>On value is required</mat-error>
-                  }
-                </mat-form-field>
-
-                <mat-form-field appearance="outline" class="full-width">
-                  <mat-label>Off Value (optional)</mat-label>
-                  <textarea
-                    matInput
-                    formControlName="interactiveStringOffValue"
-                    placeholder="Leave empty for no off value"
-                    rows="3"
-                    (input)="onInteractiveStringValueChange()"
-                  ></textarea>
-                </mat-form-field>
+                <mat-slide-toggle
+                  [checked]="form.get('booleanValue')!.value"
+                  (change)="onValueChange($event.checked)"
+                >
+                  {{ form.get('booleanValue')!.value ? 'ON' : 'OFF' }}
+                </mat-slide-toggle>
               </div>
             }
           }
@@ -588,7 +569,7 @@
               (ngModelChange)="onJsonInput($event)"
               rows="20"
               spellcheck="false"
-              placeholder='{ "state": "ENABLED", "variants": { ... } }'
+              placeholder='{ "key": "my-flag", "type": "boolean", "state": "ENABLED", "value": true }'
             ></textarea>
           </mat-form-field>
           @if (jsonError) {
@@ -596,20 +577,11 @@
           }
           <p class="json-hint">
             Edit the full flag definition as JSON. Required fields: <code>state</code>,
-            <code>variants</code>.
+            <code>type</code>, <code>value</code>.
           </p>
         </div>
       }
     </div>
-
-    <ng-template #interactiveModeGlobalBooleanSwitch>
-      <mat-slide-toggle
-        [checked]="isInteractiveModeGlobalBooleanOn()"
-        (change)="onInteractiveModeGlobalBooleanChange($event.checked)"
-      >
-        {{ getInteractiveModeGlobalBooleanLabel() }}
-      </mat-slide-toggle>
-    </ng-template>
 
     <!-- ==================== ACTIONS ==================== -->
     <div class="panel-actions">
