@@ -36,6 +36,7 @@ export interface FlagStoreStateModel {
 })
 @Injectable()
 export class FlagStoreState {
+  // eslint-disable-next-line @angular-eslint/prefer-inject
   constructor(private store: Store) {}
 
   @Selector()
@@ -96,7 +97,7 @@ export class FlagStoreState {
       );
     }
 
-    const abstraction = FlagdSchemaAbstraction.fromSchema(file.content as FlagdSchema);
+    const abstraction = FlagdSchemaAbstraction.fromSchema(JSON.parse(file.content) as FlagdSchema);
     ctx.patchState({
       abstraction,
       backendType: action.backendType,

@@ -12,15 +12,14 @@ import { MatSortModule, Sort } from '@angular/material/sort';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { FlagEditorComponent } from '../flag-editor/flag-editor';
-import { FlagEntry, FlagDefinition, inferFlagType } from '../../models/flag.models';
 import { DisplayFlag } from '../../models/abstraction/flagd-abstraction-models';
 import { FlagStoreState } from '../../state/current-flag-store.state';
 import {
-  SelectFlagsFileByRoute,
-  SaveFlag,
-  RenameFlag,
+  LoadFlagFile,
+  CreateOrUpdateFlag,
   DeleteFlag,
-} from '../../state/flag-store.actions';
+} from '../../state/current-flag-store.actions';
+import { BackendType } from '../../state/flag-file-store.actions';
 
 @Component({
   selector: 'app-flags-file-detail',
@@ -49,38 +48,21 @@ export class FlagsFileDetailComponent implements OnInit {
     typeof window !== 'undefined' && window.innerWidth >= this.inlineEditorMinWidth;
   private readonly routeSelectedFlagKey = signal<string | null>(null);
 
-  readonly flagEntries = this.ngxsStore.selectSignal(FlagStoreState.flagEntries);
-  readonly currentFlagsFile = this.ngxsStore.selectSignal(FlagStoreState.currentFlagsFile);
-  readonly currentFlags = this.ngxsStore.selectSignal(FlagStoreState.currentFlags);
-  readonly currentMetadata = this.ngxsStore.selectSignal(FlagStoreState.currentMetadata);
-  readonly currentEvaluators = this.ngxsStore.selectSignal(FlagStoreState.currentEvaluators);
-  readonly loading = this.ngxsStore.selectSignal(FlagStoreState.loading);
-  readonly error = this.ngxsStore.selectSignal(FlagStoreState.error);
+  readonly flagEntries = this.ngxsStore.selectSignal(FlagStoreState.flags);
+  readonly currentFlagsFileName = this.ngxsStore.selectSignal(FlagStoreState.fileName);
+  readonly currentMetadata = this.ngxsStore.selectSignal(FlagStoreState.metadata);
+  readonly currentSchema = this.ngxsStore.selectSignal(FlagStoreState.schema);
+  readonly currentEvaluators = computed(() => {
+    const schema = this.currentSchema();
+    if (!schema) return undefined;
+    const evaluators = (schema as { $evaluators?: Record<string, unknown> }).$evaluators;
+    if (!evaluators || Object.keys(evaluators).length === 0) return undefined;
+    return evaluators;
+  });
 
   showEditor = signal(false);
-  editingFlag = signal<FlagEntry | null>(null);
-  readonly editingDisplayFlag = computed(() => {
-    const entry = this.editingFlag();
-    if (!entry) return null;
-
-    // Infer flag type from variants
-    let flagType: 'boolean' | 'string' | 'number' | 'object' = 'object';
-    const variantValues = Object.values(entry.variants ?? {});
-    if (variantValues.length > 0) {
-      const first = variantValues[0];
-      if (typeof first === 'boolean') flagType = 'boolean';
-      else if (typeof first === 'number') flagType = 'number';
-      else if (typeof first === 'string') flagType = 'string';
-    }
-
-    return {
-      key: entry.key,
-      type: flagType,
-      state: entry.state,
-      value: entry.defaultVariant ? entry.variants[entry.defaultVariant] : null,
-      metadata: entry.metadata,
-    } as DisplayFlag;
-  });
+  editingFlag = signal<DisplayFlag | null>(null);
+  readonly editingDisplayFlag = computed(() => this.editingFlag());
   isWideLayout = signal(this.initialWideLayout);
   readonly selectedFlagKey = computed(() => this.editingFlag()?.key ?? null);
   readonly existingFlagKeys = computed(() => this.flagEntries().map((f) => f.key));
@@ -128,54 +110,58 @@ export class FlagsFileDetailComponent implements OnInit {
     this.showEditor.set(true);
   });
 
-  getFlagType(flag: FlagEntry): string {
-    return inferFlagType(flag.variants);
+  getFlagType(flag: DisplayFlag): string {
+    return flag.type;
   }
 
-  getVariantNames(flag: FlagEntry): string[] {
-    return Object.keys(flag.variants);
+  getDefaultValue(flag: DisplayFlag): unknown {
+    return flag.value ?? null;
   }
 
-  getDefaultValue(flag: FlagEntry): unknown {
-    const defaultVariant = flag.defaultVariant;
-    if (!defaultVariant) return null;
-    if (!Object.prototype.hasOwnProperty.call(flag.variants, defaultVariant)) return null;
-    return flag.variants[defaultVariant];
-  }
-
-  getDefaultValueDisplay(flag: FlagEntry): string {
+  getDefaultValueDisplay(flag: DisplayFlag): string {
     return this.stringifyValue(this.getDefaultValue(flag));
   }
 
-  getVariantValueCounts(
-    flag: FlagEntry,
-  ): { value: string; count: number; variantNames: string[] }[] {
-    const counts = new Map<string, { count: number; variantNames: string[] }>();
+  getOverrideValueCounts(
+    flag: DisplayFlag,
+  ): { value: string; count: number; environmentNames: string[] }[] {
+    const perEnvDefs = flag.perEnvironmentDefinitions ?? {};
+    const entries = Object.entries(perEnvDefs);
+    if (entries.length === 0) return [];
 
-    for (const [variantName, variantValue] of Object.entries(flag.variants)) {
-      const value = this.stringifyValue(variantValue);
+    const counts = new Map<string, { count: number; environmentNames: string[] }>();
+
+    for (const [envName, envDef] of entries) {
+      const value = this.stringifyValue(envDef?.value);
       const existing = counts.get(value);
 
       if (existing) {
         existing.count += 1;
-        existing.variantNames.push(variantName);
+        existing.environmentNames.push(envName);
         continue;
       }
 
-      counts.set(value, { count: 1, variantNames: [variantName] });
+      counts.set(value, { count: 1, environmentNames: [envName] });
     }
 
     return [...counts.entries()]
       .map(([value, data]) => ({
         value,
         count: data.count,
-        variantNames: [...data.variantNames].sort((left, right) => left.localeCompare(right)),
+        environmentNames: [...data.environmentNames].sort((left, right) =>
+          left.localeCompare(right),
+        ),
       }))
       .sort((left, right) => left.value.localeCompare(right.value));
   }
 
-  hasTargeting(flag: FlagEntry): boolean {
-    return !!flag.targeting && Object.keys(flag.targeting).length > 0;
+  hasTargeting(flag: DisplayFlag): boolean {
+    const perEnvDefs = flag.perEnvironmentDefinitions ?? {};
+    return Object.keys(perEnvDefs).length > 0 || !!flag.globalTimeWindow?.timeWindow;
+  }
+
+  hasGlobalTimeWindow(flag: DisplayFlag): boolean {
+    return !!flag.globalTimeWindow?.timeWindow;
   }
 
   onSearchInput(event: Event): void {
@@ -193,23 +179,20 @@ export class FlagsFileDetailComponent implements OnInit {
     this.sortDirection.set(sort.direction);
   }
 
-  onFlagStateToggle(flag: FlagEntry, checked: boolean): void {
-    const updatedFlag: FlagDefinition = {
+  onFlagStateToggle(flag: DisplayFlag, checked: boolean): void {
+    const updatedFlag: DisplayFlag = {
+      ...flag,
       state: checked ? 'ENABLED' : 'DISABLED',
-      variants: flag.variants,
-      defaultVariant: flag.defaultVariant,
-      targeting: flag.targeting,
-      metadata: flag.metadata,
     };
 
-    this.ngxsStore.dispatch(new SaveFlag(flag.key, updatedFlag));
+    this.ngxsStore.dispatch(new CreateOrUpdateFlag(updatedFlag));
 
     if (this.editingFlag()?.key === flag.key) {
-      this.editingFlag.set({ key: flag.key, ...updatedFlag });
+      this.editingFlag.set(updatedFlag);
     }
   }
 
-  confirmDelete(flag: FlagEntry): void {
+  confirmDelete(flag: DisplayFlag): void {
     if (confirm(`Delete flag "${flag.key}"?`)) {
       this.onDeleteFlag(flag.key);
     }
@@ -217,16 +200,13 @@ export class FlagsFileDetailComponent implements OnInit {
 
   ngOnInit(): void {
     this.route.paramMap.subscribe((params) => {
-      const name = params.get('name');
-      const backendId = params.get('backendId');
-      if (!name) return;
+      const backendType = (params.get('backendType') as BackendType | null) ?? null;
+      const backendUri = params.get('uri') ?? null;
+      const fileName = params.get('fileName') ?? null;
 
-      const routePath = this.route.snapshot.routeConfig?.path ?? '';
-      if (routePath.startsWith('flags-files/remote')) {
-        this.ngxsStore.dispatch(new SelectFlagsFileByRoute('remote', name, backendId ?? undefined));
-      } else {
-        this.ngxsStore.dispatch(new SelectFlagsFileByRoute('local', name));
-      }
+      if (!backendType || !backendUri || !fileName) return;
+
+      this.ngxsStore.dispatch(new LoadFlagFile(backendType, backendUri, fileName));
     });
 
     this.route.queryParamMap.subscribe((params) => {
@@ -255,7 +235,7 @@ export class FlagsFileDetailComponent implements OnInit {
     this.showEditor.set(true);
   }
 
-  openEditFlagEditor(flag: FlagEntry): void {
+  openEditFlagEditor(flag: DisplayFlag): void {
     if (!this.isWideLayout()) {
       this.navigateToEditRoute(flag.key);
       return;
@@ -275,29 +255,15 @@ export class FlagsFileDetailComponent implements OnInit {
   }
 
   onSaveFlag(event: { key: string; flag: DisplayFlag; originalKey?: string }): void {
-    // Convert DisplayFlag back to FlagDefinition for the store
-    const variants: Record<string, unknown> = {};
-    const variantKey = event.flag.type === 'boolean' ? 'on' : 'default';
-    variants[variantKey] = event.flag.value;
-
-    const flagDefinition = {
-      state: event.flag.state,
-      variants,
-      defaultVariant: variantKey,
-      ...(event.flag.metadata && { metadata: event.flag.metadata }),
+    const updatedFlag: DisplayFlag = {
+      ...event.flag,
+      key: event.key,
     };
 
-    if (event.originalKey && event.originalKey !== event.key) {
-      this.ngxsStore.dispatch(new RenameFlag(event.originalKey, event.key, flagDefinition));
-    } else {
-      this.ngxsStore.dispatch(new SaveFlag(event.key, flagDefinition));
-    }
+    this.ngxsStore.dispatch(new CreateOrUpdateFlag(updatedFlag, event.originalKey));
 
     if (window.innerWidth >= this.keepEditorOpenAfterSaveMinWidth) {
-      this.editingFlag.set({
-        key: event.key,
-        ...flagDefinition,
-      });
+      this.editingFlag.set(updatedFlag);
       this.showEditor.set(true);
       return;
     }
@@ -313,117 +279,72 @@ export class FlagsFileDetailComponent implements OnInit {
   }
 
   downloadFlagsFile(): void {
-    const flagsFile = this.currentFlagsFile();
-    const flags = this.currentFlags();
-    if (!flagsFile || !flags) return;
+    const fileName = this.currentFlagsFileName();
+    const schema = this.currentSchema();
+    if (!fileName || !schema) return;
 
-    const content = this.buildFlagsFileContent(flags, this.currentMetadata());
-    const blob = new Blob([JSON.stringify(content, null, 2)], {
+    const downloadName = fileName.endsWith('.flagd.json') ? fileName : `${fileName}.flagd.json`;
+    const blob = new Blob([JSON.stringify(schema, null, 2)], {
       type: 'application/json',
     });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${flagsFile.name}.flagd.json`;
+    a.download = downloadName;
     a.click();
     URL.revokeObjectURL(url);
   }
 
-  private buildFlagsFileContent(
-    flags: Record<string, FlagDefinition>,
-    metadata: any,
-  ): Record<string, any> {
-    const content: any = {
-      $schema: 'https://flagd.dev/schema/v0/flags.json',
-      flags,
-    };
-
-    const evaluators = this.currentEvaluators();
-    if (evaluators && Object.keys(evaluators).length > 0) {
-      content.$evaluators = evaluators;
-    }
-
-    if (metadata && Object.keys(metadata).length > 0) {
-      content.metadata = metadata;
-    }
-
-    return content;
-  }
-
   openSettingsPage(): void {
-    const name = this.route.snapshot.paramMap.get('name');
-    if (!name) return;
-
-    const backendId = this.route.snapshot.paramMap.get('backendId');
-    if (backendId) {
-      this.ngxsStore.dispatch(
-        new Navigate(['/flags-files', 'remote', backendId, name, 'settings'], undefined, {
-          queryParamsHandling: 'merge',
-        }),
-      );
-      return;
-    }
+    const routeSegments = this.getFlagsFileRouteSegments();
+    if (!routeSegments) return;
 
     this.ngxsStore.dispatch(
-      new Navigate(['/flags-files', 'local', name, 'settings'], undefined, {
+      new Navigate([...routeSegments, 'settings'], undefined, {
         queryParamsHandling: 'merge',
       }),
     );
   }
 
   private navigateToEditRoute(flagKey: string | null): void {
-    const name = this.route.snapshot.paramMap.get('name');
-    if (!name) return;
-
-    const backendId = this.route.snapshot.paramMap.get('backendId');
     const targetFlagKey = flagKey ?? 'new';
-
-    if (backendId) {
-      this.ngxsStore.dispatch(
-        new Navigate(
-          ['/flags-files', 'remote', backendId, name, 'edit', targetFlagKey],
-          undefined,
-          {
-            queryParamsHandling: 'merge',
-          },
-        ),
-      );
-      return;
-    }
+    const routeSegments = this.getFlagsFileRouteSegments();
+    if (!routeSegments) return;
 
     this.ngxsStore.dispatch(
-      new Navigate(['/flags-files', 'local', name, 'edit', targetFlagKey], undefined, {
+      new Navigate([...routeSegments, 'edit', targetFlagKey], undefined, {
         queryParamsHandling: 'merge',
       }),
     );
   }
 
-  private getSearchText(flag: FlagEntry): string {
+  private getSearchText(flag: DisplayFlag): string {
+    const perEnvDefs = flag.perEnvironmentDefinitions ?? {};
     return [
       flag.key,
-      inferFlagType(flag.variants),
+      flag.type,
       flag.state,
       this.getDefaultValueDisplay(flag),
-      Object.keys(flag.variants).join(' '),
-      Object.values(flag.variants)
-        .map((value) => this.stringifyValue(value))
+      Object.keys(perEnvDefs).join(' '),
+      Object.values(perEnvDefs)
+        .map((definition) => this.stringifyValue(definition?.value))
         .join(' '),
+      flag.metadata ? JSON.stringify(flag.metadata) : '',
       this.hasTargeting(flag) ? 'yes' : 'no',
-      this.hasTargeting(flag) ? JSON.stringify(flag.targeting) : '',
     ]
       .join(' ')
       .toLowerCase();
   }
 
   private getSortValue(
-    flag: FlagEntry,
+    flag: DisplayFlag,
     column: 'key' | 'type' | 'state' | 'default' | 'targeting',
   ): string {
     switch (column) {
       case 'key':
         return flag.key.toLowerCase();
       case 'type':
-        return inferFlagType(flag.variants);
+        return flag.type;
       case 'state':
         return flag.state;
       case 'default':
@@ -438,5 +359,26 @@ export class FlagsFileDetailComponent implements OnInit {
     if (typeof value === 'string') return value;
     if (typeof value === 'number' || typeof value === 'boolean') return String(value);
     return JSON.stringify(value);
+  }
+
+  private getFlagsFileRouteSegments(): string[] | null {
+    const params = this.route.snapshot.paramMap;
+    const backendType = params.get('backendType');
+    const backendUri = params.get('uri');
+    const fileName = params.get('fileName');
+
+    if (backendType && backendUri && fileName) {
+      return ['/', backendType, backendUri, fileName];
+    }
+
+    const name = params.get('name');
+    const backendId = params.get('backendId');
+    if (!name) return null;
+
+    if (backendId) {
+      return ['/flags-files', 'remote', backendId, name];
+    }
+
+    return ['/flags-files', 'local', name];
   }
 }

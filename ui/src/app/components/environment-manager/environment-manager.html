@@ -28,7 +28,7 @@
           <p class="empty-message">No environments match the current filter.</p>
         } @else {
           <div class="environment-items">
-            @for (item of filteredEnvironments(); track item.env.name) {
+            @for (item of filteredEnvironments(); track item.env.displayName) {
               <div class="environment-item">
                 <div class="environment-info">
                   <strong>{{ item.env.displayName }}</strong>

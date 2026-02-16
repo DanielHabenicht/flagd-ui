@@ -14,7 +14,7 @@ import {
  */
 export interface FlagFile {
   name: string;
-  content: Record<string, unknown>;
+  content: string;
 }
 
 /**
@@ -33,18 +33,23 @@ export interface FlagFileStoreStateModel {
   backends: Record<'local' | 'remote', Record<string, Backend>>;
 }
 
+export const LocalBackendUris = {
+  Browser: 'browser',
+  Disk: 'disk',
+};
+
 @State<FlagFileStoreStateModel>({
   name: 'flagFileStore',
   defaults: {
     backends: {
       local: {
-        'local-browser': {
-          uri: 'browser',
+        [LocalBackendUris.Browser]: {
+          uri: LocalBackendUris.Browser,
           label: 'Local Files (Browser)',
           files: [],
         },
-        'local-disk': {
-          uri: 'disk',
+        [LocalBackendUris.Disk]: {
+          uri: LocalBackendUris.Disk,
           label: 'Local Files (Disk)',
           files: [],
         },
@@ -69,6 +74,13 @@ export class FlagFileStore {
     return (state: FlagFileStoreStateModel): Backend[] => {
       return Object.values(state.backends[backendType] || {});
     };
+  }
+
+  @Selector()
+  static backend() {
+    return (state: FlagFileStoreStateModel) =>
+      (backendType: BackendType, uri: string): Backend | undefined =>
+        state.backends[backendType]?.[uri];
   }
 
   @Action(AddBackend)

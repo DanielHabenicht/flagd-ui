@@ -26,7 +26,7 @@ export class AddFile {
     readonly backendType: BackendType,
     readonly uri: string,
     readonly fileName: string,
-    readonly content: Record<string, unknown>,
+    readonly content: string,
   ) {}
 }
 
@@ -45,6 +45,6 @@ export class UpdateFileContent {
     readonly backendType: BackendType,
     readonly uri: string,
     readonly fileName: string,
-    readonly content: Record<string, unknown>,
+    readonly content: string,
   ) {}
 }

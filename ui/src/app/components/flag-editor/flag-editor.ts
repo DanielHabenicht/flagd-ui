@@ -425,7 +425,7 @@ export class FlagEditorComponent implements OnInit, OnChanges {
     this.metadata.set(metadata);
   }
 
-addGlobalEnvironmentTimeWindow(): void {
+  addGlobalEnvironmentTimeWindow(): void {
     this.globalEnvironmentTimeEnabled.set(true);
   }
 

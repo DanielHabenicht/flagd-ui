@@ -8,15 +8,13 @@ import { MatInputModule } from '@angular/material/input';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
-import { BackendRegistry } from '../../services/backend-registry';
 import { RemoteApi } from '../../services/remote-api';
 import { FlagFileContent } from '../../models/flag.models';
 import { FileSystemAccess } from '../../services/file-system-access';
-import {
-  CreateLocalFlagsFile,
-  ImportLocalFlagsFile,
-  LoadFlagsFiles,
-} from '../../state/flag-store.actions';
+import { AddBackend, AddFile } from '../../state/flag-file-store.actions';
+import { LocalBackendUris } from '../../state/flag-file-store.state';
+import { FlagdSchemaAbstraction } from '../../models/abstraction';
+import { stringifyFlagdSchema } from '../../models/flagd-schema.parser';
 
 export interface NewFlagsFileFormResult {
   type: 'empty' | 'url' | 'disk' | 'backend';
@@ -42,7 +40,6 @@ export class NewFlagsFileFormComponent {
 
   private readonly store = inject(Store);
   private readonly http = inject(HttpClient);
-  private readonly backendRegistry = inject(BackendRegistry);
   private readonly remoteApi = inject(RemoteApi);
   private readonly fileSystemAccess = inject(FileSystemAccess);
 
@@ -177,7 +174,14 @@ export class NewFlagsFileFormComponent {
   createEmptyFlagsFile(): void {
     const name = this.flagsFileName.trim();
     if (!name) return;
-    this.store.dispatch(new CreateLocalFlagsFile(name));
+    this.store.dispatch(
+      new AddFile(
+        'local',
+        LocalBackendUris.Browser,
+        name,
+        stringifyFlagdSchema(FlagdSchemaAbstraction.empty().exportSchema()),
+      ),
+    );
     this.formSubmitted.emit({ type: 'empty' });
   }
 
@@ -203,7 +207,9 @@ export class NewFlagsFileFormComponent {
           name = name.replace(/\.flagd\.json$/, '').replace(/\.json$/, '');
           if (!name) name = 'imported';
 
-          this.store.dispatch(new ImportLocalFlagsFile(name, content));
+          this.store.dispatch(
+            new AddFile('local', LocalBackendUris.Browser, name, JSON.stringify(content, null, 2)),
+          );
           this.formSubmitted.emit({ type: 'url' });
         } catch {
           this.urlError = 'Failed to parse JSON file';
@@ -233,7 +239,14 @@ export class NewFlagsFileFormComponent {
         return;
       }
 
-      this.store.dispatch(new ImportLocalFlagsFile(result.name, result.content, 'disk'));
+      this.store.dispatch(
+        new AddFile(
+          'local',
+          LocalBackendUris.Disk,
+          result.name,
+          JSON.stringify(result.content, null, 2),
+        ),
+      );
       this.formSubmitted.emit({ type: 'disk' });
     } catch (error) {
       this.diskLoading = false;
@@ -283,9 +296,34 @@ export class NewFlagsFileFormComponent {
     if (!url.startsWith('http')) {
       url = 'https://' + url;
     }
-    const label = this.backendLabel.trim() || undefined;
-    this.backendRegistry.addBackend(url, label);
-    this.store.dispatch(new LoadFlagsFiles());
-    this.formSubmitted.emit({ type: 'backend' });
+    const label = this.backendLabel.trim() || url;
+    this.store.dispatch(new AddBackend(label, url));
+
+    const discoveredFiles = [...this.discoveredFiles];
+    if (!discoveredFiles.length) {
+      this.formSubmitted.emit({ type: 'backend' });
+      return;
+    }
+
+    let remaining = discoveredFiles.length;
+    for (const fileName of discoveredFiles) {
+      this.remoteApi.getFlagsFile(url, fileName).subscribe({
+        next: (content) => {
+          this.store.dispatch(
+            new AddFile('remote', url, fileName, JSON.stringify(content, null, 2)),
+          );
+          remaining -= 1;
+          if (remaining === 0) {
+            this.formSubmitted.emit({ type: 'backend' });
+          }
+        },
+        error: () => {
+          remaining -= 1;
+          if (remaining === 0) {
+            this.formSubmitted.emit({ type: 'backend' });
+          }
+        },
+      });
+    }
   }
 }

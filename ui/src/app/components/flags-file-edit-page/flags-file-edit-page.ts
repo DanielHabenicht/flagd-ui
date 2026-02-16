@@ -6,7 +6,11 @@ import { FlagEditorComponent } from '../flag-editor/flag-editor';
 import { FlagEntry } from '../../models/flag.models';
 import { DisplayFlag } from '../../models/abstraction/flagd-abstraction-models';
 import { FlagStoreState } from '../../state/current-flag-store.state';
-import { SelectFlagsFileByRoute, SaveFlag, RenameFlag } from '../../state/current-flag-store.actions';
+import {
+  SelectFlagsFileByRoute,
+  SaveFlag,
+  RenameFlag,
+} from '../../state/current-flag-store.actions';
 
 @Component({
   selector: 'app-flags-file-edit-page',

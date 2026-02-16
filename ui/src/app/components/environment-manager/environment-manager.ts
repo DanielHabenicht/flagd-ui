@@ -9,9 +9,9 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatChipInputEvent, MatChipsModule } from '@angular/material/chips';
 import { MatDialogRef } from '@angular/material/dialog';
-import { Environment, Evaluator, createEnvironmentEvaluator } from '../../models/flag.models';
+import { Environment } from '../../models/abstraction/flagd-abstraction-models';
 import { FlagStoreState } from '../../state/current-flag-store.state';
-import { UpdateEvaluators } from '../../state/current-flag-store.actions';
+import { CreateOrUpdateEnvironment } from '../../state/current-flag-store.actions';
 
 interface EnvironmentForm {
   name: string;
@@ -41,8 +41,7 @@ export class EnvironmentManagerComponent {
     optional: true,
   });
 
-  readonly loading = this.ngxsStore.selectSignal(FlagStoreState.loading);
-  readonly currentEnvironments = this.ngxsStore.selectSignal(FlagStoreState.currentEnvironments);
+  readonly currentEnvironments = this.ngxsStore.selectSignal(FlagStoreState.environments);
 
   readonly environments = signal<Environment[]>([]);
   readonly environmentFilter = signal('');
@@ -57,7 +56,7 @@ export class EnvironmentManagerComponent {
   readonly isEditing = computed(() => this.editingIndex() !== null);
   readonly isDialogMode = computed(() => !!this.dialogRef && !this.embedded());
   readonly hasLocalChanges = signal(false);
-  readonly saveDisabled = computed(() => !this.hasLocalChanges() || this.loading());
+  readonly saveDisabled = computed(() => !this.hasLocalChanges());
   readonly filteredEnvironments = computed(() => {
     const query = this.environmentFilter().trim().toLowerCase();
     const entries = this.environments().map((env, index) => ({ env, index }));
@@ -67,7 +66,6 @@ export class EnvironmentManagerComponent {
     }
 
     return entries.filter(({ env }) => {
-      if (env.name.toLowerCase().includes(query)) return true;
       if (env.displayName.toLowerCase().includes(query)) return true;
       return env.aliases.some((alias) => alias.toLowerCase().includes(query));
     });
@@ -90,7 +88,6 @@ export class EnvironmentManagerComponent {
     const aliases = formValue.aliases.map((a) => a.trim()).filter((a) => a.length > 0);
 
     const newEnv: Environment = {
-      name: name.toLowerCase(),
       displayName: name.charAt(0).toUpperCase() + name.slice(1),
       aliases,
     };
@@ -118,7 +115,7 @@ export class EnvironmentManagerComponent {
     if (!env) return;
 
     this.form.patchValue({
-      name: env.name,
+      name: env.displayName,
       aliases: [...env.aliases],
     });
     this.aliasesInputValue.set('');
@@ -197,16 +194,11 @@ export class EnvironmentManagerComponent {
   }
 
   save(): void {
-    // Convert environments to evaluators
-    const evaluators: Record<string, Evaluator> = {};
-
+    // Dispatch actions for each environment
     for (const env of this.environments()) {
-      const evaluatorName = `is${env.displayName}`;
-      evaluators[evaluatorName] = createEnvironmentEvaluator(env.aliases);
+      this.ngxsStore.dispatch(new CreateOrUpdateEnvironment(env));
     }
 
-    // Update the store
-    this.ngxsStore.dispatch(new UpdateEvaluators(Object.keys(evaluators).length > 0 ? evaluators : undefined));
     this.hasLocalChanges.set(false);
     this.dialogRef?.close(true);
   }

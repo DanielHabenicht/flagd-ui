@@ -6,7 +6,7 @@ import { MetadataMap } from '../../models/flag.models';
 import { MetadataEditorComponent } from '../metadata-editor/metadata-editor';
 import { EnvironmentManagerComponent } from '../environment-manager/environment-manager';
 import { FlagStoreState } from '../../state/current-flag-store.state';
-import { SelectFlagsFileByRoute, SaveFlagsFileMetadata } from '../../state/current-flag-store.actions';
+import { LoadFlagFile, SetMetadata } from '../../state/current-flag-store.actions';
 
 @Component({
   selector: 'app-flags-file-settings-page',
@@ -46,9 +46,9 @@ export class FlagsFileSettingsPageComponent implements OnInit {
 
       const routePath = this.route.snapshot.routeConfig?.path ?? '';
       if (routePath.startsWith('flags-files/remote')) {
-        this.ngxsStore.dispatch(new SelectFlagsFileByRoute('remote', name, backendId ?? undefined));
+        this.ngxsStore.dispatch(new LoadFlagFile('remote', backendId ?? '', name));
       } else {
-        this.ngxsStore.dispatch(new SelectFlagsFileByRoute('local', name));
+        this.ngxsStore.dispatch(new LoadFlagFile('local', 'disk', name));
       }
     });
   }
@@ -58,7 +58,11 @@ export class FlagsFileSettingsPageComponent implements OnInit {
   }
 
   saveFlagsFileMetadata(): void {
-    this.ngxsStore.dispatch(new SaveFlagsFileMetadata(this.projectMetadataDraft()));
+    if (this.projectMetadataDraft()) {
+      this.ngxsStore.dispatch(
+        new SetMetadata(this.projectMetadataDraft() as Record<string, string | number | boolean>),
+      );
+    }
   }
 
   private metadataSnapshot(metadata: MetadataMap | undefined): string {
