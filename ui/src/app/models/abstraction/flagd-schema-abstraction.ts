@@ -124,8 +124,9 @@ export class FlagdSchemaAbstraction {
             perEnvDefs[matchedEnv.displayName] = {
               value: FlagTypeConverter.getDefaultValueForType(flagType),
               timeWindow: {
-                startTime: timeBounds.start,
-                endTime: timeBounds.end,
+                startTime:
+                  timeBounds.start !== undefined ? new Date(timeBounds.start * 1000) : undefined,
+                endTime: timeBounds.end !== undefined ? new Date(timeBounds.end * 1000) : undefined,
               },
             };
           }
@@ -219,16 +220,19 @@ export class FlagdSchemaAbstraction {
     for (const [flagKey, displayFlag] of Object.entries(this.flagsMap)) {
       const variants: Record<string, unknown> = {};
 
-      // For now, create a single variant with the current value
-      variants[
+      // Determine the variant key based on flag type
+      const variantKey =
         displayFlag.type === 'boolean'
           ? FlagdSchemaAbstraction.BOOLEAN_ON_VARIANT
-          : FlagdSchemaAbstraction.DEFAULT_VARIANT
-      ] = displayFlag.value;
+          : FlagdSchemaAbstraction.DEFAULT_VARIANT;
+
+      // For now, create a single variant with the current value
+      variants[variantKey] = displayFlag.value;
 
       const flagDef: Record<string, unknown> = {
         state: displayFlag.state,
         variants,
+        defaultVariant: variantKey,
       };
 
       if (displayFlag.metadata && Object.keys(displayFlag.metadata).length > 0) {

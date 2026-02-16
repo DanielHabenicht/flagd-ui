@@ -16,11 +16,11 @@ export class TimeWindowExporter {
     for (const [envName, def] of Object.entries(perEnvDefs)) {
       if (def.timeWindow) {
         const bounds: { start?: number; end?: number } = {};
-        if (def.timeWindow.startTime !== undefined) {
-          bounds.start = def.timeWindow.startTime;
+        if (def.timeWindow.startTime !== undefined && def.timeWindow.startTime instanceof Date) {
+          bounds.start = Math.floor(def.timeWindow.startTime.getTime() / 1000);
         }
-        if (def.timeWindow.endTime !== undefined) {
-          bounds.end = def.timeWindow.endTime;
+        if (def.timeWindow.endTime !== undefined && def.timeWindow.endTime instanceof Date) {
+          bounds.end = Math.floor(def.timeWindow.endTime.getTime() / 1000);
         }
         if (bounds.start !== undefined || bounds.end !== undefined) {
           envTimeWindows[envName.toLowerCase()] = bounds;

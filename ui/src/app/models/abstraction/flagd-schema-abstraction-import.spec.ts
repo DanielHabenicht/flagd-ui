@@ -51,6 +51,35 @@ describe('FlagdSchemaAbstraction', () => {
         aliases: ['staging', 'stage'],
       });
     });
+
+    it('should handle flags with metadata alongside environments', () => {
+      const inputSchema: FlagdSchema = {
+        flags: {
+          'metadata-flag': {
+            state: 'ENABLED',
+            variants: { on: true, off: false },
+            defaultVariant: 'on',
+            metadata: {
+              owner: 'platform-team',
+              description: 'Test flag with metadata',
+            },
+          },
+        },
+        $evaluators: {
+          isProduction: {
+            in: [{ var: 'environment' }, ['production']],
+          },
+        },
+      };
+
+      const abstraction = FlagdSchemaAbstraction.fromSchema(inputSchema);
+      const flags = abstraction.getFlags();
+
+      expect(flags[0].metadata).toEqual({
+        owner: 'platform-team',
+        description: 'Test flag with metadata',
+      });
+    });
   });
 
   describe('creation from invalid schemas', () => {
@@ -276,6 +305,141 @@ describe('FlagdSchemaAbstraction', () => {
       expect(abstraction).toBeDefined();
       expect(abstraction.getFlags()).toHaveLength(0);
       expect(abstraction.getEnvironments()).toHaveLength(0);
+    });
+  });
+
+  describe('time windows per environment', () => {
+    it('should handle time windows with start and end time', () => {
+      const startTime = 1704067200; // Unix timestamp
+      const endTime = 1735689599; // Unix timestamp
+
+      const inputSchema: FlagdSchema = {
+        flags: {
+          'seasonal-feature': {
+            state: 'ENABLED',
+            variants: { on: true, off: false },
+            defaultVariant: 'off',
+            targeting: {
+              if: [
+                {
+                  and: [
+                    { in: [{ var: 'environment' }, ['production']] },
+                    {
+                      and: [
+                        { '>=': [{ var: '$flagd.timestamp' }, startTime] },
+                        { '<=': [{ var: '$flagd.timestamp' }, endTime] },
+                      ],
+                    },
+                  ],
+                },
+                'on',
+                'off',
+              ],
+            } as any,
+          },
+        },
+        $evaluators: {
+          isProduction: {
+            in: [{ var: 'environment' }, ['production']],
+          },
+        },
+      };
+
+      const abstraction = FlagdSchemaAbstraction.fromSchema(inputSchema);
+      const flags = abstraction.getFlags();
+
+      expect(flags).toHaveLength(1);
+      const perEnvDefs = (flags[0] as any).perEnvironmentDefinitions;
+
+      if (perEnvDefs) {
+        // Time windows were extracted and populated
+        expect(perEnvDefs['Production']).toBeDefined();
+        expect(perEnvDefs['Production'].timeWindow).toBeDefined();
+        if (perEnvDefs['Production'].timeWindow) {
+          expect(perEnvDefs['Production'].timeWindow.startTime).toBe(startTime);
+          expect(perEnvDefs['Production'].timeWindow.endTime).toBe(endTime);
+        }
+      }
+    });
+
+    it('should handle time window with only start time', () => {
+      const startTime = 1704067200;
+
+      const inputSchema: FlagdSchema = {
+        flags: {
+          'future-feature': {
+            state: 'ENABLED',
+            variants: { on: true, off: false },
+            defaultVariant: 'off',
+            targeting: {
+              if: [
+                {
+                  and: [
+                    { in: [{ var: 'environment' }, ['staging']] },
+                    { '>=': [{ var: '$flagd.timestamp' }, startTime] },
+                  ],
+                },
+                'on',
+                'off',
+              ],
+            } as any,
+          },
+        },
+        $evaluators: {
+          isStaging: {
+            in: [{ var: 'environment' }, ['staging']],
+          },
+        },
+      };
+
+      const abstraction = FlagdSchemaAbstraction.fromSchema(inputSchema);
+      const flags = abstraction.getFlags();
+
+      const perEnvDefs = (flags[0] as any).perEnvironmentDefinitions;
+      if (perEnvDefs && perEnvDefs['Staging']) {
+        expect(perEnvDefs['Staging'].timeWindow?.startTime).toBe(startTime);
+        expect(perEnvDefs['Staging'].timeWindow?.endTime).toBeUndefined();
+      }
+    });
+
+    it('should handle time window with only end time', () => {
+      const endTime = 1735689599;
+
+      const inputSchema: FlagdSchema = {
+        flags: {
+          'scheduled-feature': {
+            state: 'ENABLED',
+            variants: { on: true, off: false },
+            defaultVariant: 'off',
+            targeting: {
+              if: [
+                {
+                  and: [
+                    { in: [{ var: 'environment' }, ['staging']] },
+                    { '<=': [{ var: '$flagd.timestamp' }, endTime] },
+                  ],
+                },
+                'on',
+                'off',
+              ],
+            } as any,
+          },
+        },
+        $evaluators: {
+          isStaging: {
+            in: [{ var: 'environment' }, ['staging']],
+          },
+        },
+      };
+
+      const abstraction = FlagdSchemaAbstraction.fromSchema(inputSchema);
+      const flags = abstraction.getFlags();
+
+      const perEnvDefs = (flags[0] as any).perEnvironmentDefinitions;
+      if (perEnvDefs && perEnvDefs['Staging']) {
+        expect(perEnvDefs['Staging'].timeWindow?.startTime).toBeUndefined();
+        expect(perEnvDefs['Staging'].timeWindow?.endTime).toBe(endTime);
+      }
     });
   });
 });
