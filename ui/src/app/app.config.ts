@@ -9,7 +9,7 @@ import { withNgxsRouterPlugin } from '@ngxs/router-plugin';
 import { provideApi } from './api-client/provide-api';
 import { routes } from './app.routes';
 import { globalLoadingInterceptor } from './interceptors/global-loading.interceptor';
-import { FlagStoreState } from './state/flag-store.state';
+import { FlagStoreState } from './state/current-flag-store.state';
 import { UiPreferencesState } from './state/ui-preferences.state';
 import { PlaygroundPreferencesState } from './state/playground-preferences.state';
 

@@ -9,8 +9,8 @@ import { MatDialog } from '@angular/material/dialog';
 import { BackendRegistry } from '../../services/backend-registry';
 import { FlagsFileEntry } from '../../models/flag.models';
 import { NewFlagsFileDialogComponent } from '../new-flags-file-dialog/new-flags-file-dialog';
-import { FlagStoreState } from '../../state/flag-store.state';
-import { SetHasDefaultBackend, LoadFlagsFiles, DeleteFlagsFile } from '../../state/flag-store.actions';
+import { FlagStoreState } from '../../state/current-flag-store.state';
+import { SetHasDefaultBackend, LoadFlagsFiles, DeleteFlagsFile } from '../../state/current-flag-store.actions';
 
 @Component({
   selector: 'app-flags-file-list',

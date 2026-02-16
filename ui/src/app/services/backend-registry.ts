@@ -3,8 +3,8 @@ import { HttpClient } from '@angular/common/http';
 import { Store } from '@ngxs/store';
 import { BackendInstance } from '../models/flag.models';
 import { catchError, map, Observable, of } from 'rxjs';
-import { AddBackend, RemoveBackend } from '../state/flag-store.actions';
-import { FlagStoreState } from '../state/flag-store.state';
+import { AddBackend, RemoveBackend } from '../state/current-flag-store.actions';
+import { FlagStoreState } from '../state/current-flag-store.state';
 
 @Injectable({ providedIn: 'root' })
 export class BackendRegistry {

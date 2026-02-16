@@ -10,8 +10,8 @@ import { MatInputModule } from '@angular/material/input';
 import { MatChipInputEvent, MatChipsModule } from '@angular/material/chips';
 import { MatDialogRef } from '@angular/material/dialog';
 import { Environment, Evaluator, createEnvironmentEvaluator } from '../../models/flag.models';
-import { FlagStoreState } from '../../state/flag-store.state';
-import { UpdateEvaluators } from '../../state/flag-store.actions';
+import { FlagStoreState } from '../../state/current-flag-store.state';
+import { UpdateEvaluators } from '../../state/current-flag-store.actions';
 
 interface EnvironmentForm {
   name: string;

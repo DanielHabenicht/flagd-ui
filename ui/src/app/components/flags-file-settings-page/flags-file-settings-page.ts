@@ -5,8 +5,8 @@ import { MatButtonModule } from '@angular/material/button';
 import { MetadataMap } from '../../models/flag.models';
 import { MetadataEditorComponent } from '../metadata-editor/metadata-editor';
 import { EnvironmentManagerComponent } from '../environment-manager/environment-manager';
-import { FlagStoreState } from '../../state/flag-store.state';
-import { SelectFlagsFileByRoute, SaveFlagsFileMetadata } from '../../state/flag-store.actions';
+import { FlagStoreState } from '../../state/current-flag-store.state';
+import { SelectFlagsFileByRoute, SaveFlagsFileMetadata } from '../../state/current-flag-store.actions';
 
 @Component({
   selector: 'app-flags-file-settings-page',

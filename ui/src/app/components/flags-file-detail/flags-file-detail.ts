@@ -14,7 +14,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { FlagEditorComponent } from '../flag-editor/flag-editor';
 import { FlagEntry, FlagDefinition, inferFlagType } from '../../models/flag.models';
 import { DisplayFlag } from '../../models/abstraction/flagd-abstraction-models';
-import { FlagStoreState } from '../../state/flag-store.state';
+import { FlagStoreState } from '../../state/current-flag-store.state';
 import {
   SelectFlagsFileByRoute,
   SaveFlag,

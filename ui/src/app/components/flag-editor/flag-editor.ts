@@ -41,7 +41,7 @@ import {
 import { MetadataEditorComponent } from '../metadata-editor/metadata-editor';
 import { Store } from '@ngxs/store';
 import { FlagSchemaAdapter } from '../../services/flag-schema-adapter';
-import { FlagStoreState } from '../../state/flag-store.state';
+import { FlagStoreState } from '../../state/current-flag-store.state';
 
 export type EditorMode = 'interactive' | 'json';
 

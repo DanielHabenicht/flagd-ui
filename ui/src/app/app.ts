@@ -25,8 +25,8 @@ import { GlobalLoadingService } from './services/global-loading.service';
 import { BackendRegistry } from './services/backend-registry';
 import { SetThemeMode, ThemeMode } from './state/ui-preferences.actions';
 import { UiPreferencesState } from './state/ui-preferences.state';
-import { FlagStoreState } from './state/flag-store.state';
-import { ImportLocalFlagsFile } from './state/flag-store.actions';
+import { FlagStoreState } from './state/current-flag-store.state';
+import { ImportLocalFlagsFile } from './state/current-flag-store.actions';
 
 type AppTheme = 'light' | 'dark';
 
@@ -56,8 +56,7 @@ export class App implements OnDestroy {
   readonly themeMode = this.ngxsStore.selectSignal(UiPreferencesState.themeMode);
 
   // FlagStore selectors
-  readonly currentFlagsFileName = this.ngxsStore.selectSignal(FlagStoreState.currentFileName);
-  readonly currentFlagsFile = this.ngxsStore.selectSignal(FlagStoreState.currentFile);
+  readonly currentFlagsFileName = this.ngxsStore.selectSignal(FlagStoreState.fileName);
   readonly prefersDark = signal(this.systemPrefersDark());
   readonly theme = computed<AppTheme>(() => {
     const mode = this.themeMode();
