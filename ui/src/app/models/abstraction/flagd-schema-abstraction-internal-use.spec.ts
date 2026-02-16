@@ -61,7 +61,8 @@ describe('FlagdSchemaAbstraction - Internal Use (without import or exporting Jso
     it('should add a new boolean flag to an empty abstraction', () => {
       const abstraction = FlagdSchemaAbstraction.empty();
 
-      abstraction.createOrUpdateFlag('feature-flag', {
+      abstraction.createOrUpdateFlag({
+        key: 'feature-flag',
         type: 'boolean',
         state: 'ENABLED',
         value: true,
@@ -77,7 +78,8 @@ describe('FlagdSchemaAbstraction - Internal Use (without import or exporting Jso
     it('should add a new string flag', () => {
       const abstraction = FlagdSchemaAbstraction.empty();
 
-      abstraction.createOrUpdateFlag('color-flag', {
+      abstraction.createOrUpdateFlag({
+        key: 'color-flag',
         type: 'string',
         state: 'ENABLED',
         value: 'red',
@@ -92,7 +94,8 @@ describe('FlagdSchemaAbstraction - Internal Use (without import or exporting Jso
     it('should add a new number flag', () => {
       const abstraction = FlagdSchemaAbstraction.empty();
 
-      abstraction.createOrUpdateFlag('threshold-flag', {
+      abstraction.createOrUpdateFlag({
+        key: 'threshold-flag',
         type: 'number',
         state: 'ENABLED',
         value: 42,
@@ -107,7 +110,8 @@ describe('FlagdSchemaAbstraction - Internal Use (without import or exporting Jso
     it('should add a new object flag', () => {
       const abstraction = FlagdSchemaAbstraction.empty();
 
-      abstraction.createOrUpdateFlag('config-flag', {
+      abstraction.createOrUpdateFlag({
+        key: 'config-flag',
         type: 'object',
         state: 'ENABLED',
         value: { key: 'value' },
@@ -122,7 +126,8 @@ describe('FlagdSchemaAbstraction - Internal Use (without import or exporting Jso
     it('should add a flag with metadata', () => {
       const abstraction = FlagdSchemaAbstraction.empty();
 
-      abstraction.createOrUpdateFlag('feature-flag', {
+      abstraction.createOrUpdateFlag({
+        key: 'feature-flag',
         type: 'boolean',
         state: 'ENABLED',
         value: true,
@@ -142,13 +147,15 @@ describe('FlagdSchemaAbstraction - Internal Use (without import or exporting Jso
     it('should update an existing flag', () => {
       const abstraction = FlagdSchemaAbstraction.empty();
 
-      abstraction.createOrUpdateFlag('feature-flag', {
+      abstraction.createOrUpdateFlag({
+        key: 'feature-flag',
         type: 'boolean',
         state: 'ENABLED',
         value: true,
       });
 
-      abstraction.createOrUpdateFlag('feature-flag', {
+      abstraction.createOrUpdateFlag({
+        key: 'feature-flag',
         type: 'boolean',
         state: 'DISABLED',
         value: false,
@@ -160,22 +167,56 @@ describe('FlagdSchemaAbstraction - Internal Use (without import or exporting Jso
       expect(flags[0].value).toBe(false);
     });
 
-    it('should add multiple flags', () => {
+    it('should rename a flag when previousKey is provided', () => {
       const abstraction = FlagdSchemaAbstraction.empty();
 
-      abstraction.createOrUpdateFlag('bool-flag', {
+      abstraction.createOrUpdateFlag({
+        key: 'old-flag-name',
         type: 'boolean',
         state: 'ENABLED',
         value: true,
       });
 
-      abstraction.createOrUpdateFlag('string-flag', {
+      // Rename the flag by providing previousKey
+      abstraction.createOrUpdateFlag(
+        {
+          key: 'new-flag-name',
+          type: 'boolean',
+          state: 'ENABLED',
+          value: true,
+        },
+        'old-flag-name',
+      );
+
+      const flags = abstraction.getFlags();
+      expect(flags).toHaveLength(1);
+      expect(flags[0].key).toBe('new-flag-name');
+
+      // Verify the old key no longer exists by exporting to schema
+      const schema = abstraction.exportSchema();
+      expect(schema.flags['old-flag-name']).toBeUndefined();
+      expect(schema.flags['new-flag-name']).toBeDefined();
+    });
+
+    it('should add multiple flags', () => {
+      const abstraction = FlagdSchemaAbstraction.empty();
+
+      abstraction.createOrUpdateFlag({
+        key: 'bool-flag',
+        type: 'boolean',
+        state: 'ENABLED',
+        value: true,
+      });
+
+      abstraction.createOrUpdateFlag({
+        key: 'string-flag',
         type: 'string',
         state: 'ENABLED',
         value: 'active',
       });
 
-      abstraction.createOrUpdateFlag('number-flag', {
+      abstraction.createOrUpdateFlag({
+        key: 'number-flag',
         type: 'number',
         state: 'ENABLED',
         value: 100,
@@ -205,13 +246,15 @@ describe('FlagdSchemaAbstraction - Internal Use (without import or exporting Jso
       });
 
       // Add flags
-      abstraction.createOrUpdateFlag('feature-a', {
+      abstraction.createOrUpdateFlag({
+        key: 'feature-a',
         type: 'boolean',
         state: 'ENABLED',
         value: true,
       });
 
-      abstraction.createOrUpdateFlag('feature-b', {
+      abstraction.createOrUpdateFlag({
+        key: 'feature-b',
         type: 'string',
         state: 'ENABLED',
         value: 'variant-1',

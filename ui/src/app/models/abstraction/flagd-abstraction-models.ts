@@ -38,6 +38,7 @@ export interface ValueDefinition<T> {
 }
 
 interface BaseFlagProps<TValue, TType extends string> {
+  key: string;
   type: TType;
   state: FlagState;
   metadata?: Record<string, string | number | boolean>;

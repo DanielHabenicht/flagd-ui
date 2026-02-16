@@ -42,10 +42,6 @@ export class FlagdSchemaAbstraction {
   private static readonly DEFAULT_VARIANT = 'default';
 
   /**
-   * Context variable for timestamp comparisons in JsonLogic
-   */
-  private static readonly TIMESTAMP_CONTEXT_VAR = '$flagd.timestamp';
-  /**
    * Factory method to create a FlagdSchemaAbstraction from a FlagdSchema
    */
   static fromSchema(schema: FlagdSchema): FlagdSchemaAbstraction {
@@ -104,6 +100,7 @@ export class FlagdSchemaAbstraction {
       }
 
       const displayFlag: DisplayFlag = {
+        key: flagKey,
         type: flagType,
         state: flagDef.state as FlagState,
         value: flagDef.defaultVariant ? flagDef.variants[flagDef.defaultVariant] : null,
@@ -231,11 +228,15 @@ export class FlagdSchemaAbstraction {
 
   /**
    * Update a flag in the internal state
-   * @param flagKey - The flag to update or create
-   * @param updatedFlag - The updated DisplayFlag
+   * @param updatedFlag - The updated DisplayFlag (must include the 'key' property)
+   * @param previousKey - Optional previous key if renaming a flag
    */
-  createOrUpdateFlag(flagKey: string, updatedFlag: DisplayFlag): void {
-    this.flagsMap[flagKey] = updatedFlag;
+  createOrUpdateFlag(updatedFlag: DisplayFlag, previousKey?: string): void {
+    // If previousKey is provided and different from current key, remove the old entry
+    if (previousKey && previousKey !== updatedFlag.key && this.flagsMap[previousKey]) {
+      delete this.flagsMap[previousKey];
+    }
+    this.flagsMap[updatedFlag.key] = updatedFlag;
   }
 
   /**
@@ -259,7 +260,8 @@ export class FlagdSchemaAbstraction {
 
     // Build flags from flagsMap
     const flags: Record<string, Record<string, unknown>> = {};
-    for (const [flagKey, displayFlag] of Object.entries(this.flagsMap)) {
+    for (const displayFlag of Object.values(this.flagsMap)) {
+      const flagKey = displayFlag.key;
       const variants: Record<string, unknown> = {};
 
       // Determine the variant key based on flag type

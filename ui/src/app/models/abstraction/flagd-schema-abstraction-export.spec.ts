@@ -19,13 +19,15 @@ describe('FlagdSchemaAbstraction - FlagdSchema Generation for Output', () => {
       });
 
       // Add flags
-      abstraction.createOrUpdateFlag('feature-a', {
+      abstraction.createOrUpdateFlag({
+        key: 'feature-a',
         type: 'boolean',
         state: 'ENABLED',
         value: true,
       });
 
-      abstraction.createOrUpdateFlag('feature-b', {
+      abstraction.createOrUpdateFlag({
+        key: 'feature-b',
         type: 'string',
         state: 'ENABLED',
         value: 'variant-1',
@@ -87,7 +89,7 @@ describe('FlagdSchemaAbstraction - FlagdSchema Generation for Output', () => {
         },
       };
 
-      abstraction.createOrUpdateFlag('seasonal-feature', flagWithTimeWindows);
+      abstraction.createOrUpdateFlag({ key: 'seasonal-feature', ...flagWithTimeWindows });
 
       // Export schema
       const schema = abstraction.exportSchema();
@@ -153,7 +155,7 @@ describe('FlagdSchemaAbstraction - FlagdSchema Generation for Output', () => {
         },
       };
 
-      abstraction.createOrUpdateFlag('phased-feature', phasedRollout);
+      abstraction.createOrUpdateFlag({ key: 'phased-feature', ...phasedRollout });
 
       const schema = abstraction.exportSchema();
       const targeting = schema.flags['phased-feature'].targeting as any;
@@ -204,7 +206,7 @@ describe('FlagdSchemaAbstraction - FlagdSchema Generation for Output', () => {
         },
       };
 
-      abstraction.createOrUpdateFlag('prod-only-timed', limitedTimeWindow);
+      abstraction.createOrUpdateFlag({ key: 'prod-only-timed', ...limitedTimeWindow });
 
       const schema = abstraction.exportSchema();
 
@@ -234,7 +236,7 @@ describe('FlagdSchemaAbstraction - FlagdSchema Generation for Output', () => {
         value: 'default',
       };
 
-      abstraction.createOrUpdateFlag('simple-flag', simpleFlag);
+      abstraction.createOrUpdateFlag({ key: 'simple-flag', ...simpleFlag });
 
       const schema = abstraction.exportSchema();
 
@@ -274,7 +276,7 @@ describe('FlagdSchemaAbstraction - FlagdSchema Generation for Output', () => {
         },
       };
 
-      abstraction.createOrUpdateFlag('timed-feature', timedFlag);
+      abstraction.createOrUpdateFlag({ key: 'timed-feature', ...timedFlag });
 
       const schema = abstraction.exportSchema();
 
@@ -309,7 +311,7 @@ describe('FlagdSchemaAbstraction - FlagdSchema Generation for Output', () => {
         perEnvironmentDefinitions: {},
       };
 
-      abstraction.createOrUpdateFlag('empty-env-flag', emptyEnvDef);
+      abstraction.createOrUpdateFlag({ key: 'empty-env-flag', ...emptyEnvDef });
 
       const schema = abstraction.exportSchema();
 
@@ -360,8 +362,8 @@ describe('FlagdSchemaAbstraction - FlagdSchema Generation for Output', () => {
         },
       };
 
-      abstraction.createOrUpdateFlag('string-timed', stringFlagWithTiming);
-      abstraction.createOrUpdateFlag('number-timed', numberFlagWithTiming);
+      abstraction.createOrUpdateFlag({ key: 'string-timed', ...stringFlagWithTiming });
+      abstraction.createOrUpdateFlag({ key: 'number-timed', ...numberFlagWithTiming });
 
       const schema = abstraction.exportSchema();
 
@@ -430,9 +432,9 @@ describe('FlagdSchemaAbstraction - FlagdSchema Generation for Output', () => {
         value: true,
       };
 
-      abstraction.createOrUpdateFlag('both-env-timed', bothEnvFlag);
-      abstraction.createOrUpdateFlag('prod-only-timed', prodOnlyFlag);
-      abstraction.createOrUpdateFlag('no-time', noTimeFlag);
+      abstraction.createOrUpdateFlag({ key: 'both-env-timed', ...bothEnvFlag });
+      abstraction.createOrUpdateFlag({ key: 'prod-only-timed', ...prodOnlyFlag });
+      abstraction.createOrUpdateFlag({ key: 'no-time', ...noTimeFlag });
 
       const schema = abstraction.exportSchema();
 
@@ -464,7 +466,8 @@ describe('FlagdSchemaAbstraction - FlagdSchema Generation for Output', () => {
         aliases: ['stage'],
       });
 
-      abstraction.createOrUpdateFlag('test-flag', {
+      abstraction.createOrUpdateFlag({
+        key: 'test-flag',
         type: 'string',
         state: 'ENABLED',
         value: 'default',
