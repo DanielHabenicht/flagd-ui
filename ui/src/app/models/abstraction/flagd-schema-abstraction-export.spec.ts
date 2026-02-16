@@ -1,5 +1,6 @@
 import { FlagdSchemaAbstraction } from './flagd-schema-abstraction';
 import { FlagdSchema } from '../generated/flagd-schema';
+import { DisplayFlag } from './flagd-abstraction-models';
 
 describe('FlagdSchemaAbstraction - FlagdSchema Generation for Output', () => {
   describe('combined createOrUpdate operations', () => {
@@ -446,6 +447,40 @@ describe('FlagdSchemaAbstraction - FlagdSchema Generation for Output', () => {
       expect(bothEnvTargeting).toContain(startTimestamp.toString());
       expect(bothEnvTargeting).toContain(endTimestamp.toString());
       expect(prodOnlyTargeting).toContain(endTimestamp.toString());
+    });
+  });
+
+  describe('exporting flags with global value definitions', () => {
+    it('should create evaluators for defined environments', () => {
+      const abstraction = FlagdSchemaAbstraction.empty();
+
+      abstraction.createOrUpdateEnvironment({
+        displayName: 'Production',
+        aliases: ['prod', 'production'],
+      });
+
+      abstraction.createOrUpdateEnvironment({
+        displayName: 'Staging',
+        aliases: ['stage'],
+      });
+
+      abstraction.createOrUpdateFlag('test-flag', {
+        type: 'string',
+        state: 'ENABLED',
+        value: 'default',
+      });
+
+      const schema = abstraction.exportSchema();
+
+      // Verify environments are properly exported as evaluators
+      expect(schema.$evaluators).toBeDefined();
+      if (schema.$evaluators) {
+        expect(Object.keys(schema.$evaluators)).toHaveLength(2);
+        expect(Object.keys(schema.$evaluators).some((key) => key.includes('Production'))).toBe(
+          true,
+        );
+        expect(Object.keys(schema.$evaluators).some((key) => key.includes('Staging'))).toBe(true);
+      }
     });
   });
 });

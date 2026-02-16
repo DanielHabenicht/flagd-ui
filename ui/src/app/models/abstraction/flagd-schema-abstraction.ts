@@ -1,5 +1,11 @@
 import { FlagdSchema } from '../generated/flagd-schema';
-import { DisplayFlag, Environment, FlagState, FlagType } from './flagd-abstraction-models';
+import {
+  DisplayFlag,
+  Environment,
+  FlagState,
+  FlagType,
+  ValueDefinition,
+} from './flagd-abstraction-models';
 import { JSONLOGIC_IN_OPERATOR, JSONLOGIC_VAR_PROPERTY } from './flagd-constants';
 import {
   TimeWindowExporter,
@@ -45,7 +51,10 @@ export class FlagdSchemaAbstraction {
   static fromSchema(schema: FlagdSchema): FlagdSchemaAbstraction {
     const newInstance = new FlagdSchemaAbstraction();
     if (schema.metadata) {
-      newInstance.metadata = schema.metadata;
+      // Filter out undefined values from FlagSetMetadata
+      newInstance.metadata = Object.fromEntries(
+        Object.entries(schema.metadata).filter(([, v]) => v !== undefined),
+      ) as Record<string, string | number | boolean>;
     }
 
     // Extract environments from evaluators FIRST
@@ -109,31 +118,64 @@ export class FlagdSchemaAbstraction {
         const targeting = flagDef.targeting as Record<string, unknown>;
         const timingResult = TimeWindowImporter.parseEnvironmentTimingTargeting(targeting);
 
-        const perEnvDefs: Record<string, any> = {};
+        // Handle global value definition
+        if (timingResult.global && timingResult.global.timeWindow) {
+          displayFlag.globalTimeWindow = {
+            value: FlagTypeConverter.getDefaultValueForType(flagType) as any, // eslint-disable-line @typescript-eslint/no-explicit-any
+            timeWindow: {
+              startTime:
+                timingResult.global.timeWindow.start !== undefined
+                  ? new Date(timingResult.global.timeWindow.start * 1000)
+                  : undefined,
+              endTime:
+                timingResult.global.timeWindow.end !== undefined
+                  ? new Date(timingResult.global.timeWindow.end * 1000)
+                  : undefined,
+            },
+          };
+        }
+
+        // Handle per-environment definitions
+        const perEnvDefs: Record<string, ValueDefinition<unknown>> = {};
         const environments = newInstance.getEnvironments();
 
-        for (const timeBoundsEntry of Object.entries(timingResult.perEnvironment)) {
-          const envName = timeBoundsEntry[0];
-          const timeBounds = timeBoundsEntry[1];
+        for (const envEntry of Object.entries(timingResult.perEnvironment)) {
+          const envName = envEntry[0];
+          const envData = envEntry[1];
 
           // Find the environment with this name (case-insensitive)
           const matchedEnv = environments.find(
             (e) => e.displayName.toLowerCase() === envName.toLowerCase(),
           );
-          if (matchedEnv && (timeBounds.start !== undefined || timeBounds.end !== undefined)) {
+
+          if (matchedEnv) {
+            // Get the value - either from variant or use default
+            let envValue: unknown = FlagTypeConverter.getDefaultValueForType(flagType);
+            if (envData.variant && typeof envData.variant === 'string') {
+              // Look up the variant value from the flag's variants
+              envValue = flagDef.variants[envData.variant];
+            }
+
             perEnvDefs[matchedEnv.displayName] = {
-              value: FlagTypeConverter.getDefaultValueForType(flagType),
-              timeWindow: {
-                startTime:
-                  timeBounds.start !== undefined ? new Date(timeBounds.start * 1000) : undefined,
-                endTime: timeBounds.end !== undefined ? new Date(timeBounds.end * 1000) : undefined,
-              },
+              value: envValue,
             };
+
+            // Add time window if it exists
+            if (envData.start !== undefined || envData.end !== undefined) {
+              perEnvDefs[matchedEnv.displayName].timeWindow = {
+                startTime: envData.start !== undefined ? new Date(envData.start * 1000) : undefined,
+                endTime: envData.end !== undefined ? new Date(envData.end * 1000) : undefined,
+              };
+            }
           }
         }
 
         if (Object.keys(perEnvDefs).length > 0) {
-          (displayFlag as any).perEnvironmentDefinitions = perEnvDefs;
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          (displayFlag as any).perEnvironmentDefinitions = perEnvDefs as Record<
+            string,
+            ValueDefinition<unknown>
+          >;
         }
       }
 
@@ -236,15 +278,24 @@ export class FlagdSchemaAbstraction {
       };
 
       if (displayFlag.metadata && Object.keys(displayFlag.metadata).length > 0) {
-        flagDef.metadata = displayFlag.metadata;
+        flagDef['metadata'] = displayFlag.metadata;
       }
 
-      // Reconstruct targeting from perEnvironmentDefinitions
-      const perEnvDefs = (displayFlag as any).perEnvironmentDefinitions;
-      if (perEnvDefs && Object.keys(perEnvDefs).length > 0) {
-        const targeting = TimeWindowExporter.buildTargetingFromTimeWindows(perEnvDefs);
+      // Reconstruct targeting from perEnvironmentDefinitions and/or globalValueDefinition
+      const perEnvDefs = displayFlag.perEnvironmentDefinitions;
+      const globalValueDef = displayFlag.globalTimeWindow;
+
+      // Build targeting if there are per-environment definitions OR a global value definition with time window
+      const hasPerEnvDefs = perEnvDefs && Object.keys(perEnvDefs).length > 0;
+      const hasGlobalTimeWindow = globalValueDef && globalValueDef.timeWindow;
+
+      if (hasPerEnvDefs || hasGlobalTimeWindow) {
+        const targeting = TimeWindowExporter.buildTargetingFromTimeWindows(
+          perEnvDefs || {},
+          globalValueDef,
+        );
         if (targeting) {
-          flagDef.targeting = targeting;
+          flagDef['targeting'] = targeting;
         }
       }
 
@@ -253,7 +304,7 @@ export class FlagdSchemaAbstraction {
 
     // Build schema
     const schema: FlagdSchema = {
-      flags,
+      flags: flags as any, // eslint-disable-line @typescript-eslint/no-explicit-any
     };
 
     if (Object.keys(evaluators).length > 0) {

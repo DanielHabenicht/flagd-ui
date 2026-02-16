@@ -6,13 +6,15 @@
 export type FlagState = 'ENABLED' | 'DISABLED';
 export type FlagType = 'boolean' | 'string' | 'number' | 'object';
 
-/**
- * Represents a time window constraint (e.g., flag is on between 2pm-5pm)
- */
-export interface TimeWindow {
-  startTime?: Date;
+interface TimeWindowStart {
+  startTime: Date;
   endTime?: Date;
 }
+interface TimeWindowEnd {
+  startTime?: Date;
+  endTime: Date;
+}
+type TimeWindow = TimeWindowStart | TimeWindowEnd;
 
 /**
  * Environment as displayed in the UI
@@ -22,48 +24,32 @@ export interface Environment {
   aliases: string[]; // how it's matched in context
 }
 
+export interface TimeWindowValue<T> {
+  value: T;
+  timeWindow: TimeWindow;
+}
+
 /**
  * Target group for conditional flag logic
  */
-export interface EnvironmentDefinition<T> {
+export interface ValueDefinition<T> {
   value: T;
   timeWindow?: TimeWindow;
 }
 
-/**
- * Common properties for all flag types
- */
-interface BaseFlagProps {
+interface BaseFlagProps<TValue, TType extends string> {
+  type: TType;
   state: FlagState;
   metadata?: Record<string, string | number | boolean>;
+  value: TValue | null;
+  perEnvironmentDefinitions?: Record<string, ValueDefinition<TValue>>;
+  globalTimeWindow?: TimeWindowValue<TValue>;
 }
 
-/**
- * Typed flag definitions for frontend display/editing
- */
-export interface BooleanFlag extends BaseFlagProps {
-  type: 'boolean';
-  value: boolean | null;
-  perEnvironmentDefinitions?: Record<string, EnvironmentDefinition<boolean>>;
-}
-
-export interface StringFlag extends BaseFlagProps {
-  type: 'string';
-  value: string | null;
-  perEnvironmentDefinitions?: Record<string, EnvironmentDefinition<string>>;
-}
-
-export interface NumberFlag extends BaseFlagProps {
-  type: 'number';
-  value: number | null;
-  perEnvironmentDefinitions?: Record<string, EnvironmentDefinition<number>>;
-}
-
-export interface ObjectFlag extends BaseFlagProps {
-  type: 'object';
-  value: object | null;
-  perEnvironmentDefinitions?: Record<string, EnvironmentDefinition<object>>;
-}
+export type BooleanFlag = BaseFlagProps<boolean, 'boolean'>;
+export type StringFlag = BaseFlagProps<string, 'string'>;
+export type NumberFlag = BaseFlagProps<number, 'number'>;
+export type ObjectFlag = BaseFlagProps<object, 'object'>;
 
 /**
  * Union type representing any flag

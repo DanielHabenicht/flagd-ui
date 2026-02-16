@@ -10,6 +10,7 @@ export class TimeWindowExporter {
 
   static buildTargetingFromTimeWindows(
     perEnvDefs: Record<string, any>,
+    globalValueDef?: Record<string, any>,
   ): Record<string, unknown> | null {
     const envTimeWindows: Record<string, { start?: number; end?: number } | null> = {};
 
@@ -28,36 +29,62 @@ export class TimeWindowExporter {
       }
     }
 
-    if (Object.keys(envTimeWindows).length === 0) {
-      return null;
-    }
-
     // Build environment chain with time windows
-    let chain: Record<string, unknown> | null = null;
-    for (const [envName, bounds] of Object.entries(envTimeWindows)) {
-      const condition = {
-        [JSONLOGIC_IN_OPERATOR]: [
-          { [JSONLOGIC_VAR_PROPERTY]: TimeWindowExporter.ENVIRONMENT_VAR_NAME },
-          [envName],
-        ],
-      };
+    let environmentChain: Record<string, unknown> | null = null;
+    if (Object.keys(envTimeWindows).length > 0) {
+      let chain: Record<string, unknown> | null = null;
+      for (const [envName, bounds] of Object.entries(envTimeWindows)) {
+        const condition = {
+          [JSONLOGIC_IN_OPERATOR]: [
+            { [JSONLOGIC_VAR_PROPERTY]: TimeWindowExporter.ENVIRONMENT_VAR_NAME },
+            [envName],
+          ],
+        };
 
-      let nextCondition: Record<string, unknown> = condition;
-      if (bounds && (bounds.start !== undefined || bounds.end !== undefined)) {
-        const timeCondition = TimeWindowExporter.buildTimestampCondition(bounds);
-        if (timeCondition) {
-          nextCondition = { and: [condition, timeCondition] };
+        let nextCondition: Record<string, unknown> = condition;
+        if (bounds && (bounds.start !== undefined || bounds.end !== undefined)) {
+          const timeCondition = TimeWindowExporter.buildTimestampCondition(bounds);
+          if (timeCondition) {
+            nextCondition = { and: [condition, timeCondition] };
+          }
+        }
+
+        if (chain === null) {
+          chain = { if: [nextCondition, 'on', 'off'] };
+        } else {
+          chain = { if: [nextCondition, 'on', chain] };
         }
       }
+      environmentChain = chain;
+    }
 
-      if (chain === null) {
-        chain = { if: [nextCondition, 'on', 'off'] };
-      } else {
-        chain = { if: [nextCondition, 'on', chain] };
+    // If there's a global value definition with time window, wrap environment chain
+    if (globalValueDef && globalValueDef.timeWindow) {
+      const globalBounds: { start?: number; end?: number } = {};
+      if (
+        globalValueDef.timeWindow.startTime !== undefined &&
+        globalValueDef.timeWindow.startTime instanceof Date
+      ) {
+        globalBounds.start = Math.floor(globalValueDef.timeWindow.startTime.getTime() / 1000);
+      }
+      if (
+        globalValueDef.timeWindow.endTime !== undefined &&
+        globalValueDef.timeWindow.endTime instanceof Date
+      ) {
+        globalBounds.end = Math.floor(globalValueDef.timeWindow.endTime.getTime() / 1000);
+      }
+
+      if (globalBounds.start !== undefined || globalBounds.end !== undefined) {
+        const globalCondition = TimeWindowExporter.buildTimestampCondition(globalBounds);
+        if (globalCondition) {
+          const thenValue = globalValueDef.value;
+          const elseValue = environmentChain || 'off';
+          return { if: [globalCondition, thenValue, elseValue] };
+        }
       }
     }
 
-    return chain;
+    return environmentChain;
   }
 
   private static buildTimestampCondition(bounds: {
@@ -101,12 +128,12 @@ export class TimeWindowImporter {
   private static readonly TIMESTAMP_CONTEXT_VAR = '$flagd.timestamp';
 
   static parseEnvironmentTimingTargeting(targeting: Record<string, unknown>): {
-    global?: { start?: number; end?: number };
-    perEnvironment: Record<string, { start?: number; end?: number }>;
+    global?: { value?: unknown; timeWindow?: { start?: number; end?: number } };
+    perEnvironment: Record<string, { start?: number; end?: number; variant?: unknown }>;
   } {
     const result: {
-      global?: { start?: number; end?: number };
-      perEnvironment: Record<string, { start?: number; end?: number }>;
+      global?: { value?: unknown; timeWindow?: { start?: number; end?: number } };
+      perEnvironment: Record<string, { start?: number; end?: number; variant?: unknown }>;
     } = {
       perEnvironment: {},
     };
@@ -115,11 +142,19 @@ export class TimeWindowImporter {
 
     let cursor: unknown = targeting;
     const maybeIf = TimeWindowImporter.asIfClause(cursor);
+
     if (maybeIf) {
-      const maybeGlobal = TimeWindowImporter.extractTimestampBounds(maybeIf[0]);
-      if (maybeGlobal && maybeIf[2] === 'off') {
-        result.global = maybeGlobal;
-        cursor = maybeIf[1];
+      // Check if this is a global time window condition (not environment-based)
+      const maybeGlobalTimeWindow = TimeWindowImporter.extractTimestampBounds(maybeIf[0]);
+      const maybeEnvCondition = TimeWindowImporter.extractEnvironmentCondition(maybeIf[0]);
+
+      // If there's a timestamp bounds AND no environment condition, this is a global time window
+      if (maybeGlobalTimeWindow && !maybeEnvCondition) {
+        result.global = {
+          value: maybeIf[1],
+          timeWindow: maybeGlobalTimeWindow,
+        };
+        cursor = maybeIf[2];
       }
     }
 
@@ -129,7 +164,7 @@ export class TimeWindowImporter {
 
   private static parseEnvironmentChainTimeWindows(
     node: unknown,
-    perEnvironment: Record<string, { start?: number; end?: number }>,
+    perEnvironment: Record<string, { start?: number; end?: number; variant?: unknown }>,
   ): void {
     const ifClause = TimeWindowImporter.asIfClause(node);
     if (!ifClause) return;
@@ -138,8 +173,15 @@ export class TimeWindowImporter {
     if (parsedCondition?.environmentName) {
       const timeBounds = TimeWindowImporter.extractTimestampBounds(ifClause[0]);
       if (timeBounds && (timeBounds.start !== undefined || timeBounds.end !== undefined)) {
-        perEnvironment[parsedCondition.environmentName] = timeBounds;
+        perEnvironment[parsedCondition.environmentName] = { ...timeBounds };
+      } else {
+        // Even without time bounds, store the environment mapping with its variant
+        if (!perEnvironment[parsedCondition.environmentName]) {
+          perEnvironment[parsedCondition.environmentName] = {};
+        }
       }
+      // Store the variant value (the "then" clause)
+      perEnvironment[parsedCondition.environmentName].variant = ifClause[1];
     }
 
     // Recursively parse the else clause
@@ -150,6 +192,20 @@ export class TimeWindowImporter {
     condition: unknown,
   ): { environmentName: string } | null {
     if (!TimeWindowImporter.isRecord(condition)) return null;
+
+    // Check for $ref reference to an evaluator
+    const refKey = '$ref';
+    if (refKey in condition) {
+      const refValue = condition[refKey];
+      if (typeof refValue === 'string') {
+        // Extract environment name from evaluator reference (e.g., 'isProduction' -> 'production')
+        const prefix = 'is';
+        if (refValue.startsWith(prefix)) {
+          const envName = refValue.slice(prefix.length).toLowerCase();
+          return { environmentName: envName };
+        }
+      }
+    }
 
     // Check for direct 'in' operator
     if (JSONLOGIC_IN_OPERATOR in condition) {
@@ -203,15 +259,19 @@ export class TimeWindowImporter {
 
       let start: number | undefined;
       let end: number | undefined;
+      let foundAnyTimestamp = false;
 
       for (const subCondition of subConditions) {
         const parsed = TimeWindowImporter.extractTimestampBounds(subCondition);
-        if (!parsed) return null;
-        if (parsed.start !== undefined) start = parsed.start;
-        if (parsed.end !== undefined) end = parsed.end;
+        if (parsed) {
+          foundAnyTimestamp = true;
+          if (parsed.start !== undefined) start = parsed.start;
+          if (parsed.end !== undefined) end = parsed.end;
+        }
+        // If parsed is null, skip this condition (e.g., environment conditions in an and block)
       }
 
-      if (start === undefined && end === undefined) return null;
+      if (!foundAnyTimestamp) return null;
       return { start, end };
     }
 
