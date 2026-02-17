@@ -56,6 +56,12 @@
               "baseHref": "./"
             },
             "development": {
+              "fileReplacements": [
+                {
+                  "replace": "src/environments.ts",
+                  "with": "src/environments.development.ts"
+                }
+              ],
               "optimization": false,
               "extractLicenses": false,
               "sourceMap": true
