@@ -9,7 +9,6 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { RemoteApi } from '../../services/remote-api';
-import { FlagFileContent } from '../../models/flag.models';
 import { FileSystemAccess } from '../../services/file-system-access';
 import { AddBackend, AddFile } from '../../state/flag-file-store.actions';
 import { LocalBackendUris } from '../../state/flag-file-store.state';
@@ -195,21 +194,13 @@ export class NewFlagsFileFormComponent {
     this.http.get(url, { responseType: 'text' }).subscribe({
       next: (text) => {
         try {
-          const content = JSON.parse(text) as FlagFileContent;
-          if (!content.flags || typeof content.flags !== 'object') {
-            this.urlError = 'Invalid flag file: missing "flags" property';
-            this.urlLoading = false;
-            return;
-          }
           // Derive name from URL filename
           const urlPath = new URL(url).pathname;
           let name = urlPath.split('/').pop() ?? 'imported';
           name = name.replace(/\.flagd\.json$/, '').replace(/\.json$/, '');
           if (!name) name = 'imported';
 
-          this.store.dispatch(
-            new AddFile('local', LocalBackendUris.Browser, name, JSON.stringify(content, null, 2)),
-          );
+          this.store.dispatch(new AddFile('local', LocalBackendUris.Browser, name, text));
           this.formSubmitted.emit({ type: 'url' });
         } catch {
           this.urlError = 'Failed to parse JSON file';
