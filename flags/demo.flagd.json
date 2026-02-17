@@ -24,12 +24,9 @@
   "$schema": "https://flagd.dev/schema/v0/flags.json",
   "flags": {
     "background-color": {
-      "defaultVariant": "red",
+      "defaultVariant": "yellow",
       "state": "ENABLED",
       "variants": {
-        "blue": "#0000FF",
-        "green": "#00FF00",
-        "red": "#FF0000",
         "yellow": "#FFFF00"
       }
     },
@@ -90,24 +87,37 @@
       "targeting": {
         "if": [
           {
-            "$ref": "isAnother"
+            ">=": [
+              {
+                "var": "$flagd.timestamp"
+              },
+              1771369200
+            ]
           },
-          "another",
           {
             "if": [
               {
-                "$ref": "isTest"
+                "$ref": "isAnother"
               },
-              "test",
-              "off"
+              "another",
+              {
+                "if": [
+                  {
+                    "$ref": "isTest"
+                  },
+                  "test",
+                  "off"
+                ]
+              }
             ]
-          }
+          },
+          "off"
         ]
       },
       "variants": {
         "another": true,
         "off": false,
-        "test": true
+        "test": false
       }
     }
   },

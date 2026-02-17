@@ -6,7 +6,7 @@ allowed-tools: Bash(playwright-cli:*)
 
 # Browser Automation with playwright-cli
 
-> Should any of the commands not work because the cli is not installed, install it by using `npm install -g @playwright/cli`. Do not use npx.
+> Should any of the commands not work because the cli is not installed, install it by using `npm install -g @playwright/cli`. Do not use `npx @playwright/cli`.
 
 ## Quick start
 

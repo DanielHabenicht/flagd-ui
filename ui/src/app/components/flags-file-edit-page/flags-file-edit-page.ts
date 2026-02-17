@@ -1,6 +1,7 @@
 import { Component, computed, effect, inject, OnInit, signal } from '@angular/core';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute } from '@angular/router';
 import { Store } from '@ngxs/store';
+import { Navigate } from '@ngxs/router-plugin';
 import { FlagEditorComponent } from '../flag-editor/flag-editor';
 import { FlagDefinition, FlagEntry } from '../../models/flag.models';
 import { FlagStoreState } from '../../state/flag-store.state';
@@ -16,7 +17,6 @@ import { SelectFlagsFileByRoute, SaveFlag, RenameFlag } from '../../state/flag-s
 export class FlagsFileEditPageComponent implements OnInit {
   private readonly ngxsStore = inject(Store);
   private readonly route = inject(ActivatedRoute);
-  private readonly router = inject(Router);
   private readonly keepEditorOpenAfterSaveMinWidth = 1920;
 
   private readonly routeFlagKey = signal<string | null>(null);
@@ -98,15 +98,31 @@ export class FlagsFileEditPageComponent implements OnInit {
 
     const backendId = this.route.snapshot.paramMap.get('backendId');
     if (backendId) {
-      this.router.navigate(['/flags-files', 'remote', backendId, name], {
-        queryParams: { flag: flagKey },
-      });
+      this.ngxsStore.dispatch(
+        new Navigate(
+          ['/flags-files', 'remote', backendId, name],
+          {
+            flag: flagKey,
+          },
+          {
+            queryParamsHandling: 'merge',
+          },
+        ),
+      );
       return;
     }
 
-    this.router.navigate(['/flags-files', 'local', name], {
-      queryParams: { flag: flagKey },
-    });
+    this.ngxsStore.dispatch(
+      new Navigate(
+        ['/flags-files', 'local', name],
+        {
+          flag: flagKey,
+        },
+        {
+          queryParamsHandling: 'merge',
+        },
+      ),
+    );
   }
 
   private navigateToEditRoute(flagKey: string): void {
@@ -115,10 +131,18 @@ export class FlagsFileEditPageComponent implements OnInit {
 
     const backendId = this.route.snapshot.paramMap.get('backendId');
     if (backendId) {
-      this.router.navigate(['/flags-files', 'remote', backendId, name, 'edit', flagKey]);
+      this.ngxsStore.dispatch(
+        new Navigate(['/flags-files', 'remote', backendId, name, 'edit', flagKey], undefined, {
+          queryParamsHandling: 'merge',
+        }),
+      );
       return;
     }
 
-    this.router.navigate(['/flags-files', 'local', name, 'edit', flagKey]);
+    this.ngxsStore.dispatch(
+      new Navigate(['/flags-files', 'local', name, 'edit', flagKey], undefined, {
+        queryParamsHandling: 'merge',
+      }),
+    );
   }
 }

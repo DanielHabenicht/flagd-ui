@@ -270,6 +270,50 @@ export class FlagSchemaAdapter {
     return result;
   }
 
+  /**
+   * Detects if a targeting contains a simple time window (easy mode).
+   * This is when the targeting is structured as: { if: [timestamp_condition, 'on', 'off'] }
+   */
+  hasEasyTimeWindow(targeting: Record<string, unknown> | undefined): boolean {
+    if (!targeting) return false;
+    const bounds = this.parseEasyTimeTargeting(targeting);
+    return bounds !== null && (bounds.start !== undefined || bounds.end !== undefined);
+  }
+
+  /**
+   * Detects if environment-based targeting contains a global time window.
+   * Global time windows wrap the entire environment chain: { if: [timestamp_condition, environmentChain, 'off'] }
+   */
+  hasGlobalTimeWindow(targeting: Record<string, unknown> | undefined): boolean {
+    if (!targeting) return false;
+    const result = this.parseEnvironmentTimingTargeting(targeting);
+    return (
+      result.global !== undefined &&
+      (result.global.start !== undefined || result.global.end !== undefined)
+    );
+  }
+
+  /**
+   * Detects if targeting contains any time windows (easy, global, or per-environment).
+   */
+  hasAnyTimeWindow(targeting: Record<string, unknown> | undefined): boolean {
+    if (!targeting) return false;
+    return (
+      this.hasEasyTimeWindow(targeting) ||
+      this.hasGlobalTimeWindow(targeting) ||
+      this.hasPerEnvironmentTimeWindows(targeting)
+    );
+  }
+
+  /**
+   * Detects if targeting contains any per-environment time windows.
+   */
+  hasPerEnvironmentTimeWindows(targeting: Record<string, unknown> | undefined): boolean {
+    if (!targeting) return false;
+    const result = this.parseEnvironmentTimingTargeting(targeting);
+    return Object.keys(result.perEnvironment).length > 0;
+  }
+
   private parseJsonObject(
     raw: string,
     invalidJsonError: string,

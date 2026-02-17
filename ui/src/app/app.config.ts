@@ -5,6 +5,7 @@ import { provideAnimationsAsync } from '@angular/platform-browser/animations/asy
 import { provideNativeDateAdapter } from '@angular/material/core';
 import { provideStore } from '@ngxs/store';
 import { withNgxsStoragePlugin } from '@ngxs/storage-plugin';
+import { withNgxsRouterPlugin } from '@ngxs/router-plugin';
 import { provideApi } from './api-client/provide-api';
 import { routes } from './app.routes';
 import { globalLoadingInterceptor } from './interceptors/global-loading.interceptor';
@@ -31,6 +32,7 @@ export const appConfig: ApplicationConfig = {
           'playgroundPreferences.drawerHeight',
         ],
       }),
+      withNgxsRouterPlugin(),
     ),
     provideAnimationsAsync(),
   ],

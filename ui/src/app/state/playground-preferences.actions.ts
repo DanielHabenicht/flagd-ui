@@ -11,3 +11,15 @@ export class SetPlaygroundDrawerHeight {
 
   constructor(readonly drawerHeight: number) {}
 }
+
+export class OpenPlaygroundDrawer {
+  static readonly type = '[PlaygroundPreferences] Open Drawer';
+}
+
+export class ClosePlaygroundDrawer {
+  static readonly type = '[PlaygroundPreferences] Close Drawer';
+}
+
+export class TogglePlaygroundDrawer {
+  static readonly type = '[PlaygroundPreferences] Toggle Drawer';
+}

@@ -149,7 +149,7 @@ export class App implements OnDestroy {
   });
   navOpen = signal(!this.isCompactLayout());
 
-  readonly showPlaygroundDrawer = computed(() => this.currentUrl().startsWith('/flags-files/'));
+  readonly showPlaygroundDrawer = computed(() => true);
 
   readonly playgroundDrawerFlags = computed(() => {
     const component = this.activeRouteComponent();

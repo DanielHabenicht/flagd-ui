@@ -8,6 +8,7 @@
         [maximizeTitle]="'Return to detail view'"
         [flag]="editingFlag()"
         [existingKeys]="existingFlagKeys()"
+        [showMetadata]="true"
         (maximize)="onUnexpand()"
         (save)="onSaveFlag($event)"
         (cancelled)="onCancel()"

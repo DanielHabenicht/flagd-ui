@@ -1,15 +1,6 @@
 import { JsonPipe } from '@angular/common';
-import {
-  Component,
-  computed,
-  effect,
-  inject,
-  input,
-  OnDestroy,
-  OnInit,
-  signal,
-} from '@angular/core';
-import { ActivatedRoute, Router } from '@angular/router';
+import { Component, computed, effect, inject, input, OnDestroy, signal } from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
 import { Store } from '@ngxs/store';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
@@ -32,6 +23,7 @@ import {
 import {
   SetPlaygroundDrawerHeight,
   SetPlaygroundServers,
+  TogglePlaygroundDrawer,
 } from '../../state/playground-preferences.actions';
 import { PlaygroundPreferencesState } from '../../state/playground-preferences.state';
 
@@ -62,17 +54,16 @@ const AUTO_EVALUATE_DEBOUNCE_MS = 250;
   templateUrl: './playground-drawer.html',
   styleUrl: './playground-drawer.scss',
 })
-export class PlaygroundDrawerComponent implements OnInit, OnDestroy {
+export class PlaygroundDrawerComponent implements OnDestroy {
   readonly flags = input<FlagEntry[]>([]);
   readonly evaluators = input<Record<string, Evaluator> | undefined>(undefined);
   readonly selectedFlagKey = input<string | null>(null);
   private readonly route = inject(ActivatedRoute);
-  private readonly router = inject(Router);
   private readonly dialog = inject(MatDialog);
   private readonly ngxsStore = inject(Store);
   private readonly evaluator = inject(PlaygroundEvaluatorService);
 
-  readonly open = signal(this.route.snapshot.queryParamMap.get('playground') === 'expanded');
+  readonly open = this.ngxsStore.selectSignal(PlaygroundPreferencesState.drawerOpen);
   readonly animate = signal(false);
   readonly servers = signal<PlaygroundServer[]>(
     this.ngxsStore.selectSnapshot(PlaygroundPreferencesState.servers),
@@ -131,12 +122,6 @@ export class PlaygroundDrawerComponent implements OnInit, OnDestroy {
     this.scheduleAutoEvaluate();
   });
 
-  ngOnInit(): void {
-    this.route.queryParamMap.subscribe((params) => {
-      this.open.set(params.get('playground') === 'expanded');
-    });
-  }
-
   ngOnDestroy(): void {
     this.clearAutoEvaluateTimer();
     this.stopResizing();
@@ -144,12 +129,7 @@ export class PlaygroundDrawerComponent implements OnInit, OnDestroy {
 
   toggleDrawer(): void {
     this.animate.set(true);
-    const nextOpen = !this.open();
-    if (nextOpen) {
-      this.drawerHeight.set(this.clampDrawerHeight(this.drawerHeight()));
-    }
-    this.open.set(nextOpen);
-    this.updatePlaygroundQueryParam(nextOpen);
+    this.ngxsStore.dispatch(new TogglePlaygroundDrawer());
   }
 
   onResizeStart(event: MouseEvent): void {
@@ -353,16 +333,5 @@ export class PlaygroundDrawerComponent implements OnInit, OnDestroy {
     }
 
     return 'Evaluation failed.';
-  }
-
-  private updatePlaygroundQueryParam(expanded: boolean): void {
-    this.router.navigate([], {
-      relativeTo: this.route,
-      queryParams: {
-        playground: expanded ? 'expanded' : null,
-      },
-      queryParamsHandling: 'merge',
-      replaceUrl: true,
-    });
   }
 }

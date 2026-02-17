@@ -133,4 +133,76 @@ describe('FlagSchemaAdapter', () => {
     expect(parsed['state']).toBe('DISABLED');
     expect(parsed['variants']).toEqual({ on: true });
   });
+
+  describe('Time Window Detection', () => {
+    it('detects easy mode time windows', () => {
+      const easyTargeting = {
+        if: [
+          {
+            and: [
+              { '>=': [{ var: '$flagd.timestamp' }, 1700000000] },
+              { '<=': [{ var: '$flagd.timestamp' }, 1700003600] },
+            ],
+          },
+          'on',
+          'off',
+        ],
+      } as Record<string, unknown>;
+
+      expect(adapter.hasEasyTimeWindow(easyTargeting)).toBe(true);
+      expect(adapter.hasEasyTimeWindow(undefined)).toBe(false);
+      expect(adapter.hasEasyTimeWindow({})).toBe(false);
+    });
+
+    it('detects global time windows in environment-based targeting', () => {
+      const environmentTargeting = {
+        if: [
+          { '>=': [{ var: '$flagd.timestamp' }, 1700000000] },
+          {
+            if: [{ $ref: 'isDev' }, 'dev', 'off'],
+          },
+          'off',
+        ],
+      } as Record<string, unknown>;
+
+      expect(adapter.hasGlobalTimeWindow(environmentTargeting)).toBe(true);
+      expect(adapter.hasGlobalTimeWindow(undefined)).toBe(false);
+    });
+
+    it('detects per-environment time windows', () => {
+      const envPerTargeting = {
+        if: [
+          {
+            and: [{ $ref: 'isDev' }, { '<=': [{ var: '$flagd.timestamp' }, 1700003600] }],
+          },
+          'dev',
+          {
+            if: [{ $ref: 'isProd' }, 'prod', 'off'],
+          },
+        ],
+      } as Record<string, unknown>;
+
+      expect(adapter.hasPerEnvironmentTimeWindows(envPerTargeting)).toBe(true);
+      expect(adapter.hasPerEnvironmentTimeWindows(undefined)).toBe(false);
+    });
+
+    it('detects any time windows regardless of type', () => {
+      const easyTargeting = {
+        if: [{ '>=': [{ var: '$flagd.timestamp' }, 1700000000] }, 'on', 'off'],
+      } as Record<string, unknown>;
+
+      const globalTargeting = {
+        if: [
+          { '>=': [{ var: '$flagd.timestamp' }, 1700000000] },
+          { if: [{ $ref: 'isDev' }, 'dev', 'off'] },
+          'off',
+        ],
+      } as Record<string, unknown>;
+
+      expect(adapter.hasAnyTimeWindow(easyTargeting)).toBe(true);
+      expect(adapter.hasAnyTimeWindow(globalTargeting)).toBe(true);
+      expect(adapter.hasAnyTimeWindow(undefined)).toBe(false);
+      expect(adapter.hasAnyTimeWindow({})).toBe(false);
+    });
+  });
 });

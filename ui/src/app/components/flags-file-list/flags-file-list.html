@@ -21,8 +21,9 @@
             <a
               mat-list-item
               [routerLink]="getFlagsFileRoute(entry)"
+              queryParamsHandling="merge"
               routerLinkActive="active-link"
-              [routerLinkActiveOptions]="{ exact: true }"
+              [routerLinkActiveOptions]="{ exact: false }"
             >
               <span matListItemTitle class="project-name">{{ entry.name }}</span>
               <button
