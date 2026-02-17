@@ -1,6 +1,8 @@
 import { EvaluationContext } from '@openfeature/web-sdk';
-import { Evaluator, FlagEntry } from '../models/flag.models';
+import { BaseFlag, Evaluators } from '../models/generated/flagd-schema';
 import { PlaygroundServer } from '../models/playground.models';
+
+export type PlaygroundFlag = BaseFlag & { key: string };
 
 export interface EvaluationResult {
   value: unknown;
@@ -12,9 +14,9 @@ export interface EvaluationResult {
 }
 
 export interface PlaygroundEvaluationRequest {
-  flag: FlagEntry;
+  flag: PlaygroundFlag;
   context: EvaluationContext;
-  evaluators?: Record<string, Evaluator>;
+  evaluators?: Evaluators;
   server?: PlaygroundServer;
 }
 

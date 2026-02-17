@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { FlagEntry } from '../models/flag.models';
+import { PlaygroundFlag } from './playground-evaluation.types';
 import { PlaygroundLocalEvaluatorService } from './playground-local-evaluator.service';
 
 describe('PlaygroundLocalEvaluatorService', () => {
   const service = new PlaygroundLocalEvaluatorService();
 
   it('returns default variant for static flags without targeting', async () => {
-    const flag: FlagEntry = {
+    const flag: PlaygroundFlag = {
       key: 'show-banner',
       state: 'ENABLED',
       defaultVariant: 'on',
@@ -30,7 +30,7 @@ describe('PlaygroundLocalEvaluatorService', () => {
   });
 
   it('resolves $ref evaluator chains for environment targeting', async () => {
-    const flag: FlagEntry = {
+    const flag: PlaygroundFlag = {
       key: 'show-banner',
       state: 'ENABLED',
       defaultVariant: 'off',
@@ -62,7 +62,7 @@ describe('PlaygroundLocalEvaluatorService', () => {
   });
 
   it('supports $flagd.timestamp from nested $flagd context', async () => {
-    const flag: FlagEntry = {
+    const flag: PlaygroundFlag = {
       key: 'time-window',
       state: 'ENABLED',
       defaultVariant: 'off',
@@ -94,7 +94,7 @@ describe('PlaygroundLocalEvaluatorService', () => {
   });
 
   it('falls back to default with error details for unknown evaluator refs', async () => {
-    const flag: FlagEntry = {
+    const flag: PlaygroundFlag = {
       key: 'show-banner',
       state: 'ENABLED',
       defaultVariant: 'off',
@@ -121,7 +121,7 @@ describe('PlaygroundLocalEvaluatorService', () => {
   });
 
   it('reports fallback usage when no default variant is available', async () => {
-    const flag: FlagEntry = {
+    const flag: PlaygroundFlag = {
       key: 'empty-fallback',
       state: 'ENABLED',
       variants: {},

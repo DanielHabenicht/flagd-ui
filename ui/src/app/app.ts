@@ -152,41 +152,6 @@ export class App implements OnDestroy {
 
   readonly showPlaygroundDrawer = computed(() => true);
 
-  // readonly playgroundDrawerFlags = computed(() => {
-  //   const component = this.activeRouteComponent();
-  //   if (
-  //     component instanceof FlagsFileDetailComponent ||
-  //     component instanceof FlagsFileEditPageComponent ||
-  //     component instanceof FlagsFileSettingsPageComponent
-  //   ) {
-  //     return component.flagEntries();
-  //   }
-  //   return [];
-  // });
-
-  // readonly playgroundDrawerEvaluators = computed(() => {
-  //   const component = this.activeRouteComponent();
-  //   if (
-  //     component instanceof FlagsFileDetailComponent ||
-  //     component instanceof FlagsFileEditPageComponent ||
-  //     component instanceof FlagsFileSettingsPageComponent
-  //   ) {
-  //     return component.currentEvaluators();
-  //   }
-  //   return undefined;
-  // });
-
-  // readonly playgroundDrawerSelectedFlagKey = computed(() => {
-  //   const component = this.activeRouteComponent();
-  //   if (
-  //     component instanceof FlagsFileDetailComponent ||
-  //     component instanceof FlagsFileEditPageComponent
-  //   ) {
-  //     return component.selectedFlagKey();
-  //   }
-  //   return null;
-  // });
-
   private readonly routerEventsSub: Subscription;
   private readonly mediaQuery =
     typeof window !== 'undefined' ? window.matchMedia('(prefers-color-scheme: dark)') : null;

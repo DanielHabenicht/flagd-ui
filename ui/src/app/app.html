@@ -90,13 +90,8 @@
       </div>
     }
     <router-outlet (activate)="onRouteActivate($event)" (deactivate)="onRouteDeactivate()" />
-    <!-- Removed for now to reduce amount of errors, Comment in again -->
-    <!-- @defer (when showPlaygroundDrawer()) {
-      <app-playground-drawer
-        [flags]="playgroundDrawerFlags()"
-        [evaluators]="playgroundDrawerEvaluators()"
-        [selectedFlagKey]="playgroundDrawerSelectedFlagKey()"
-      />
-    } -->
+    @defer (when showPlaygroundDrawer()) {
+      <app-playground-drawer />
+    }
   </mat-sidenav-content>
 </mat-sidenav-container>

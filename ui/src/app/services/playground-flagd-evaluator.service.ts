@@ -1,7 +1,6 @@
 import { Injectable } from '@angular/core';
 import { JsonValue, OpenFeature, Provider } from '@openfeature/web-sdk';
 import { FlagdWebProvider } from '@openfeature/flagd-web-provider';
-import { inferFlagType } from '../models/flag.models';
 import {
   EvaluationResult,
   PlaygroundEvaluationRequest,
@@ -28,7 +27,7 @@ export class PlaygroundFlagdEvaluatorService implements PlaygroundEvaluator {
     );
 
     const client = OpenFeature.getClient(OF_DOMAIN, 'flagd-ui');
-    const flagType = inferFlagType(request.flag.variants);
+    const flagType = this.inferFlagType(request.flag.variants);
     const fallbackValue = this.resolveFallbackValue(request.flag, flagType);
 
     let details: EvaluationResult;
@@ -133,7 +132,7 @@ export class PlaygroundFlagdEvaluatorService implements PlaygroundEvaluator {
 
   private resolveFallbackValue(
     flag: PlaygroundEvaluationRequest['flag'],
-    flagType: ReturnType<typeof inferFlagType>,
+    flagType: ReturnType<PlaygroundFlagdEvaluatorService['inferFlagType']>,
   ): unknown {
     if (typeof flag.defaultVariant === 'string' && this.hasVariant(flag, flag.defaultVariant)) {
       return flag.variants[flag.defaultVariant];
@@ -161,5 +160,17 @@ export class PlaygroundFlagdEvaluatorService implements PlaygroundEvaluator {
 
   private isFallbackReason(reason?: string): boolean {
     return reason === 'DEFAULT' || reason === 'ERROR';
+  }
+
+  private inferFlagType(
+    variants: Record<string, unknown>,
+  ): 'boolean' | 'string' | 'number' | 'object' {
+    const values = Object.values(variants);
+    if (values.length === 0) return 'boolean';
+    const first = values[0];
+    if (typeof first === 'boolean') return 'boolean';
+    if (typeof first === 'number') return 'number';
+    if (typeof first === 'string') return 'string';
+    return 'object';
   }
 }

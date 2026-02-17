@@ -1,5 +1,5 @@
 import { JsonPipe } from '@angular/common';
-import { Component, computed, effect, inject, input, OnDestroy, signal } from '@angular/core';
+import { Component, computed, effect, inject, OnDestroy, OnInit, signal } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { Store } from '@ngxs/store';
 import { MatButtonModule } from '@angular/material/button';
@@ -9,13 +9,14 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { EvaluationContext } from '@openfeature/web-sdk';
-import { Evaluator, FlagEntry } from '../../models/flag.models';
+import { FlagdSchema } from '../../models/generated/flagd-schema';
 import { PlaygroundServer } from '../../models/playground.models';
 import { PlaygroundEvaluatorService } from '../../services/playground-evaluator.service';
 import { PlaygroundFlagdEvaluatorService } from '../../services/playground-flagd-evaluator.service';
 import { PlaygroundLocalEvaluatorService } from '../../services/playground-local-evaluator.service';
 import { PlaygroundOfrepEvaluatorService } from '../../services/playground-ofrep-evaluator.service';
 import { EvaluationResult } from '../../services/playground-evaluation.types';
+import { PlaygroundFlag } from '../../services/playground-evaluation.types';
 import {
   PlaygroundServerDialogComponent,
   PlaygroundServerDialogResult,
@@ -26,6 +27,8 @@ import {
   TogglePlaygroundDrawer,
 } from '../../state/playground-preferences.actions';
 import { PlaygroundPreferencesState } from '../../state/playground-preferences.state';
+import { FlagStoreState } from '../../state/current-flag-store.state';
+import { Subscription } from 'rxjs';
 
 const LOCAL_EVALUATOR_ID = '__local__';
 const COLLAPSED_DRAWER_HEIGHT = 56;
@@ -54,14 +57,12 @@ const AUTO_EVALUATE_DEBOUNCE_MS = 250;
   templateUrl: './playground-drawer.html',
   styleUrl: './playground-drawer.scss',
 })
-export class PlaygroundDrawerComponent implements OnDestroy {
-  readonly flags = input<FlagEntry[]>([]);
-  readonly evaluators = input<Record<string, Evaluator> | undefined>(undefined);
-  readonly selectedFlagKey = input<string | null>(null);
+export class PlaygroundDrawerComponent implements OnInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly dialog = inject(MatDialog);
   private readonly ngxsStore = inject(Store);
   private readonly evaluator = inject(PlaygroundEvaluatorService);
+  private readonly schemaState = this.ngxsStore.selectSignal(FlagStoreState.schema);
 
   readonly open = this.ngxsStore.selectSignal(PlaygroundPreferencesState.drawerOpen);
   readonly animate = signal(false);
@@ -71,6 +72,7 @@ export class PlaygroundDrawerComponent implements OnDestroy {
   readonly activeServerId = signal<string>(this.servers()[0]?.id ?? LOCAL_EVALUATOR_ID);
   readonly localEvaluatorId = LOCAL_EVALUATOR_ID;
   readonly localSelectedFlagKey = signal<string>('');
+  readonly routeSelectedFlagKey = signal<string | null>(null);
   readonly contextJson = signal('{\n  "targetingKey": "user-123"\n}');
   readonly drawerHeight = signal(
     this.clampDrawerHeight(this.ngxsStore.selectSnapshot(PlaygroundPreferencesState.drawerHeight)),
@@ -86,6 +88,17 @@ export class PlaygroundDrawerComponent implements OnDestroy {
     () => this.servers().find((server) => server.id === this.activeServerId()) ?? null,
   );
 
+  readonly flags = computed<PlaygroundFlag[]>(() => {
+    const schema = this.getSchema();
+    if (!schema?.flags) return [];
+    return Object.entries(schema.flags).map(([key, flag]) => ({
+      key,
+      ...(flag as FlagdSchema['flags'][string]),
+    }));
+  });
+
+  readonly evaluators = computed(() => this.getSchema()?.$evaluators);
+
   readonly selectedFlag = computed(() => {
     const selected = this.localSelectedFlagKey();
     return this.flags().find((flag) => flag.key === selected) ?? null;
@@ -94,12 +107,13 @@ export class PlaygroundDrawerComponent implements OnDestroy {
   private resizeStartY = 0;
   private resizeStartHeight = DEFAULT_DRAWER_HEIGHT;
   private autoEvaluateTimeoutId: ReturnType<typeof setTimeout> | null = null;
+  private routeParamsSub: Subscription | null = null;
 
   private readonly syncSelectedFromInput = effect(() => {
     const current = this.localSelectedFlagKey();
     if (current && this.flags().some((flag) => flag.key === current)) return;
 
-    const requested = this.selectedFlagKey();
+    const requested = this.routeSelectedFlagKey();
     if (requested && this.flags().some((flag) => flag.key === requested)) {
       this.localSelectedFlagKey.set(requested);
       return;
@@ -122,9 +136,16 @@ export class PlaygroundDrawerComponent implements OnDestroy {
     this.scheduleAutoEvaluate();
   });
 
+  ngOnInit(): void {
+    this.routeParamsSub = this.route.queryParamMap.subscribe((params) => {
+      this.routeSelectedFlagKey.set(params.get('flag'));
+    });
+  }
+
   ngOnDestroy(): void {
     this.clearAutoEvaluateTimer();
     this.stopResizing();
+    this.routeParamsSub?.unsubscribe();
   }
 
   toggleDrawer(): void {
@@ -333,5 +354,11 @@ export class PlaygroundDrawerComponent implements OnDestroy {
     }
 
     return 'Evaluation failed.';
+  }
+
+  private getSchema(): FlagdSchema | null {
+    const schema = this.schemaState();
+    if (!schema || typeof schema !== 'object') return null;
+    return schema as FlagdSchema;
   }
 }

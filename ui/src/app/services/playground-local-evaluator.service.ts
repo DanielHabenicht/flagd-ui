@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { EvaluationContext } from '@openfeature/web-sdk';
 import { LogicEngine } from 'json-logic-engine';
-import { Evaluator, FlagEntry, inferFlagType } from '../models/flag.models';
+import { Evaluators } from '../models/generated/flagd-schema';
 import {
   EvaluationResult,
   PlaygroundEvaluationRequest,
@@ -75,11 +75,7 @@ export class PlaygroundLocalEvaluatorService implements PlaygroundEvaluator {
     }
   }
 
-  private expandRefs(
-    value: unknown,
-    evaluators: Record<string, Evaluator>,
-    activeRefs: string[],
-  ): unknown {
+  private expandRefs(value: unknown, evaluators: Evaluators, activeRefs: string[]): unknown {
     if (Array.isArray(value)) {
       return value.map((item) => this.expandRefs(item, evaluators, activeRefs));
     }
@@ -119,7 +115,7 @@ export class PlaygroundLocalEvaluatorService implements PlaygroundEvaluator {
     return expanded;
   }
 
-  private resolveDefaultResult(flag: FlagEntry): EvaluationResult {
+  private resolveDefaultResult(flag: PlaygroundEvaluationRequest['flag']): EvaluationResult {
     const defaultVariant =
       typeof flag.defaultVariant === 'string' && this.hasVariant(flag, flag.defaultVariant)
         ? flag.defaultVariant
@@ -139,13 +135,13 @@ export class PlaygroundLocalEvaluatorService implements PlaygroundEvaluator {
     };
   }
 
-  private resolveFallbackValue(flag: FlagEntry): unknown {
+  private resolveFallbackValue(flag: PlaygroundEvaluationRequest['flag']): unknown {
     const firstVariant = Object.values(flag.variants)[0];
     if (firstVariant !== undefined) {
       return firstVariant;
     }
 
-    const flagType = inferFlagType(flag.variants);
+    const flagType = this.inferFlagType(flag.variants);
     if (flagType === 'boolean') return false;
     if (flagType === 'string') return '';
     if (flagType === 'number') return 0;
@@ -180,7 +176,7 @@ export class PlaygroundLocalEvaluatorService implements PlaygroundEvaluator {
     return Math.floor(Date.now() / 1000);
   }
 
-  private hasVariant(flag: FlagEntry, variantName: string): boolean {
+  private hasVariant(flag: PlaygroundEvaluationRequest['flag'], variantName: string): boolean {
     return Object.prototype.hasOwnProperty.call(flag.variants, variantName);
   }
 
@@ -189,5 +185,17 @@ export class PlaygroundLocalEvaluatorService implements PlaygroundEvaluator {
       return {};
     }
     return value as Record<string, unknown>;
+  }
+
+  private inferFlagType(
+    variants: Record<string, unknown>,
+  ): 'boolean' | 'string' | 'number' | 'object' {
+    const values = Object.values(variants);
+    if (values.length === 0) return 'boolean';
+    const first = values[0];
+    if (typeof first === 'boolean') return 'boolean';
+    if (typeof first === 'number') return 'number';
+    if (typeof first === 'string') return 'string';
+    return 'object';
   }
 }
