@@ -44,6 +44,7 @@ FROM node:22-bookworm-slim AS frontend-builder
 
 WORKDIR /ui
 
+COPY schema /schema
 COPY ui/package*.json ./
 RUN npm ci --ignore-scripts
 
