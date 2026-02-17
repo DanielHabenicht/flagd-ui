@@ -20,22 +20,20 @@ export class FlagsFileSettingsPageComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
 
   // Selectors for template access
-  readonly error = this.ngxsStore.selectSignal(FlagStoreState.error);
-  readonly flagEntries = this.ngxsStore.selectSignal(FlagStoreState.flagEntries);
-  readonly currentEvaluators = this.ngxsStore.selectSignal(FlagStoreState.currentEvaluators);
-  readonly currentMetadata = this.ngxsStore.selectSignal(FlagStoreState.currentMetadata);
-  readonly loading = this.ngxsStore.selectSignal(FlagStoreState.loading);
+  readonly currentMetadata = this.ngxsStore.selectSignal(FlagStoreState.metadata);
+  readonly flags = this.ngxsStore.selectSignal(FlagStoreState.flags);
+  readonly environments = this.ngxsStore.selectSignal(FlagStoreState.environments);
 
   readonly projectMetadataDraft = signal<MetadataMap | undefined>(undefined);
   readonly projectMetadataDirty = computed(
     () =>
       this.metadataSnapshot(this.projectMetadataDraft()) !==
-      this.metadataSnapshot(this.currentMetadata()),
+      this.metadataSnapshot(this.currentMetadata() as MetadataMap | undefined),
   );
-  readonly metadataSaveDisabled = computed(() => this.loading() || !this.projectMetadataDirty());
+  readonly metadataSaveDisabled = computed(() => !this.projectMetadataDirty());
 
   private readonly syncProjectMetadataDraft = effect(() => {
-    this.projectMetadataDraft.set(this.currentMetadata());
+    this.projectMetadataDraft.set(this.currentMetadata() as MetadataMap | undefined);
   });
 
   ngOnInit(): void {
