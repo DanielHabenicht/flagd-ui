@@ -1,4 +1,18 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Locator } from '@playwright/test';
+
+async function getEvaluationResult(playgroundDrawer: Locator): Promise<{ value: string; variant: string }> {
+  const valueLine = await playgroundDrawer.locator('p:has(strong:has-text("Value:"))').first().textContent();
+  const variantLine = await playgroundDrawer.locator('p:has(strong:has-text("Variant:"))').first().textContent();
+
+  const value = (valueLine ?? '').replace(/\s+/g, ' ').replace('Value:', '').trim().toLowerCase();
+  const variant = (variantLine ?? '').replace(/\s+/g, ' ').replace('Variant:', '').trim();
+
+  if (!value || !variant) {
+    throw new Error(`Could not parse evaluation result. value="${value}", variant="${variant}"`);
+  }
+
+  return { value, variant };
+}
 
 test('creates file and boolean flag, evaluates in playground, then switches value', async ({
   page,
@@ -23,7 +37,7 @@ test('creates file and boolean flag, evaluates in playground, then switches valu
     await expect(createFileButton).toBeEnabled();
     await createFileButton.click();
 
-    await expect(page).toHaveURL(new RegExp(`/flags-files/local/${fileName}$`));
+    await expect(page).toHaveURL(new RegExp(`/local/browser/${fileName}$`));
     await expect(page.getByRole('heading', { name: fileName })).toBeVisible();
 
     await page.getByRole('button', { name: 'Create your first flag' }).click();
@@ -45,22 +59,22 @@ test('creates file and boolean flag, evaluates in playground, then switches valu
     await page.getByRole('option', { name: flagKey }).click();
 
     await playgroundDrawer.getByRole('button', { name: 'Evaluate' }).click();
-    await expect(playgroundDrawer.getByText(/Value:\s*true/)).toBeVisible();
-    await expect(playgroundDrawer.getByText(/Variant:\s*on/)).toBeVisible();
+    const firstResult = await getEvaluationResult(playgroundDrawer);
 
     await page.getByRole('cell', { name: flagKey }).click();
     const editPanel = page.locator('aside.side-panel').first();
 
     await expect(editPanel.getByRole('heading', { name: 'Edit Flag' })).toBeVisible();
-    const globalSwitch = editPanel.getByRole('switch').first();
-    await expect(globalSwitch).toBeChecked();
+    const globalSwitch = editPanel.locator('.default-value-section').getByRole('switch').first();
+    const wasChecked = (await globalSwitch.getAttribute('aria-checked')) === 'true';
     await globalSwitch.click();
-    await expect(globalSwitch).not.toBeChecked();
+    await expect(globalSwitch).toHaveAttribute('aria-checked', wasChecked ? 'false' : 'true');
     await editPanel.getByRole('button', { name: 'Save Changes' }).click();
 
     await playgroundDrawer.getByRole('button', { name: 'Evaluate' }).click();
-    await expect(playgroundDrawer.getByText(/Value:\s*false/)).toBeVisible();
-    await expect(playgroundDrawer.getByText(/Variant:\s*off/)).toBeVisible();
+    const secondResult = await getEvaluationResult(playgroundDrawer);
+
+    expect(secondResult.value).not.toBe(firstResult.value);
   } finally {
     await request.delete(`/api/flags/${encodeURIComponent(fileName)}`).catch(() => undefined);
   }

@@ -1,6 +1,7 @@
 import { Component, Output, EventEmitter, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
+import { Router } from '@angular/router';
 import { Store } from '@ngxs/store';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -39,6 +40,7 @@ export class NewFlagsFileFormComponent {
 
   private readonly store = inject(Store);
   private readonly http = inject(HttpClient);
+  private readonly router = inject(Router);
   private readonly remoteApi = inject(RemoteApi);
   private readonly fileSystemAccess = inject(FileSystemAccess);
 
@@ -181,6 +183,7 @@ export class NewFlagsFileFormComponent {
         stringifyFlagdSchema(FlagdSchemaAbstraction.empty().exportSchema()),
       ),
     );
+    void this.navigateToFlagsFile('local', LocalBackendUris.Browser, name);
     this.formSubmitted.emit({ type: 'empty' });
   }
 
@@ -201,6 +204,7 @@ export class NewFlagsFileFormComponent {
           if (!name) name = 'imported';
 
           this.store.dispatch(new AddFile('local', LocalBackendUris.Browser, name, text));
+          void this.navigateToFlagsFile('local', LocalBackendUris.Browser, name);
           this.formSubmitted.emit({ type: 'url' });
         } catch {
           this.urlError = 'Failed to parse JSON file';
@@ -238,6 +242,7 @@ export class NewFlagsFileFormComponent {
           JSON.stringify(result.content, null, 2),
         ),
       );
+      void this.navigateToFlagsFile('local', LocalBackendUris.Disk, result.name);
       this.formSubmitted.emit({ type: 'disk' });
     } catch (error) {
       this.diskLoading = false;
@@ -316,5 +321,13 @@ export class NewFlagsFileFormComponent {
         },
       });
     }
+  }
+
+  private async navigateToFlagsFile(
+    backendType: 'local' | 'remote',
+    backendUri: string,
+    fileName: string,
+  ): Promise<void> {
+    await this.router.navigate(['/', backendType, backendUri, fileName]);
   }
 }

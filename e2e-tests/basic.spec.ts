@@ -116,7 +116,7 @@ test('creates a flags-file from the sidebar form', async ({ page }) => {
   await page.getByRole('dialog', { name: 'Add Flag File' }).getByLabel('File name').fill('new-project.flagd.json');
   await page.getByRole('dialog', { name: 'Add Flag File' }).getByRole('button', { name: 'Create' }).click();
 
-  await expect(page).toHaveURL(/\/flags-files\/local\/new-project.flagd.json$/);
+  await expect(page).toHaveURL(/\/local\/browser\/new-project.flagd.json$/);
   await expect(page.getByRole('heading', { name: 'new-project.flagd.json' })).toBeVisible();
   await expect(page.getByText('No flags in this file yet.')).toBeVisible();
   await expect(page.locator('.sidebar').getByRole('link', { name: 'new-project.flagd.json' })).toBeVisible();
