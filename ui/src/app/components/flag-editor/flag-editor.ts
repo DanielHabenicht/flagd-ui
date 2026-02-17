@@ -40,7 +40,6 @@ import {
 } from '../../models/abstraction/flagd-abstraction-models';
 import { MetadataEditorComponent } from '../metadata-editor/metadata-editor';
 import { Store } from '@ngxs/store';
-import { FlagSchemaAdapter } from '../../services/flag-schema-adapter';
 import { FlagStoreState } from '../../state/current-flag-store.state';
 
 export type EditorMode = 'interactive' | 'json';
@@ -78,7 +77,6 @@ interface TimeWindowFormState {
 })
 export class FlagEditorComponent implements OnInit, OnChanges {
   private readonly ngxsStore = inject(Store);
-  private readonly schemaAdapter = new FlagSchemaAdapter();
 
   readonly inline = input(false);
   readonly allowMaximize = input(false);
@@ -107,7 +105,7 @@ export class FlagEditorComponent implements OnInit, OnChanges {
   // Expose JSON to template for object editing
   readonly JSON = JSON;
 
-  readonly environments = this.ngxsStore.selectSignal(FlagStoreState.currentEnvironments);
+  readonly environments = this.ngxsStore.selectSignal(FlagStoreState.environments);
   readonly filteredEnvironments = computed(() => {
     const filterValue = this.environmentFilter().trim().toLowerCase();
     const allEnvironments = this.environments();
@@ -517,17 +515,18 @@ export class FlagEditorComponent implements OnInit, OnChanges {
 
   onJsonInput(value: string): void {
     this.rawJson = value;
-    this.jsonError = this.schemaAdapter.isValidJson(value) ? null : 'Invalid JSON';
+    this.jsonError = this.isValidJson(value) ? null : 'Invalid JSON';
   }
 
   formatJson(): void {
-    const formatted = this.schemaAdapter.formatJson(this.rawJson);
+    const formatted = this.tryFormatJson(this.rawJson);
     if (formatted.ok) {
       this.rawJson = formatted.value;
       this.jsonError = null;
-    } else {
-      this.jsonError = formatted.error;
+      return;
     }
+
+    this.jsonError = formatted.error;
   }
 
   // --- Save ---
@@ -845,6 +844,24 @@ export class FlagEditorComponent implements OnInit, OnChanges {
   private isCurrentModeFormValid(): boolean {
     const keyControl = this.form.get('key');
     return !!(keyControl && keyControl.valid);
+  }
+
+  private isValidJson(raw: string): boolean {
+    try {
+      JSON.parse(raw);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  private tryFormatJson(raw: string): { ok: true; value: string } | { ok: false; error: string } {
+    try {
+      const parsed = JSON.parse(raw);
+      return { ok: true, value: JSON.stringify(parsed, null, 2) };
+    } catch {
+      return { ok: false, error: 'Cannot format: invalid JSON' };
+    }
   }
 
   private getDefaultValueForType(flagType: FlagType): unknown {
