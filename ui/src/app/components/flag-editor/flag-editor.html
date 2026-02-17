@@ -76,64 +76,69 @@
         </div>
       }
 
-      <!-- Default (Fallback) Value Section (When environments exist) -->
-      @if (editorMode() === 'interactive' && hasEnvironments()) {
-        <div class="form-field default-value-section">
-          <span class="field-label">Default (Fallback) Value</span>
-          <p class="hint-text">This value is used when no environment-specific override is set.</p>
-
-          @if (form.get('flagType')!.value === 'boolean') {
-            <mat-slide-toggle
-              [checked]="form.get('booleanValue')!.value"
-              (change)="onValueChange($event.checked)"
-            >
-              {{ form.get('booleanValue')!.value ? 'ON' : 'OFF' }}
-            </mat-slide-toggle>
-          }
-
-          @if (form.get('flagType')!.value === 'string') {
-            <mat-form-field appearance="outline" class="full-width">
-              <mat-label>String Value</mat-label>
-              <input
-                matInput
-                [value]="form.get('stringValue')!.value"
-                (input)="onValueChange($any($event.target).value)"
-                placeholder="Enter default value"
-              />
-            </mat-form-field>
-          }
-
-          @if (form.get('flagType')!.value === 'number') {
-            <mat-form-field appearance="outline" class="full-width">
-              <mat-label>Number Value</mat-label>
-              <input
-                matInput
-                type="number"
-                [value]="form.get('numberValue')!.value"
-                (input)="onValueChange(+$any($event.target).value)"
-                placeholder="Enter default number"
-              />
-            </mat-form-field>
-          }
-
-          @if (form.get('flagType')!.value === 'object') {
-            <mat-form-field appearance="outline" class="full-width">
-              <mat-label>JSON Object</mat-label>
-              <textarea
-                matInput
-                [value]="form.get('objectValue')!.value"
-                (input)="onValueChange(JSON.parse($any($event.target).value || '{}'))"
-                rows="4"
-                placeholder="{}"
-              ></textarea>
-            </mat-form-field>
-          }
-        </div>
-      }
-
       <!-- ==================== INTERACTIVE MODE ==================== -->
       @if (editorMode() === 'interactive') {
         <div class="interactive-mode">
+          <div class="form-field default-value-section">
+            <span class="field-label">
+              {{ hasEnvironments() ? 'Default (Fallback) Value' : 'Global Value' }}
+            </span>
+            <p class="hint-text">
+              {{
+                hasEnvironments()
+                  ? 'This value is used when no environment-specific override is set.'
+                  : 'This sets the default value while no environments exist.'
+              }}
+            </p>
+
+            @if (form.get('flagType')!.value === 'boolean') {
+              <mat-slide-toggle
+                [checked]="form.get('booleanValue')!.value"
+                (change)="onValueChange($event.checked)"
+              >
+                {{ form.get('booleanValue')!.value ? 'ON' : 'OFF' }}
+              </mat-slide-toggle>
+            }
+
+            @if (form.get('flagType')!.value === 'string') {
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>String Value</mat-label>
+                <input
+                  matInput
+                  [value]="form.get('stringValue')!.value"
+                  (input)="onValueChange($any($event.target).value)"
+                  [placeholder]="hasEnvironments() ? 'Enter default value' : 'Enter value'"
+                />
+              </mat-form-field>
+            }
+
+            @if (form.get('flagType')!.value === 'number') {
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Number Value</mat-label>
+                <input
+                  matInput
+                  type="number"
+                  [value]="form.get('numberValue')!.value"
+                  (input)="onValueChange(+$any($event.target).value)"
+                  [placeholder]="hasEnvironments() ? 'Enter default number' : 'Enter number'"
+                />
+              </mat-form-field>
+            }
+
+            @if (form.get('flagType')!.value === 'object') {
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>JSON Object</mat-label>
+                <textarea
+                  matInput
+                  [value]="form.get('objectValue')!.value"
+                  (input)="onValueChange($any($event.target).value)"
+                  rows="4"
+                  placeholder="{}"
+                ></textarea>
+              </mat-form-field>
+            }
+          </div>
+
           @if (hasEnvironments()) {
             <div class="environment-mode">
               <!-- Environment Overrides Panel -->
@@ -528,20 +533,6 @@
                 </div>
               </mat-expansion-panel>
             </div>
-          } @else {
-            @if (form.get('flagType')!.value === 'boolean') {
-              <div class="global-environment-value-section">
-                <h3>Global Value</h3>
-                <p class="hint-text">This sets the default value while no environments exist.</p>
-
-                <mat-slide-toggle
-                  [checked]="form.get('booleanValue')!.value"
-                  (change)="onValueChange($event.checked)"
-                >
-                  {{ form.get('booleanValue')!.value ? 'ON' : 'OFF' }}
-                </mat-slide-toggle>
-              </div>
-            }
           }
 
           @if (showMetadata()) {
