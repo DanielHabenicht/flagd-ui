@@ -71,10 +71,13 @@ export class App implements OnDestroy {
   isCompactLayout = signal(
     typeof window !== 'undefined' && window.innerWidth <= this.navigationCollapseWidth,
   );
-  readonly showFlagsContextHeader = computed(
-    () => this.currentUrl().startsWith('/flags-files/') && !!this.currentFlagsFileName(),
-  );
-  readonly showPageHeader = computed(() => this.isCompactLayout() || this.showFlagsContextHeader());
+  readonly isRootRoute = computed(() => {
+    const path = this.currentUrl().split('?')[0];
+    return path === '/' || path === '';
+  });
+  readonly displayedFlagsFileName = computed(() => this.currentFlagsFileName() || '');
+  readonly showFlagsContextHeader = computed(() => !this.isRootRoute());
+  readonly showPageHeader = computed(() => !this.isRootRoute());
   readonly isOverviewComponentActive = computed(
     () => this.activeRouteComponent() instanceof FlagsFileDetailComponent,
   );
@@ -129,21 +132,12 @@ export class App implements OnDestroy {
   });
   readonly sourceBreadcrumbRoute = computed(() => ['/']);
   readonly flagsFileDetailRoute = computed(() => {
-    const path = this.currentUrl().split('?')[0];
+    const backendType = this.currentFlagsBackendType();
+    const backendUri = this.currentFlagsBackendUri();
+    const fileName = this.currentFlagsFileName();
 
-    const localMatch = path.match(/^\/flags-files\/local\/([^/]+)/);
-    if (localMatch) {
-      return ['/flags-files', 'local', decodeURIComponent(localMatch[1])];
-    }
-
-    const remoteMatch = path.match(/^\/flags-files\/remote\/([^/]+)\/([^/]+)/);
-    if (remoteMatch) {
-      return [
-        '/flags-files',
-        'remote',
-        decodeURIComponent(remoteMatch[1]),
-        decodeURIComponent(remoteMatch[2]),
-      ];
+    if (backendType && backendUri && fileName) {
+      return ['/', backendType, backendUri, fileName];
     }
 
     return null;
