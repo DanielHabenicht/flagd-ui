@@ -1,11 +1,34 @@
 use super::StorageBackend;
 use crate::error::{AppError, AppResult};
 use async_trait::async_trait;
+use azure_core::credentials::TokenCredential;
 use azure_core::http::RequestContent;
 use azure_storage_blob::clients::BlobContainerClient;
 use azure_storage_blob::BlobServiceClient;
 use futures::StreamExt;
 use std::sync::Arc;
+
+#[cfg(feature = "azurite-local-auth")]
+fn local_azurite_credential(is_local: bool) -> AppResult<Option<Arc<dyn TokenCredential>>> {
+    if !is_local {
+        return Ok(None);
+    }
+
+    let credential = super::azurite_auth::build_azurite_token_credential()?;
+    Ok(Some(credential))
+}
+
+#[cfg(not(feature = "azurite-local-auth"))]
+fn local_azurite_credential(is_local: bool) -> AppResult<Option<Arc<dyn TokenCredential>>> {
+    if is_local {
+        return Err(AppError::BadRequest(
+            "Local Azurite OAuth token auth is disabled. Rebuild with feature 'azurite-local-auth' to enable it."
+                .to_string(),
+        ));
+    }
+
+    Ok(None)
+}
 
 /// Azure Blob Storage backend
 pub struct AzureStorage {
@@ -93,17 +116,21 @@ impl AzureStorage {
             ));
         };
 
-        // For Azurite and local development, try to use connection string from environment
-        // The Azure SDK 0.8 doesn't have easy DefaultAzureCredential, so we rely on the SDK's
-        // automatic credential resolution which checks environment variables like
-        // AZURE_STORAGE_CONNECTION_STRING, AZURE_STORAGE_ACCOUNT, etc.
-        
-        // Create blob service client - the SDK will automatically look for credentials
-        // in environment variables (AZURE_STORAGE_CONNECTION_STRING, etc.)
-        let blob_service =
-            BlobServiceClient::new(&service_url, None, None).map_err(|e| {
-                AppError::BadRequest(format!("Failed to create blob service client: {}. Make sure AZURE_STORAGE_CONNECTION_STRING or appropriate credentials are set.", e))
-            })?;
+        // Detect whether this is a local Azurite endpoint
+        let is_local = service_url.contains("127.0.0.1")
+            || service_url.contains("localhost")
+            || service_url.contains("azurite");
+
+        let credential = local_azurite_credential(is_local)?;
+
+        let blob_service = BlobServiceClient::new(&service_url, credential, None).map_err(|e| {
+            AppError::BadRequest(format!(
+                "Failed to create blob service client: {}. \
+                     For local Azurite, ensure certs are generated. \
+                     For Azure, set AZURE_STORAGE_CONNECTION_STRING or appropriate credentials.",
+                e
+            ))
+        })?;
 
         Ok(blob_service.blob_container_client(&container_name))
     }
@@ -143,7 +170,8 @@ impl StorageBackend for AzureStorage {
                         // BlobName.content is an Option<String>
                         if let Some(name_str) = &name.content {
                             if name_str.ends_with(".flagd.json") {
-                                let flag_name = name_str.trim_end_matches(".flagd.json").to_string();
+                                let flag_name =
+                                    name_str.trim_end_matches(".flagd.json").to_string();
                                 files.push(flag_name);
                             }
                         }

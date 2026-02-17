@@ -1,4 +1,6 @@
 mod azure;
+#[cfg(feature = "azurite-local-auth")]
+mod azurite_auth;
 mod local;
 
 pub use azure::AzureStorage;
