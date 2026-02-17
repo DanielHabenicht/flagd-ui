@@ -126,14 +126,16 @@ export class FlagdSchemaAbstraction {
               ? new Date(timingResult.global.timeWindow.end * 1000)
               : undefined;
 
-          if (startTime === undefined || endTime === undefined) {
+          if (startTime === undefined && endTime === undefined) {
             throw new Error(
-              'Invalid global time window: both startTime and endTime must be defined',
+              'Invalid global time window: at least one of startTime or endTime must be defined',
             );
           }
           displayFlag.globalTimeWindow = {
             value: FlagTypeConverter.getDefaultValueForType(flagType) as any, // eslint-disable-line @typescript-eslint/no-explicit-any
-            timeWindow: { startTime, endTime },
+            timeWindow: (startTime !== undefined
+              ? { startTime, endTime }
+              : { endTime: endTime! }) as any, // eslint-disable-line @typescript-eslint/no-explicit-any
           };
         }
 
@@ -162,16 +164,18 @@ export class FlagdSchemaAbstraction {
               value: envValue,
             };
 
-            // Add time window if it exists (both start and end must be defined)
+            // Add time window if it exists (at least one of start or end must be defined)
             if (envData.start !== undefined || envData.end !== undefined) {
-              if (envData.start === undefined || envData.end === undefined) {
+              if (envData.start === undefined && envData.end === undefined) {
                 throw new Error(
-                  `Invalid time window for environment '${envName}': both startTime and endTime must be defined`,
+                  `Invalid time window for environment '${envName}': at least one of startTime or endTime must be defined`,
                 );
               }
-              const startTime = new Date(envData.start * 1000);
-              const endTime = new Date(envData.end * 1000);
-              perEnvDefs[matchedEnv.displayName].timeWindow = { startTime, endTime };
+              const startTime = envData.start !== undefined ? new Date(envData.start * 1000) : undefined;
+              const endTime = envData.end !== undefined ? new Date(envData.end * 1000) : undefined;
+              perEnvDefs[matchedEnv.displayName].timeWindow = (startTime !== undefined
+                ? { startTime, endTime }
+                : { endTime: endTime! }) as any; // eslint-disable-line @typescript-eslint/no-explicit-any
             }
           }
         }

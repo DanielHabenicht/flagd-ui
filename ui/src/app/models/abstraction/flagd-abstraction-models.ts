@@ -14,7 +14,7 @@ interface TimeWindowEnd {
   startTime?: Date;
   endTime: Date;
 }
-type TimeWindow = TimeWindowStart | TimeWindowEnd;
+export type TimeWindow = TimeWindowStart | TimeWindowEnd;
 
 /**
  * Environment as displayed in the UI
