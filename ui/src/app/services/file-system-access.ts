@@ -79,6 +79,28 @@ export class FileSystemAccess {
     await writable.close();
   }
 
+  async readBoundFlagsFiles(): Promise<Array<{ name: string; content: FlagFileContent }>> {
+    const results: Array<{ name: string; content: FlagFileContent }> = [];
+
+    for (const [name, handle] of this.fileHandles.entries()) {
+      try {
+        const file = await handle.getFile();
+        const text = await file.text();
+        const content = JSON.parse(text) as FlagFileContent;
+
+        if (!content.flags || typeof content.flags !== 'object' || Array.isArray(content.flags)) {
+          continue;
+        }
+
+        results.push({ name, content });
+      } catch {
+        continue;
+      }
+    }
+
+    return results;
+  }
+
   unbindFlagsFile(name: string): void {
     this.fileHandles.delete(name);
   }

@@ -48,3 +48,11 @@ export class UpdateFileContent {
     readonly content: string,
   ) {}
 }
+
+export class SyncBackends {
+  static readonly type = '[FlagFileStore] Sync Backends';
+  constructor(
+    readonly backendType: BackendType,
+    readonly uri: string,
+  ) {}
+}

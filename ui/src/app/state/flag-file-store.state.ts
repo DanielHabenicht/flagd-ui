@@ -1,5 +1,10 @@
 import { Injectable } from '@angular/core';
-import { Action, createSelector, Selector, State, StateContext } from '@ngxs/store';
+import { HttpClient } from '@angular/common/http';
+import { Action, createSelector, NgxsOnInit, Selector, State, StateContext } from '@ngxs/store';
+import { firstValueFrom } from 'rxjs';
+import { DEFAULT_BACKEND_ROOT } from '../../environments';
+import { FlagsService } from '../api-client/api/flags.service';
+import { FileSystemAccess } from '../services/file-system-access';
 import {
   AddBackend,
   RemoveBackend,
@@ -7,6 +12,7 @@ import {
   RemoveFile,
   UpdateFileContent,
   BackendType,
+  SyncBackends,
 } from './flag-file-store.actions';
 
 /**
@@ -59,7 +65,44 @@ export const LocalBackendUris = {
   },
 })
 @Injectable()
-export class FlagFileStore {
+export class FlagFileStore implements NgxsOnInit {
+  constructor(
+    private readonly httpClient: HttpClient,
+    private readonly fileSystemAccess: FileSystemAccess,
+  ) {}
+
+  ngxsOnInit(ctx: StateContext<FlagFileStoreStateModel>): void {
+    if (DEFAULT_BACKEND_ROOT === null || DEFAULT_BACKEND_ROOT === undefined) {
+      return;
+    }
+
+    const defaultRoot = DEFAULT_BACKEND_ROOT;
+
+    const normalized = this.normalizeUrl(defaultRoot);
+    const state = ctx.getState();
+    const remoteBackends = state?.backends?.remote ?? {};
+    if (remoteBackends[normalized]) {
+      ctx.dispatch(new SyncBackends('remote', normalized));
+      return;
+    }
+
+    ctx.patchState({
+      backends: {
+        ...state.backends,
+        remote: {
+          ...remoteBackends,
+          [normalized]: {
+            uri: normalized,
+            label: defaultRoot,
+            files: [],
+          },
+        },
+      },
+    });
+
+    ctx.dispatch(new SyncBackends('remote', normalized));
+  }
+
   @Selector()
   static backends(state: FlagFileStoreStateModel): Backend[] {
     if (!state?.backends) {
@@ -239,9 +282,112 @@ export class FlagFileStore {
     });
   }
 
+  @Action(SyncBackends)
+  async syncBackends(
+    ctx: StateContext<FlagFileStoreStateModel>,
+    action: SyncBackends,
+  ): Promise<void> {
+    const state = ctx.getState();
+
+    const backend = state.backends[action.backendType]?.[action.uri];
+    if (!backend) {
+      return;
+    }
+
+    if (action.backendType === 'remote') {
+      await this.importRemoteBackend(ctx, backend);
+      return;
+    }
+
+    if (action.backendType === 'local' && action.uri === LocalBackendUris.Disk) {
+      await this.importDiskBackend(ctx);
+    }
+  }
+
   // ============================================================================
   // PRIVATE HELPERS
   // ============================================================================
+  private async importRemoteBackend(
+    ctx: StateContext<FlagFileStoreStateModel>,
+    backend: Backend,
+  ): Promise<void> {
+    const api = new FlagsService(this.httpClient, backend.uri);
+
+    try {
+      const listResponse = await firstValueFrom(api.listFlags());
+      const files = listResponse?.files ?? [];
+      if (!files.length) {
+        return;
+      }
+
+      const imported = await Promise.all(
+        files.map(async (name) => {
+          const content = await firstValueFrom(api.getFlag(name));
+          return { name, content: JSON.stringify(content, null, 2) };
+        }),
+      );
+
+      this.upsertBackendFiles(ctx, 'remote', backend.uri, imported);
+    } catch {
+      return;
+    }
+  }
+
+  private async importDiskBackend(ctx: StateContext<FlagFileStoreStateModel>): Promise<void> {
+    const bound = await this.fileSystemAccess.readBoundFlagsFiles();
+    if (!bound.length) {
+      return;
+    }
+
+    const imported = bound.map((entry) => ({
+      name: entry.name,
+      content: JSON.stringify(entry.content, null, 2),
+    }));
+
+    this.upsertBackendFiles(ctx, 'local', LocalBackendUris.Disk, imported);
+  }
+
+  private upsertBackendFiles(
+    ctx: StateContext<FlagFileStoreStateModel>,
+    backendType: BackendType,
+    uri: string,
+    imported: Array<{ name: string; content: string }>,
+  ): void {
+    const state = ctx.getState();
+    const uriMap = state.backends[backendType];
+    const backend = uriMap?.[uri];
+    if (!backend) {
+      return;
+    }
+
+    const incomingMap = new Map(imported.map((entry) => [entry.name, entry.content]));
+    const updatedFiles = backend.files.map((file) => {
+      const incoming = incomingMap.get(file.name);
+      if (!incoming) {
+        return file;
+      }
+      incomingMap.delete(file.name);
+      return { name: file.name, content: incoming };
+    });
+
+    for (const [name, content] of incomingMap.entries()) {
+      updatedFiles.push({ name, content });
+    }
+
+    ctx.patchState({
+      backends: {
+        ...state.backends,
+        [backendType]: {
+          ...uriMap,
+          [uri]: {
+            ...backend,
+            files: updatedFiles,
+          },
+        },
+      },
+    });
+  }
+
   private normalizeUrl(url: string): string {
     // Remove trailing slashes and normalize the URL
     return url.replace(/\/$/, '').toLowerCase();
