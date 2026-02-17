@@ -341,6 +341,7 @@ export class FlagdSchemaAbstraction {
 
     // Build schema
     const schema: FlagdSchema = {
+      $schema: 'https://flagd.dev/schema/v0/flags.json',
       flags: flags as any, // eslint-disable-line @typescript-eslint/no-explicit-any
     };
 

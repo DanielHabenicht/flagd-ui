@@ -27,6 +27,7 @@ export class AddFile {
     readonly uri: string,
     readonly fileName: string,
     readonly content: string,
+    readonly isDirty = false,
   ) {}
 }
 

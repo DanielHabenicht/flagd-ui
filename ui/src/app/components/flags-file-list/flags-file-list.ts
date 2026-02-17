@@ -8,12 +8,18 @@ import { MatDividerModule } from '@angular/material/divider';
 import { MatDialog } from '@angular/material/dialog';
 import { NewFlagsFileDialogComponent } from '../new-flags-file-dialog/new-flags-file-dialog';
 import { FlagFileStore, Backend } from '../../state/flag-file-store.state';
-import { BackendType, RemoveBackend, RemoveFile } from '../../state/flag-file-store.actions';
+import {
+  BackendType,
+  RemoveBackend,
+  RemoveFile,
+  SyncBackends,
+} from '../../state/flag-file-store.actions';
 
 interface FlagsFileListEntry {
   name: string;
   backendType: BackendType;
   backendUri: string;
+  isDirty: boolean;
 }
 
 interface FlagsFileGroup {
@@ -23,6 +29,7 @@ interface FlagsFileGroup {
   backendType: BackendType;
   backendUri: string;
   canRemove: boolean;
+  canSync: boolean;
 }
 
 @Component({
@@ -53,6 +60,7 @@ export class FlagsFileListComponent {
         name: file.name,
         backendType,
         backendUri: backend.uri,
+        isDirty: file.isDirty ?? false,
       }));
 
     for (const backend of this.localBackends()) {
@@ -65,6 +73,7 @@ export class FlagsFileListComponent {
         backendType: 'local',
         backendUri: backend.uri,
         canRemove: false,
+        canSync: backend.uri === 'disk',
       });
     }
 
@@ -78,6 +87,7 @@ export class FlagsFileListComponent {
         backendType: 'remote',
         backendUri: backend.uri,
         canRemove: true,
+        canSync: true,
       });
     }
 
@@ -120,5 +130,11 @@ export class FlagsFileListComponent {
     if (confirm(`Remove backend "${backendLabel}" from navigation?`)) {
       this.ngxsStore.dispatch(new RemoveBackend(backendType, backendUri));
     }
+  }
+
+  syncBackend(event: Event, backendType: BackendType, backendUri: string): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.ngxsStore.dispatch(new SyncBackends(backendType, backendUri));
   }
 }

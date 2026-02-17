@@ -1,9 +1,12 @@
-import { Injectable } from '@angular/core';
+import { inject, Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Action, createSelector, NgxsOnInit, Selector, State, StateContext } from '@ngxs/store';
 import { firstValueFrom } from 'rxjs';
 import { DEFAULT_BACKEND_ROOT } from '../../environments';
 import { FlagsService } from '../api-client/api/flags.service';
+import { CreateFlagRequest } from '../api-client/model/createFlagRequest';
+import { UpdateFlagRequest } from '../api-client/model/updateFlagRequest';
+import { FlagFileContent } from '../models/flag.models';
 import { FileSystemAccess } from '../services/file-system-access';
 import {
   AddBackend,
@@ -21,6 +24,7 @@ import {
 export interface FlagFile {
   name: string;
   content: string;
+  isDirty?: boolean;
 }
 
 /**
@@ -66,10 +70,12 @@ export const LocalBackendUris = {
 })
 @Injectable()
 export class FlagFileStore implements NgxsOnInit {
-  constructor(
-    private readonly httpClient: HttpClient,
-    private readonly fileSystemAccess: FileSystemAccess,
-  ) {}
+  private readonly httpClient = inject(HttpClient);
+  private readonly fileSystemAccess = inject(FileSystemAccess);
+
+  private isSyncTrackedBackend(backendType: BackendType, uri: string): boolean {
+    return backendType === 'remote' || (backendType === 'local' && uri === LocalBackendUris.Disk);
+  }
 
   ngxsOnInit(ctx: StateContext<FlagFileStoreStateModel>): void {
     let defaultRoot = DEFAULT_BACKEND_ROOT;
@@ -209,7 +215,17 @@ export class FlagFileStore implements NgxsOnInit {
 
     const updatedBackend: Backend = {
       ...backend,
-      files: [...backend.files, { name: action.fileName, content: action.content }],
+      files: [
+        ...backend.files,
+        {
+          name: action.fileName,
+          content: this.toDeterministicContent(action.content),
+          isDirty:
+            this.isSyncTrackedBackend(action.backendType, action.uri) && action.isDirty
+              ? true
+              : false,
+        },
+      ],
     };
 
     ctx.patchState({
@@ -231,6 +247,10 @@ export class FlagFileStore implements NgxsOnInit {
 
     if (!backend) {
       throw new Error(`Backend "${action.uri}" of type "${action.backendType}" not found`);
+    }
+
+    if (action.backendType === 'local' && action.uri === LocalBackendUris.Disk) {
+      this.fileSystemAccess.unbindFlagsFile(action.fileName);
     }
 
     const updatedBackend: Backend = {
@@ -264,8 +284,22 @@ export class FlagFileStore implements NgxsOnInit {
       throw new Error(`File "${action.fileName}" not found in backend "${action.uri}"`);
     }
 
+    const normalizedContent = this.toDeterministicContent(action.content);
+    const file = backend.files[fileIndex];
+    const hasChanged = file.content !== normalizedContent;
+    if (!hasChanged) {
+      return;
+    }
+
     const updatedFiles = [...backend.files];
-    updatedFiles[fileIndex] = { ...updatedFiles[fileIndex], content: action.content };
+    updatedFiles[fileIndex] = {
+      ...updatedFiles[fileIndex],
+      content: normalizedContent,
+      isDirty:
+        hasChanged && this.isSyncTrackedBackend(action.backendType, action.uri)
+          ? true
+          : updatedFiles[fileIndex].isDirty,
+    };
 
     const updatedBackend: Backend = {
       ...backend,
@@ -296,11 +330,13 @@ export class FlagFileStore implements NgxsOnInit {
     }
 
     if (action.backendType === 'remote') {
+      await this.syncRemoteBackend(ctx, backend);
       await this.importRemoteBackend(ctx, backend);
       return;
     }
 
     if (action.backendType === 'local' && action.uri === LocalBackendUris.Disk) {
+      await this.syncDiskBackend(ctx);
       await this.importDiskBackend(ctx);
     }
   }
@@ -308,6 +344,75 @@ export class FlagFileStore implements NgxsOnInit {
   // ============================================================================
   // PRIVATE HELPERS
   // ============================================================================
+  private async syncRemoteBackend(
+    ctx: StateContext<FlagFileStoreStateModel>,
+    backend: Backend,
+  ): Promise<void> {
+    const api = new FlagsService(this.httpClient, backend.uri);
+
+    try {
+      const listResponse = await firstValueFrom(api.listFlags());
+      const remoteFileNames = new Set(listResponse?.files ?? []);
+      const localFileNames = new Set(backend.files.map((file) => file.name));
+
+      for (const file of backend.files) {
+        const parsed = this.parseFlagFileContent(file.content);
+        if (!parsed) {
+          continue;
+        }
+
+        const updatePayload: UpdateFlagRequest = {
+          $evaluators: parsed.$evaluators ?? {},
+          flags: parsed.flags,
+          metadata: parsed.metadata ?? {},
+        };
+
+        if (remoteFileNames.has(file.name)) {
+          await firstValueFrom(api.updateFlag(file.name, updatePayload));
+        } else {
+          const createPayload: CreateFlagRequest = {
+            name: file.name,
+            ...updatePayload,
+          };
+          await firstValueFrom(api.createFlag(createPayload));
+        }
+      }
+
+      for (const remoteFileName of remoteFileNames) {
+        if (!localFileNames.has(remoteFileName)) {
+          await firstValueFrom(api.deleteFlag(remoteFileName));
+        }
+      }
+
+      this.markBackendFilesSynced(ctx, 'remote', backend.uri);
+    } catch {
+      return;
+    }
+  }
+
+  private async syncDiskBackend(ctx: StateContext<FlagFileStoreStateModel>): Promise<void> {
+    const state = ctx.getState();
+    const backend = state.backends.local[LocalBackendUris.Disk];
+    if (!backend) {
+      return;
+    }
+
+    try {
+      for (const file of backend.files) {
+        const parsed = this.parseFlagFileContent(file.content);
+        if (!parsed) {
+          continue;
+        }
+
+        await this.fileSystemAccess.persistBoundFlagsFile(file.name, parsed);
+      }
+
+      this.markBackendFilesSynced(ctx, 'local', LocalBackendUris.Disk);
+    } catch {
+      return;
+    }
+  }
+
   private async importRemoteBackend(
     ctx: StateContext<FlagFileStoreStateModel>,
     backend: Backend,
@@ -324,7 +429,11 @@ export class FlagFileStore implements NgxsOnInit {
       const imported = await Promise.all(
         files.map(async (name) => {
           const content = await firstValueFrom(api.getFlag(name));
-          return { name, content: JSON.stringify(content, null, 2) };
+          return {
+            name,
+            content: this.toDeterministicContent(JSON.stringify(content, null, 2)),
+            isDirty: false,
+          };
         }),
       );
 
@@ -342,7 +451,8 @@ export class FlagFileStore implements NgxsOnInit {
 
     const imported = bound.map((entry) => ({
       name: entry.name,
-      content: JSON.stringify(entry.content, null, 2),
+      content: this.toDeterministicContent(JSON.stringify(entry.content, null, 2)),
+      isDirty: false,
     }));
 
     this.upsertBackendFiles(ctx, 'local', LocalBackendUris.Disk, imported);
@@ -352,7 +462,7 @@ export class FlagFileStore implements NgxsOnInit {
     ctx: StateContext<FlagFileStoreStateModel>,
     backendType: BackendType,
     uri: string,
-    imported: Array<{ name: string; content: string }>,
+    imported: { name: string; content: string; isDirty?: boolean }[],
   ): void {
     const state = ctx.getState();
     const uriMap = state.backends[backendType];
@@ -361,18 +471,26 @@ export class FlagFileStore implements NgxsOnInit {
       return;
     }
 
-    const incomingMap = new Map(imported.map((entry) => [entry.name, entry.content]));
+    const incomingMap = new Map(imported.map((entry) => [entry.name, entry]));
     const updatedFiles = backend.files.map((file) => {
       const incoming = incomingMap.get(file.name);
       if (!incoming) {
         return file;
       }
       incomingMap.delete(file.name);
-      return { name: file.name, content: incoming };
+      return {
+        name: file.name,
+        content: this.toDeterministicContent(incoming.content),
+        isDirty: incoming.isDirty ?? false,
+      };
     });
 
-    for (const [name, content] of incomingMap.entries()) {
-      updatedFiles.push({ name, content });
+    for (const incoming of incomingMap.values()) {
+      updatedFiles.push({
+        name: incoming.name,
+        content: this.toDeterministicContent(incoming.content),
+        isDirty: incoming.isDirty ?? false,
+      });
     }
 
     ctx.patchState({
@@ -389,8 +507,86 @@ export class FlagFileStore implements NgxsOnInit {
     });
   }
 
+  private markBackendFilesSynced(
+    ctx: StateContext<FlagFileStoreStateModel>,
+    backendType: BackendType,
+    uri: string,
+  ): void {
+    const state = ctx.getState();
+    const uriMap = state.backends[backendType];
+    const backend = uriMap?.[uri];
+    if (!backend) {
+      return;
+    }
+
+    const updatedBackend: Backend = {
+      ...backend,
+      files: backend.files.map((file) => ({
+        ...file,
+        isDirty: false,
+      })),
+    };
+
+    ctx.patchState({
+      backends: {
+        ...state.backends,
+        [backendType]: {
+          ...uriMap,
+          [uri]: updatedBackend,
+        },
+      },
+    });
+  }
+
   private normalizeUrl(url: string): string {
     // Remove trailing slashes and normalize the URL
     return url.replace(/\/$/, '').toLowerCase();
+  }
+
+  private tryParseJson(content: string): unknown | undefined {
+    try {
+      return JSON.parse(content) as unknown;
+    } catch {
+      return undefined;
+    }
+  }
+
+  private toDeterministicContent(content: string): string {
+    const parsed = this.tryParseJson(content);
+    if (parsed === undefined) {
+      return content;
+    }
+
+    return JSON.stringify(this.sortJson(parsed));
+  }
+
+  private sortJson(value: unknown): unknown {
+    if (Array.isArray(value)) {
+      return value.map((item) => this.sortJson(item));
+    }
+
+    if (value && typeof value === 'object') {
+      const record = value as Record<string, unknown>;
+      return Object.keys(record)
+        .sort()
+        .reduce<Record<string, unknown>>((acc, key) => {
+          acc[key] = this.sortJson(record[key]);
+          return acc;
+        }, {});
+    }
+
+    return value;
+  }
+
+  private parseFlagFileContent(content: string): FlagFileContent | null {
+    try {
+      const parsed = JSON.parse(content) as FlagFileContent;
+      if (!parsed.flags || typeof parsed.flags !== 'object' || Array.isArray(parsed.flags)) {
+        return null;
+      }
+      return parsed;
+    } catch {
+      return null;
+    }
   }
 }

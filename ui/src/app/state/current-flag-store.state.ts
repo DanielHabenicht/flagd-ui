@@ -40,6 +40,9 @@ export class CurrentFlagStoreState {
   // eslint-disable-next-line @angular-eslint/prefer-inject
   constructor(private store: Store) {}
 
+  private persistTimer: ReturnType<typeof setTimeout> | null = null;
+  private readonly persistDebounceMs = 1000;
+
   @Selector()
   static flags(state: CurrentFlagStoreStateModel): DisplayFlag[] {
     return state.abstraction?.getFlags() || [];
@@ -89,6 +92,8 @@ export class CurrentFlagStoreState {
     ctx: StateContext<CurrentFlagStoreStateModel>,
     action: RouterNavigation<unknown>,
   ): void {
+    this.flushPendingPersist();
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const routerState = action.routerState as any;
     const params = this.collectRouteParams(routerState?.root);
@@ -148,7 +153,7 @@ export class CurrentFlagStoreState {
 
   @Action(ClearFlagFile)
   clearFlagFile(ctx: StateContext<CurrentFlagStoreStateModel>): void {
-    this.persistCurrentFile(ctx);
+    this.flushPendingPersist();
     ctx.patchState({
       abstraction: null,
       backendType: null,
@@ -170,6 +175,7 @@ export class CurrentFlagStoreState {
     state.abstraction.createOrUpdateFlag(action.flag, action.previousKey);
     // Trigger state update by creating a new reference
     ctx.patchState({ abstraction: state.abstraction });
+    this.schedulePersist();
   }
 
   @Action(DeleteFlag)
@@ -181,6 +187,7 @@ export class CurrentFlagStoreState {
 
     state.abstraction.deleteFlag(action.flagKey);
     ctx.patchState({ abstraction: state.abstraction });
+    this.schedulePersist();
   }
 
   @Action(CreateOrUpdateEnvironment)
@@ -195,6 +202,7 @@ export class CurrentFlagStoreState {
 
     state.abstraction.createOrUpdateEnvironment(action.environment);
     ctx.patchState({ abstraction: state.abstraction });
+    this.schedulePersist();
   }
 
   @Action(DeleteEnvironment)
@@ -209,6 +217,7 @@ export class CurrentFlagStoreState {
 
     state.abstraction.deleteEnvironment(action.displayName);
     ctx.patchState({ abstraction: state.abstraction });
+    this.schedulePersist();
   }
 
   @Action(SetMetadata)
@@ -220,6 +229,7 @@ export class CurrentFlagStoreState {
 
     state.abstraction.setMetadata(action.metadata);
     ctx.patchState({ abstraction: state.abstraction });
+    this.schedulePersist();
   }
 
   private collectRouteParams(route: RouteSnapshotLike | null): Record<string, string> {
@@ -233,7 +243,42 @@ export class CurrentFlagStoreState {
   }
 
   private persistCurrentFile(ctx: StateContext<CurrentFlagStoreStateModel>): void {
-    const state = ctx.getState();
+    this.persistCurrentFileFromState(ctx.getState());
+  }
+
+  private schedulePersist(): void {
+    this.clearPersistTimer();
+    this.persistTimer = setTimeout(() => {
+      this.persistTimer = null;
+      const state = this.store.selectSnapshot(
+        (rootState: { currentFlagStore: CurrentFlagStoreStateModel }) => rootState.currentFlagStore,
+      );
+      this.persistCurrentFileFromState(state);
+    }, this.persistDebounceMs);
+  }
+
+  private flushPendingPersist(): void {
+    if (!this.persistTimer) {
+      return;
+    }
+
+    this.clearPersistTimer();
+    const state = this.store.selectSnapshot(
+      (rootState: { currentFlagStore: CurrentFlagStoreStateModel }) => rootState.currentFlagStore,
+    );
+    this.persistCurrentFileFromState(state);
+  }
+
+  private clearPersistTimer(): void {
+    if (!this.persistTimer) {
+      return;
+    }
+
+    clearTimeout(this.persistTimer);
+    this.persistTimer = null;
+  }
+
+  private persistCurrentFileFromState(state: CurrentFlagStoreStateModel): void {
     if (!state.abstraction || !state.backendType || !state.backendUri || !state.fileName) {
       return;
     }
@@ -244,7 +289,7 @@ export class CurrentFlagStoreState {
     }
 
     const content = JSON.stringify(schema, null, 2);
-    ctx.dispatch(
+    this.store.dispatch(
       new UpdateFileContent(state.backendType, state.backendUri, state.fileName, content),
     );
   }

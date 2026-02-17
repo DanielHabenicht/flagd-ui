@@ -1,7 +1,17 @@
 .project-name {
+  flex: 1 1 auto;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.project-title-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  min-width: 0;
 }
 
 .group-header {
@@ -43,6 +53,18 @@ a[mat-list-item]:hover .btn-delete {
 }
 
 .btn-remove-backend {
+  opacity: 0;
+  pointer-events: none;
+  width: 24px;
+  height: 24px;
+  min-width: 24px;
+  min-height: 24px;
+  padding: 0;
+  color: var(--color-text-secondary);
+  transition: opacity 120ms ease-in-out;
+}
+
+.btn-sync-backend {
   margin-left: auto;
   opacity: 0;
   pointer-events: none;
@@ -55,20 +77,31 @@ a[mat-list-item]:hover .btn-delete {
   transition: opacity 120ms ease-in-out;
 }
 
-.group-header:hover .btn-remove-backend {
+.group-header:hover .btn-remove-backend,
+.group-header:hover .btn-sync-backend {
   opacity: 1;
   pointer-events: auto;
 }
 
-.btn-remove-backend:focus-visible {
+.btn-remove-backend:focus-visible,
+.btn-sync-backend:focus-visible {
   opacity: 1;
   pointer-events: auto;
 }
 
+.btn-sync-backend mat-icon,
 .btn-remove-backend mat-icon {
   font-size: 18px;
   width: 18px;
   height: 18px;
+}
+
+.unsynced-indicator {
+  color: var(--color-warning);
+  font-size: 16px;
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
 }
 
 .active-link {
