@@ -117,18 +117,23 @@ export class FlagdSchemaAbstraction {
 
         // Handle global value definition
         if (timingResult.global && timingResult.global.timeWindow) {
+          const startTime =
+            timingResult.global.timeWindow.start !== undefined
+              ? new Date(timingResult.global.timeWindow.start * 1000)
+              : undefined;
+          const endTime =
+            timingResult.global.timeWindow.end !== undefined
+              ? new Date(timingResult.global.timeWindow.end * 1000)
+              : undefined;
+
+          if (startTime === undefined || endTime === undefined) {
+            throw new Error(
+              'Invalid global time window: both startTime and endTime must be defined',
+            );
+          }
           displayFlag.globalTimeWindow = {
             value: FlagTypeConverter.getDefaultValueForType(flagType) as any, // eslint-disable-line @typescript-eslint/no-explicit-any
-            timeWindow: {
-              startTime:
-                timingResult.global.timeWindow.start !== undefined
-                  ? new Date(timingResult.global.timeWindow.start * 1000)
-                  : undefined,
-              endTime:
-                timingResult.global.timeWindow.end !== undefined
-                  ? new Date(timingResult.global.timeWindow.end * 1000)
-                  : undefined,
-            },
+            timeWindow: { startTime, endTime },
           };
         }
 
@@ -157,12 +162,16 @@ export class FlagdSchemaAbstraction {
               value: envValue,
             };
 
-            // Add time window if it exists
+            // Add time window if it exists (both start and end must be defined)
             if (envData.start !== undefined || envData.end !== undefined) {
-              perEnvDefs[matchedEnv.displayName].timeWindow = {
-                startTime: envData.start !== undefined ? new Date(envData.start * 1000) : undefined,
-                endTime: envData.end !== undefined ? new Date(envData.end * 1000) : undefined,
-              };
+              if (envData.start === undefined || envData.end === undefined) {
+                throw new Error(
+                  `Invalid time window for environment '${envName}': both startTime and endTime must be defined`,
+                );
+              }
+              const startTime = new Date(envData.start * 1000);
+              const endTime = new Date(envData.end * 1000);
+              perEnvDefs[matchedEnv.displayName].timeWindow = { startTime, endTime };
             }
           }
         }
