@@ -2,12 +2,6 @@
   "name": "Flagd UI Dev Container",
   "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
   "features": {
-    "ghcr.io/devcontainers/features/apt-get:1": {
-      "packages": [
-        "pkg-config",
-        "libssl-dev"
-      ]
-    },
     "ghcr.io/devcontainers/features/rust:1": {
       "version": "1.93.1"
     },
@@ -32,11 +26,6 @@
       "settings": {}
     }
   },
-  "postCreateCommand": "cargo check && cd ui && npm install && npm run build",
-  "forwardPorts": [
-    3000,
-    4200,
-    8013,
-    8016
-  ]
+  "postCreateCommand": "sudo apt-get update && sudo apt-get install -y pkg-config libssl-dev && cargo check && cd ui && npm install && npm run build",
+  "forwardPorts": [3000, 4200, 8013, 8016]
 }
