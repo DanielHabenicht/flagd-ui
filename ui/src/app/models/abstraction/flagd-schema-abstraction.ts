@@ -171,11 +171,12 @@ export class FlagdSchemaAbstraction {
                   `Invalid time window for environment '${envName}': at least one of startTime or endTime must be defined`,
                 );
               }
-              const startTime = envData.start !== undefined ? new Date(envData.start * 1000) : undefined;
+              const startTime =
+                envData.start !== undefined ? new Date(envData.start * 1000) : undefined;
               const endTime = envData.end !== undefined ? new Date(envData.end * 1000) : undefined;
-              perEnvDefs[matchedEnv.displayName].timeWindow = (startTime !== undefined
-                ? { startTime, endTime }
-                : { endTime: endTime! }) as any; // eslint-disable-line @typescript-eslint/no-explicit-any
+              perEnvDefs[matchedEnv.displayName].timeWindow = (
+                startTime !== undefined ? { startTime, endTime } : { endTime: endTime! }
+              ) as any; // eslint-disable-line @typescript-eslint/no-explicit-any
             }
           }
         }

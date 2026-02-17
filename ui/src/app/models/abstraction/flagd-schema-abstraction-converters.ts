@@ -66,7 +66,9 @@ export class TimeWindowExporter {
 
     // If there's a global value definition with time window, wrap environment chain
     if (globalValueDef && globalValueDef['timeWindow']) {
-      const globalBounds = TimeWindowExporter.convertTimeWindowToBounds(globalValueDef['timeWindow']);
+      const globalBounds = TimeWindowExporter.convertTimeWindowToBounds(
+        globalValueDef['timeWindow'],
+      );
       if (globalBounds) {
         const globalCondition = TimeWindowExporter.buildTimestampCondition(globalBounds);
         if (globalCondition) {
@@ -250,12 +252,12 @@ export class TimeWindowImporter {
 
     if ('>=' in value) {
       const start = TimeWindowImporter.readTimestampComparison(value['>=']);
-      return start !== null ? { start } as TimestampBounds : null;
+      return start !== null ? ({ start } as TimestampBounds) : null;
     }
 
     if ('<=' in value) {
       const end = TimeWindowImporter.readTimestampComparison(value['<=']);
-      return end !== null ? { end } as TimestampBounds : null;
+      return end !== null ? ({ end } as TimestampBounds) : null;
     }
 
     if ('and' in value) {
