@@ -4,7 +4,7 @@ import { RouterNavigation } from '@ngxs/router-plugin';
 import { FlagdSchemaAbstraction } from '../models/abstraction/flagd-schema-abstraction';
 import { DisplayFlag, Environment } from '../models/abstraction/flagd-abstraction-models';
 import { FlagdSchema } from '../models/generated/flagd-schema';
-import { BackendType } from './flag-file-store.actions';
+import { BackendType, UpdateFileContent } from './flag-file-store.actions';
 import { FlagFile, FlagFileStoreStateModel } from './flag-file-store.state';
 import {
   LoadFlagFile,
@@ -98,6 +98,7 @@ export class CurrentFlagStoreState {
 
     const state = ctx.getState();
     if (!backendType || !backendUri || !fileName) {
+      this.persistCurrentFile(ctx);
       if (state.backendType || state.backendUri || state.fileName || state.abstraction) {
         ctx.patchState({
           abstraction: null,
@@ -116,6 +117,8 @@ export class CurrentFlagStoreState {
     ) {
       return;
     }
+
+    this.persistCurrentFile(ctx);
 
     ctx.dispatch(new LoadFlagFile(backendType, backendUri, fileName));
   }
@@ -145,6 +148,7 @@ export class CurrentFlagStoreState {
 
   @Action(ClearFlagFile)
   clearFlagFile(ctx: StateContext<CurrentFlagStoreStateModel>): void {
+    this.persistCurrentFile(ctx);
     ctx.patchState({
       abstraction: null,
       backendType: null,
@@ -226,6 +230,23 @@ export class CurrentFlagStoreState {
       Object.assign(merged, this.collectRouteParams(child));
     }
     return merged;
+  }
+
+  private persistCurrentFile(ctx: StateContext<CurrentFlagStoreStateModel>): void {
+    const state = ctx.getState();
+    if (!state.abstraction || !state.backendType || !state.backendUri || !state.fileName) {
+      return;
+    }
+
+    const schema = state.abstraction.exportSchema();
+    if (!schema) {
+      return;
+    }
+
+    const content = JSON.stringify(schema, null, 2);
+    ctx.dispatch(
+      new UpdateFileContent(state.backendType, state.backendUri, state.fileName, content),
+    );
   }
 }
 
