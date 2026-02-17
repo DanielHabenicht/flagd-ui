@@ -3,6 +3,7 @@ import {
   input,
   output,
   OnChanges,
+  OnDestroy,
   OnInit,
   computed,
   signal,
@@ -41,6 +42,7 @@ import {
 import { MetadataEditorComponent } from '../metadata-editor/metadata-editor';
 import { Store } from '@ngxs/store';
 import { CurrentFlagStoreState } from '../../state/current-flag-store.state';
+import { Subscription } from 'rxjs';
 
 export type EditorMode = 'interactive' | 'json';
 
@@ -75,7 +77,7 @@ interface TimeWindowFormState {
   templateUrl: './flag-editor.html',
   styleUrl: './flag-editor.scss',
 })
-export class FlagEditorComponent implements OnInit, OnChanges {
+export class FlagEditorComponent implements OnInit, OnChanges, OnDestroy {
   private readonly ngxsStore = inject(Store);
 
   readonly inline = input(false);
@@ -85,6 +87,7 @@ export class FlagEditorComponent implements OnInit, OnChanges {
   readonly flag = input<DisplayFlag | null>(null);
   readonly existingKeys = input<string[]>([]);
   readonly showMetadata = input(false);
+  readonly autoSave = input(true);
   readonly save = output<{ key: string; flag: DisplayFlag; originalKey?: string }>();
   readonly cancelled = output<void>();
   readonly maximize = output<void>();
@@ -148,6 +151,10 @@ export class FlagEditorComponent implements OnInit, OnChanges {
   rawJson = '';
   jsonError: string | null = null;
   private initialEditorSnapshot = '';
+  private lastSavedSnapshot = '';
+  private autoSaveTimer: ReturnType<typeof setTimeout> | null = null;
+  private readonly autoSaveDebounceMs = 500;
+  private formChangesSub: Subscription | null = null;
 
   readonly isEditing = computed(() => this.flag() !== null);
 
@@ -224,6 +231,16 @@ export class FlagEditorComponent implements OnInit, OnChanges {
     });
 
     this.applyFlagToForm(f);
+
+    this.formChangesSub = this.form.valueChanges.subscribe(() => {
+      this.scheduleAutoSave();
+    });
+  }
+
+  ngOnDestroy(): void {
+    this.formChangesSub?.unsubscribe();
+    this.formChangesSub = null;
+    this.clearAutoSaveTimer();
   }
 
   ngOnChanges(): void {
@@ -320,6 +337,8 @@ export class FlagEditorComponent implements OnInit, OnChanges {
     this.jsonError = null;
     this.syncToJson();
     this.initialEditorSnapshot = this.buildEditorSnapshot();
+    this.lastSavedSnapshot = this.initialEditorSnapshot;
+    this.clearAutoSaveTimer();
   }
 
   setMode(mode: EditorMode): void {
@@ -361,6 +380,8 @@ export class FlagEditorComponent implements OnInit, OnChanges {
       numberValue: newType === 'number' ? (newValue as number) : 0,
       objectValue: newType === 'object' ? JSON.stringify(newValue, null, 2) : '{}',
     });
+
+    this.scheduleAutoSave();
   }
 
   onValueChange(eventValue?: unknown): void {
@@ -417,14 +438,17 @@ export class FlagEditorComponent implements OnInit, OnChanges {
     }
 
     this.flagValue.set(newValue);
+    this.scheduleAutoSave();
   }
 
   onMetadataChange(metadata: Record<string, string | number | boolean> | undefined): void {
     this.metadata.set(metadata);
+    this.scheduleAutoSave();
   }
 
   addGlobalEnvironmentTimeWindow(): void {
     this.globalEnvironmentTimeEnabled.set(true);
+    this.scheduleAutoSave();
   }
 
   removeGlobalEnvironmentTimeWindow(): void {
@@ -435,6 +459,7 @@ export class FlagEditorComponent implements OnInit, OnChanges {
       globalEndDate: null,
       globalEndTime: null,
     });
+    this.scheduleAutoSave();
   }
 
   hasEnvironmentTimeWindow(envDisplayName: string): boolean {
@@ -462,6 +487,7 @@ export class FlagEditorComponent implements OnInit, OnChanges {
       endTime: null,
     };
     this.environmentTimeWindows.set(windows);
+    this.scheduleAutoSave();
   }
 
   removeEnvironmentTimeWindow(envDisplayName: string): void {
@@ -469,6 +495,7 @@ export class FlagEditorComponent implements OnInit, OnChanges {
     const windows = { ...this.environmentTimeWindows() };
     delete windows[key];
     this.environmentTimeWindows.set(windows);
+    this.scheduleAutoSave();
   }
 
   onEnvironmentTimeWindowChange(
@@ -489,6 +516,7 @@ export class FlagEditorComponent implements OnInit, OnChanges {
       [field]: value,
     };
     this.environmentTimeWindows.set(windows);
+    this.scheduleAutoSave();
   }
 
   onEnvironmentValueChange(envDisplayName: string, value: unknown): void {
@@ -499,6 +527,7 @@ export class FlagEditorComponent implements OnInit, OnChanges {
       timeWindow: existing?.timeWindow,
     };
     this.perEnvironmentDefinitions.set(perEnvDefs);
+    this.scheduleAutoSave();
   }
 
   getEnvironmentValue(envDisplayName: string): unknown {
@@ -516,6 +545,7 @@ export class FlagEditorComponent implements OnInit, OnChanges {
   onJsonInput(value: string): void {
     this.rawJson = value;
     this.jsonError = this.isValidJson(value) ? null : 'Invalid JSON';
+    this.scheduleAutoSave();
   }
 
   formatJson(): void {
@@ -641,6 +671,8 @@ export class FlagEditorComponent implements OnInit, OnChanges {
       flag: displayFlag,
       originalKey: this.flag()?.key,
     });
+
+    this.lastSavedSnapshot = this.buildEditorSnapshot();
   }
 
   onCancel(): void {
@@ -793,6 +825,39 @@ export class FlagEditorComponent implements OnInit, OnChanges {
       flag: displayFlag,
       originalKey: this.flag()?.key,
     });
+
+    this.lastSavedSnapshot = this.buildEditorSnapshot();
+  }
+
+  private scheduleAutoSave(): void {
+    if (!this.autoSave() || !this.form) {
+      return;
+    }
+
+    this.clearAutoSaveTimer();
+    this.autoSaveTimer = setTimeout(() => {
+      this.autoSaveTimer = null;
+
+      if (!this.canSave()) {
+        return;
+      }
+
+      const snapshot = this.buildEditorSnapshot();
+      if (snapshot === this.lastSavedSnapshot) {
+        return;
+      }
+
+      this.onSave();
+    }, this.autoSaveDebounceMs);
+  }
+
+  private clearAutoSaveTimer(): void {
+    if (!this.autoSaveTimer) {
+      return;
+    }
+
+    clearTimeout(this.autoSaveTimer);
+    this.autoSaveTimer = null;
   }
 
   private hasChanges(): boolean {

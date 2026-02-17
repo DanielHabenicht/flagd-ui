@@ -4,7 +4,12 @@
 }
 <aside class="side-panel" [class.inline-panel]="inline()">
   <div class="panel-header">
-    <h2>{{ isEditing() ? 'Edit Flag' : 'Create Flag' }}</h2>
+    <div class="panel-header-title">
+      <button mat-icon-button type="button" (click)="onCancel()" title="Close editor">
+        <mat-icon>close</mat-icon>
+      </button>
+      <h2>{{ isEditing() ? 'Edit Flag' : 'Create Flag' }}</h2>
+    </div>
     <div class="panel-header-actions">
       <mat-button-toggle-group [value]="editorMode()" (change)="setMode($event.value)">
         <mat-button-toggle
@@ -24,15 +29,10 @@
           <mat-icon>{{ maximizeIcon() }}</mat-icon>
         </button>
       }
-      @if (!inline()) {
-        <button mat-icon-button (click)="onCancel()">
-          <mat-icon>close</mat-icon>
-        </button>
-      }
     </div>
   </div>
 
-  <form [formGroup]="form" (ngSubmit)="onSave()" class="panel-body" [class.inline-body]="inline()">
+  <form [formGroup]="form" class="panel-body" [class.inline-body]="inline()">
     <div class="panel-content">
       <!-- Flag Key (shared across all modes) -->
       <div class="key-row">
@@ -569,20 +569,6 @@
           </p>
         </div>
       }
-    </div>
-
-    <!-- ==================== ACTIONS ==================== -->
-    <div class="panel-actions">
-      <button mat-button type="button" (click)="onCancel()">Cancel</button>
-      <button
-        mat-flat-button
-        color="primary"
-        type="button"
-        (click)="onSave()"
-        [disabled]="!canSave()"
-      >
-        {{ isEditing() ? 'Save Changes' : 'Create Flag' }}
-      </button>
     </div>
   </form>
 </aside>

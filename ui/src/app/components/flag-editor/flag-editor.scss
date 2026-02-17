@@ -76,6 +76,12 @@
   font-weight: 600;
 }
 
+.panel-header-title {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
 .panel-header-actions {
   display: flex;
   align-items: center;
@@ -239,21 +245,6 @@
   margin: 0;
   font-size: 0.78rem;
   color: var(--color-text-secondary);
-}
-
-/* Actions */
-
-.panel-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-  padding: 12px 20px;
-  position: sticky;
-  bottom: 0;
-  z-index: 2;
-  background: var(--color-bg);
-  border-top: 1px solid var(--color-border);
-  flex-shrink: 0;
 }
 
 /* Environment mode */

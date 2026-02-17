@@ -125,16 +125,18 @@
     </div>
   </div>
 
-  <div class="manager-actions" [class.dialog-actions]="isDialogMode()">
-    @if (isDialogMode()) {
-      <button mat-button (click)="cancel()">Cancel</button>
-      <button mat-flat-button color="primary" (click)="save()" [disabled]="saveDisabled()">
-        Save All
-      </button>
-    } @else {
-      <button mat-flat-button color="primary" (click)="save()" [disabled]="saveDisabled()">
-        Save Environments
-      </button>
-    }
-  </div>
+  @if (!embedded()) {
+    <div class="manager-actions" [class.dialog-actions]="isDialogMode()">
+      @if (isDialogMode()) {
+        <button mat-button (click)="cancel()">Cancel</button>
+        <button mat-flat-button color="primary" (click)="save()" [disabled]="saveDisabled()">
+          Save All
+        </button>
+      } @else {
+        <button mat-flat-button color="primary" (click)="save()" [disabled]="saveDisabled()">
+          Save Environments
+        </button>
+      }
+    </div>
+  }
 </div>

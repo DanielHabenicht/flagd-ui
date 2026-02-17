@@ -4,14 +4,6 @@
       <section class="settings-section">
         <div class="section-header">
           <h3>Flags-File Metadata</h3>
-          <button
-            mat-stroked-button
-            type="button"
-            (click)="saveFlagsFileMetadata()"
-            [disabled]="metadataSaveDisabled()"
-          >
-            Save Metadata
-          </button>
         </div>
         <app-metadata-editor
           [metadata]="projectMetadataDraft()"

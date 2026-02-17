@@ -17,7 +17,6 @@ import { CreateOrUpdateFlag } from '../../state/current-flag-store.actions';
 export class FlagsFileEditPageComponent implements OnInit {
   private readonly ngxsStore = inject(Store);
   private readonly route = inject(ActivatedRoute);
-  private readonly keepEditorOpenAfterSaveMinWidth = 1920;
 
   private readonly routeFlagKey = signal<string | null>(null);
 
@@ -60,14 +59,9 @@ export class FlagsFileEditPageComponent implements OnInit {
 
     this.ngxsStore.dispatch(new CreateOrUpdateFlag(updatedFlag, event.originalKey));
 
-    if (window.innerWidth < this.keepEditorOpenAfterSaveMinWidth) {
-      this.navigateToDetailRoute();
-      return;
+    if (this.routeFlagKey() !== event.key) {
+      this.navigateToEditRoute(event.key);
     }
-
-    // Navigate to the edit route for the newly saved flag
-    // The component will automatically update via the route effect
-    this.navigateToEditRoute(event.key);
   }
 
   onCancel(): void {

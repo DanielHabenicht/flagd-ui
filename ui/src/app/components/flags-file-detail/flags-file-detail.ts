@@ -38,7 +38,6 @@ export class FlagsFileDetailComponent implements OnInit {
   private readonly ngxsStore = inject(Store);
   private readonly route = inject(ActivatedRoute);
   private readonly inlineEditorMinWidth = 1280;
-  private readonly keepEditorOpenAfterSaveMinWidth = 1920;
   private readonly initialWideLayout =
     typeof window !== 'undefined' && window.innerWidth >= this.inlineEditorMinWidth;
   private readonly routeSelectedFlagKey = signal<string | null>(null);
@@ -246,14 +245,8 @@ export class FlagsFileDetailComponent implements OnInit {
     };
 
     this.ngxsStore.dispatch(new CreateOrUpdateFlag(updatedFlag, event.originalKey));
-
-    if (window.innerWidth >= this.keepEditorOpenAfterSaveMinWidth) {
-      this.editingFlag.set(updatedFlag);
-      this.showEditor.set(true);
-      return;
-    }
-
-    this.closeEditor();
+    this.editingFlag.set(updatedFlag);
+    this.showEditor.set(true);
   }
 
   onDeleteFlag(key: string): void {

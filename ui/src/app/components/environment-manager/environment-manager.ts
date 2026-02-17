@@ -11,7 +11,10 @@ import { MatChipInputEvent, MatChipsModule } from '@angular/material/chips';
 import { MatDialogRef } from '@angular/material/dialog';
 import { Environment } from '../../models/abstraction/flagd-abstraction-models';
 import { CurrentFlagStoreState } from '../../state/current-flag-store.state';
-import { CreateOrUpdateEnvironment } from '../../state/current-flag-store.actions';
+import {
+  CreateOrUpdateEnvironment,
+  DeleteEnvironment,
+} from '../../state/current-flag-store.actions';
 
 interface EnvironmentForm {
   name: string;
@@ -73,6 +76,11 @@ export class EnvironmentManagerComponent {
 
   private readonly syncEnvironmentsFromStore = effect(() => {
     const currentEnvs = this.currentEnvironments();
+    if (this.embedded()) {
+      this.environments.set([...currentEnvs]);
+      return;
+    }
+
     if (this.hasLocalChanges()) {
       return;
     }
@@ -93,9 +101,11 @@ export class EnvironmentManagerComponent {
     };
 
     const editIndex = this.editingIndex();
+    let previousDisplayName: string | null = null;
     if (editIndex !== null) {
       // Update existing
       const updated = [...this.environments()];
+      previousDisplayName = updated[editIndex]?.displayName ?? null;
       updated[editIndex] = newEnv;
       this.environments.set(updated);
       this.editingIndex.set(null);
@@ -104,7 +114,14 @@ export class EnvironmentManagerComponent {
       this.environments.set([...this.environments(), newEnv]);
     }
 
-    this.hasLocalChanges.set(true);
+    if (this.embedded()) {
+      if (previousDisplayName && previousDisplayName !== newEnv.displayName) {
+        this.ngxsStore.dispatch(new DeleteEnvironment(previousDisplayName));
+      }
+      this.ngxsStore.dispatch(new CreateOrUpdateEnvironment(newEnv));
+    } else {
+      this.hasLocalChanges.set(true);
+    }
 
     this.form.reset({ name: '', aliases: [] });
     this.aliasesInputValue.set('');
@@ -123,8 +140,17 @@ export class EnvironmentManagerComponent {
   }
 
   deleteEnvironment(index: number): void {
+    const removed = this.environments()[index];
     const updated = this.environments().filter((_, i) => i !== index);
     this.environments.set(updated);
+
+    if (this.embedded()) {
+      if (removed) {
+        this.ngxsStore.dispatch(new DeleteEnvironment(removed.displayName));
+      }
+      return;
+    }
+
     this.hasLocalChanges.set(true);
   }
 
