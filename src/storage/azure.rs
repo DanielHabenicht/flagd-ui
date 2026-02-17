@@ -18,7 +18,7 @@ impl AzureStorage {
     /// Expected formats:
     /// - azblob://container (uses default Azure storage)
     /// - azblob://account.blob.core.windows.net/container
-    /// - azblob://127.0.0.1:10000/devstoreaccount1/container (for Azurite)
+    /// - azblob://127.0.0.1:10000/devstoreaccount1/container (for Azurite HTTPS)
     pub fn new(uri: &str) -> AppResult<Self> {
         let container_client = Self::parse_uri(uri)?;
         Ok(Self {
@@ -55,13 +55,25 @@ impl AzureStorage {
             let host = parts[0];
             let container = parts[1];
 
-            if host.contains(".") {
+            if host.contains(":") {
+                // Looks like host:port (e.g., 127.0.0.1:10000)
+                // For local Azurite, include account path segment and default to devstoreaccount1.
+                let is_local = host.starts_with("127.0.0.1")
+                    || host.starts_with("localhost")
+                    || host.starts_with("azurite");
+
+                let url = if is_local {
+                    let account = std::env::var("AZURE_STORAGE_ACCOUNT")
+                        .unwrap_or_else(|_| "devstoreaccount1".to_string());
+                    format!("https://{}/{}", host, account)
+                } else {
+                    format!("https://{}", host)
+                };
+
+                (url, container.to_string())
+            } else if host.contains(".") {
                 // Looks like a FQDN (e.g., account.blob.core.windows.net)
                 let url = format!("https://{}", host);
-                (url, container.to_string())
-            } else if host.contains(":") {
-                // Looks like host:port (e.g., 127.0.0.1:10000)
-                let url = format!("http://{}", host);
                 (url, container.to_string())
             } else {
                 // Account name only
@@ -73,11 +85,7 @@ impl AzureStorage {
             let host = parts[0];
             let account = parts[1];
             let container = parts[2];
-            let url = if host.starts_with("127.0.0.1") || host.starts_with("localhost") {
-                format!("http://{}/{}", host, account)
-            } else {
-                format!("https://{}/{}", host, account)
-            };
+            let url = format!("https://{}/{}", host, account);
             (url, container.to_string())
         } else {
             return Err(AppError::BadRequest(
