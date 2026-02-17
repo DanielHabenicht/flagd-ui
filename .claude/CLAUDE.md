@@ -12,6 +12,23 @@ This is a web UI for the OpenFeature flagd service. It provides a web interface 
 
 Full-stack application with a Rust backend and Angular frontend.
 
+## Agent Quick Start (Do This First)
+
+Use this runbook to keep changes fast, safe, and consistent.
+
+1. Confirm scope before editing (backend, frontend, or both).
+2. Prefer minimal, focused diffs in existing files and patterns.
+3. For frontend UI work, use Angular Material components where possible before creating custom UI.
+4. Do not manually edit auto-generated API client files in `ui/src/app/api-client/`; regenerate them via script when needed.
+5. After edits, always run error checks (`get_errors()`), then required format/validation commands for the changed area.
+6. Finish by reporting changed files, validation performed, and any known follow-up risks.
+
+## Editing Guardrails
+
+- Treat `ui/src/app/api-client/` as generated code (no manual edits).
+- Preserve persisted UX behavior documented in this file (especially responsive edit/playground behavior).
+- Prefer targeted validation (only what changed) before broad test runs.
+
 ### Backend (Rust/Axum)
 
 - **Web Framework**: Axum 0.7
@@ -286,31 +303,35 @@ For more details, see `.claude/skills/playwright-cli/SKILL.md`
 
 When working on this codebase, the following practices must be followed:
 
-1. **Build Verification**: Always run `get_errors()` after making any changes to:
-   - Component files (`.ts`)
-   - Templates (`.html`)
-   - Styles (`.scss`)
-   - Configuration files
+1. **Mandatory Error Check**: Always run `get_errors()` after changing frontend component/template/style/config files or backend Rust source files.
 
-2. **Fix All Errors**: Do not consider a task complete until all compilation/lint errors are resolved.
+2. **Completion Gate**: Do not mark work complete with unresolved errors introduced by your changes. If unrelated pre-existing errors exist, call them out clearly.
 
-3. **Code Formatting**: After making changes to frontend files in `ui/`:
-   - Run `npm run format:check` to validate formatting
-   - Run `npm run format` to auto-format if needed
-   - Ensure Prettier config in `ui/package.json` is respected
+3. **Frontend Formatting**: After frontend changes in `ui/`, respect Prettier config in `ui/package.json` and run:
+   - `npm run format:check`
+   - `npm run format` (or `npx prettier --write <changed-files>` for minimal diffs)
 
-4. **Theme Awareness**: When modifying or creating UI components:
+4. **Component Preference**: In frontend UI work, prefer Angular Material components over custom implementations wherever possible. Build custom UI primitives only when no suitable Material component exists or a requirement cannot be met with Material.
+
+5. **Theme Awareness**: When modifying or creating UI components:
    - Use theme variables from `ui/src/styles.scss` (`--color-bg`, `--color-surface`, `--color-text`, etc.)
    - Never hard-code semantic colors
    - Ensure components work in both light and dark themes
    - Reference Material theme tokens from `ui/src/material-theme.scss` when using Material components
 
-5. **Import Missing Dependencies**: When using Material components or other dependencies in templates:
+6. **Import Hygiene**: When using Material components or other dependencies in templates:
    - Verify all required imports are present in the component's `.ts` file
    - Add missing module imports to the `imports` array in `@Component()`
    - Example: If adding `mat-divider`, import `MatDividerModule`
 
-6. **Documentation**: Update this context file when:
+7. **Generated Code Policy**: Do not manually edit generated API client files in `ui/src/app/api-client/`. Regenerate them from OpenAPI when required.
+
+8. **Validation by Scope**:
+   - Frontend-only changes: run the smallest relevant frontend checks first (`get_errors()`, formatting, then targeted lint/test if needed)
+   - Backend-only changes: run `cargo check` (and tests when behavior changes)
+   - Full-stack or behavior-critical changes: run targeted E2E or reproducible manual verification steps
+
+9. **Documentation Maintenance**: Update this file when:
    - Adding new architectural patterns or components
    - Establishing new workflow requirements or best practices
    - Documenting important learnings or gotchas
