@@ -421,119 +421,116 @@
                   }
                 </div>
               </mat-expansion-panel>
-
-              <!-- Global Active Time Window Panel -->
-              <mat-expansion-panel
-                #globalTimeWindowPanel
-                [expanded]="globalEnvironmentTimeEnabled() || showGlobalTimeWindow()"
-                [hideToggle]="true"
-              >
-                <mat-expansion-panel-header>
-                  <mat-panel-title>Active Time Window</mat-panel-title>
-                  @if (!globalEnvironmentTimeEnabled()) {
-                    <button
-                      mat-stroked-button
-                      type="button"
-                      (click)="
-                        $event.stopPropagation();
-                        showGlobalTimeWindow.set(true);
-                        addGlobalEnvironmentTimeWindow();
-                        globalTimeWindowPanel.open()
-                      "
-                      class="environment-toggle-button"
-                    >
-                      <mat-icon>add</mat-icon>
-                      Add Time Window
-                    </button>
-                  }
-                  @if (globalEnvironmentTimeEnabled()) {
-                    <button
-                      mat-stroked-button
-                      type="button"
-                      (click)="
-                        $event.stopPropagation();
-                        showGlobalTimeWindow.set(false);
-                        removeGlobalEnvironmentTimeWindow();
-                        globalTimeWindowPanel.close()
-                      "
-                      class="environment-toggle-button"
-                    >
-                      <mat-icon>delete</mat-icon>
-                      Remove Time Window
-                    </button>
-                  }
-                </mat-expansion-panel-header>
-
-                <div class="interactive-time-window-section">
-                  <span class="time-window-label">Activate after</span>
-                  <div class="form-row">
-                    <mat-form-field appearance="outline" class="full-width">
-                      <mat-label>From Date</mat-label>
-                      <input
-                        matInput
-                        [matDatepicker]="startDatePicker"
-                        formControlName="interactiveStartDate"
-                      />
-                      <mat-datepicker-toggle
-                        matIconSuffix
-                        [for]="startDatePicker"
-                      ></mat-datepicker-toggle>
-                      <mat-datepicker #startDatePicker></mat-datepicker>
-                    </mat-form-field>
-
-                    <mat-form-field appearance="outline" class="full-width">
-                      <mat-label>From Time</mat-label>
-                      <input
-                        matInput
-                        [matTimepicker]="startTimePicker"
-                        formControlName="interactiveStartTime"
-                      />
-                      <mat-timepicker-toggle
-                        matIconSuffix
-                        [for]="startTimePicker"
-                      ></mat-timepicker-toggle>
-                      <mat-timepicker #startTimePicker></mat-timepicker>
-                    </mat-form-field>
-                  </div>
-
-                  <span class="time-window-label">Activate till</span>
-                  <div class="form-row">
-                    <mat-form-field appearance="outline" class="full-width">
-                      <mat-label>Till Date</mat-label>
-                      <input
-                        matInput
-                        [matDatepicker]="endDatePicker"
-                        formControlName="interactiveEndDate"
-                      />
-                      <mat-datepicker-toggle
-                        matIconSuffix
-                        [for]="endDatePicker"
-                      ></mat-datepicker-toggle>
-                      <mat-datepicker #endDatePicker></mat-datepicker>
-                    </mat-form-field>
-
-                    <mat-form-field appearance="outline" class="full-width">
-                      <mat-label>Till Time</mat-label>
-                      <input
-                        matInput
-                        [matTimepicker]="endTimePicker"
-                        formControlName="interactiveEndTime"
-                      />
-                      <mat-timepicker-toggle
-                        matIconSuffix
-                        [for]="endTimePicker"
-                      ></mat-timepicker-toggle>
-                      <mat-timepicker #endTimePicker></mat-timepicker>
-                    </mat-form-field>
-                  </div>
-
-                  <p class="interactive-hint">
-                    Applies to all environments. Outside this window the fallback variant is used.
-                  </p>
-                </div>
-              </mat-expansion-panel>
             </div>
           }
+
+          <!-- Global Active Time Window Panel -->
+          <mat-expansion-panel
+            #globalTimeWindowPanel
+            class="global-time-window-panel"
+            [expanded]="globalEnvironmentTimeEnabled() || showGlobalTimeWindow()"
+            [hideToggle]="true"
+          >
+            <mat-expansion-panel-header>
+              <mat-panel-title>Active Time Window</mat-panel-title>
+              @if (!globalEnvironmentTimeEnabled()) {
+                <button
+                  mat-stroked-button
+                  type="button"
+                  (click)="
+                    $event.stopPropagation();
+                    showGlobalTimeWindow.set(true);
+                    addGlobalEnvironmentTimeWindow();
+                    globalTimeWindowPanel.open()
+                  "
+                  class="environment-toggle-button"
+                >
+                  <mat-icon>add</mat-icon>
+                  Add Time Window
+                </button>
+              }
+              @if (globalEnvironmentTimeEnabled()) {
+                <button
+                  mat-stroked-button
+                  type="button"
+                  (click)="
+                    $event.stopPropagation();
+                    showGlobalTimeWindow.set(false);
+                    removeGlobalEnvironmentTimeWindow();
+                    globalTimeWindowPanel.close()
+                  "
+                  class="environment-toggle-button"
+                >
+                  <mat-icon>delete</mat-icon>
+                  Remove Time Window
+                </button>
+              }
+            </mat-expansion-panel-header>
+
+            <div class="interactive-time-window-section">
+              <span class="time-window-label">Activate after</span>
+              <div class="form-row">
+                <mat-form-field appearance="outline" class="full-width">
+                  <mat-label>From Date</mat-label>
+                  <input
+                    matInput
+                    [matDatepicker]="startDatePicker"
+                    formControlName="globalStartDate"
+                  />
+                  <mat-datepicker-toggle
+                    matIconSuffix
+                    [for]="startDatePicker"
+                  ></mat-datepicker-toggle>
+                  <mat-datepicker #startDatePicker></mat-datepicker>
+                </mat-form-field>
+
+                <mat-form-field appearance="outline" class="full-width">
+                  <mat-label>From Time</mat-label>
+                  <input
+                    matInput
+                    [matTimepicker]="startTimePicker"
+                    formControlName="globalStartTime"
+                  />
+                  <mat-timepicker-toggle
+                    matIconSuffix
+                    [for]="startTimePicker"
+                  ></mat-timepicker-toggle>
+                  <mat-timepicker #startTimePicker></mat-timepicker>
+                </mat-form-field>
+              </div>
+
+              <span class="time-window-label">Activate till</span>
+              <div class="form-row">
+                <mat-form-field appearance="outline" class="full-width">
+                  <mat-label>Till Date</mat-label>
+                  <input matInput [matDatepicker]="endDatePicker" formControlName="globalEndDate" />
+                  <mat-datepicker-toggle
+                    matIconSuffix
+                    [for]="endDatePicker"
+                  ></mat-datepicker-toggle>
+                  <mat-datepicker #endDatePicker></mat-datepicker>
+                </mat-form-field>
+
+                <mat-form-field appearance="outline" class="full-width">
+                  <mat-label>Till Time</mat-label>
+                  <input matInput [matTimepicker]="endTimePicker" formControlName="globalEndTime" />
+                  <mat-timepicker-toggle
+                    matIconSuffix
+                    [for]="endTimePicker"
+                  ></mat-timepicker-toggle>
+                  <mat-timepicker #endTimePicker></mat-timepicker>
+                </mat-form-field>
+              </div>
+
+              <p class="interactive-hint">
+                {{
+                  hasEnvironments()
+                    ? 'Applies to all environments. Outside this window the fallback variant is used.'
+                    : 'Applies globally to this flag. Outside this window the flag value is inactive.'
+                }}
+              </p>
+            </div>
+          </mat-expansion-panel>
 
           @if (showMetadata()) {
             <app-metadata-editor

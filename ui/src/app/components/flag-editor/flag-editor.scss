@@ -200,6 +200,19 @@
   color: var(--color-text-secondary);
 }
 
+.global-time-window-panel {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+
+  mat-expansion-panel-header {
+    pointer-events: none;
+
+    button {
+      pointer-events: auto;
+    }
+  }
+}
+
 .json-mode-header {
   display: flex;
   justify-content: space-between;
