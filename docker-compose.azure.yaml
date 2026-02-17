@@ -13,9 +13,22 @@ services:
 
   flagd:
     image: ghcr.io/open-feature/flagd:latest
+    depends_on:
+      azurite:
+        condition: service_started
+      azurite-init:
+        condition: service_completed_successfully
+    environment:
+      - AZURE_STORAGE_ACCOUNT=devstoreaccount1
+      - AZURE_STORAGE_KEY=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==
+      - AZURE_STORAGE_IS_LOCAL_EMULATOR=true
+      - AZURE_STORAGE_PROTOCOL=https
+      - AZURE_STORAGE_DOMAIN=azurite:10000
+      - SSL_CERT_FILE=/certs/ca.pem
     volumes:
-      - ./flags:/flags
-    command: ['start', '--uri', 'file:./flags/demo.flagd.json']
+      - ./services/azurite/certs/ca.pem:/certs/ca.pem:ro
+    command:
+      ['start', '--uri', 'azblob://feature-flags/demo.flagd.json']
     ports:
       - '8013:8013'
       - '8016:8016'

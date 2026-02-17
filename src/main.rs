@@ -3,6 +3,7 @@ mod error;
 mod handlers;
 mod middleware;
 mod openapi_doc;
+mod storage;
 
 use axum::{routing::get, Router};
 use tower_http::{
@@ -33,7 +34,7 @@ async fn main() {
         .init();
 
     // Load configuration
-    let config = ServerConfig::from_env();
+    let config = ServerConfig::from_cli();
     let addr = format!("0.0.0.0:{}", config.port);
 
     tracing::info!("Starting server with config: {:?}", config);

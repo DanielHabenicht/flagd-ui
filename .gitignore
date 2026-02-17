@@ -29,3 +29,9 @@ node_modules/
 /blob-report/
 /playwright/.cache/
 /playwright/.auth/
+
+# Azurite storage data
+services/azurite/azurite-store/
+services/azurite/azurite-logs/
+services/azurite/certs/*
+!services/azurite/certs/.gitkeep
