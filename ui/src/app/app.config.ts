@@ -9,7 +9,8 @@ import { withNgxsRouterPlugin } from '@ngxs/router-plugin';
 import { provideApi } from './api-client/provide-api';
 import { routes } from './app.routes';
 import { globalLoadingInterceptor } from './interceptors/global-loading.interceptor';
-import { FlagStoreState } from './state/current-flag-store.state';
+import { FlagFileStore } from './state/flag-file-store.state';
+import { CurrentFlagStoreState } from './state/current-flag-store.state';
 import { UiPreferencesState } from './state/ui-preferences.state';
 import { PlaygroundPreferencesState } from './state/playground-preferences.state';
 
@@ -21,16 +22,9 @@ export const appConfig: ApplicationConfig = {
     provideNativeDateAdapter(),
     provideApi({ basePath: '' }),
     provideStore(
-      [FlagStoreState, UiPreferencesState, PlaygroundPreferencesState],
+      [FlagFileStore, CurrentFlagStoreState, UiPreferencesState, PlaygroundPreferencesState],
       withNgxsStoragePlugin({
-        keys: [
-          'flagStore.localFlagsFiles',
-          'flagStore.localFileOrigins',
-          'flagStore.backends',
-          'uiPreferences.themeMode',
-          'playgroundPreferences.servers',
-          'playgroundPreferences.drawerHeight',
-        ],
+        keys: [UiPreferencesState, PlaygroundPreferencesState, FlagFileStore],
       }),
       withNgxsRouterPlugin(),
     ),

@@ -5,7 +5,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MetadataMap } from '../../models/flag.models';
 import { MetadataEditorComponent } from '../metadata-editor/metadata-editor';
 import { EnvironmentManagerComponent } from '../environment-manager/environment-manager';
-import { FlagStoreState } from '../../state/current-flag-store.state';
+import { CurrentFlagStoreState } from '../../state/current-flag-store.state';
 import { LoadFlagFile, SetMetadata } from '../../state/current-flag-store.actions';
 
 @Component({
@@ -20,9 +20,9 @@ export class FlagsFileSettingsPageComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
 
   // Selectors for template access
-  readonly currentMetadata = this.ngxsStore.selectSignal(FlagStoreState.metadata);
-  readonly flags = this.ngxsStore.selectSignal(FlagStoreState.flags);
-  readonly environments = this.ngxsStore.selectSignal(FlagStoreState.environments);
+  readonly currentMetadata = this.ngxsStore.selectSignal(CurrentFlagStoreState.metadata);
+  readonly flags = this.ngxsStore.selectSignal(CurrentFlagStoreState.flags);
+  readonly environments = this.ngxsStore.selectSignal(CurrentFlagStoreState.environments);
 
   readonly projectMetadataDraft = signal<MetadataMap | undefined>(undefined);
   readonly projectMetadataDirty = computed(

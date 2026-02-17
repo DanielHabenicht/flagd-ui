@@ -13,7 +13,7 @@ import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { FlagEditorComponent } from '../flag-editor/flag-editor';
 import { DisplayFlag } from '../../models/abstraction/flagd-abstraction-models';
-import { FlagStoreState } from '../../state/current-flag-store.state';
+import { CurrentFlagStoreState } from '../../state/current-flag-store.state';
 import {
   LoadFlagFile,
   CreateOrUpdateFlag,
@@ -48,10 +48,10 @@ export class FlagsFileDetailComponent implements OnInit {
     typeof window !== 'undefined' && window.innerWidth >= this.inlineEditorMinWidth;
   private readonly routeSelectedFlagKey = signal<string | null>(null);
 
-  readonly flagEntries = this.ngxsStore.selectSignal(FlagStoreState.flags);
-  readonly currentFlagsFileName = this.ngxsStore.selectSignal(FlagStoreState.fileName);
-  readonly currentMetadata = this.ngxsStore.selectSignal(FlagStoreState.metadata);
-  readonly currentSchema = this.ngxsStore.selectSignal(FlagStoreState.schema);
+  readonly flagEntries = this.ngxsStore.selectSignal(CurrentFlagStoreState.flags);
+  readonly currentFlagsFileName = this.ngxsStore.selectSignal(CurrentFlagStoreState.fileName);
+  readonly currentMetadata = this.ngxsStore.selectSignal(CurrentFlagStoreState.metadata);
+  readonly currentSchema = this.ngxsStore.selectSignal(CurrentFlagStoreState.schema);
   readonly currentEvaluators = computed(() => {
     const schema = this.currentSchema();
     if (!schema) return undefined;

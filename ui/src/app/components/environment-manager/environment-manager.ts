@@ -10,7 +10,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatChipInputEvent, MatChipsModule } from '@angular/material/chips';
 import { MatDialogRef } from '@angular/material/dialog';
 import { Environment } from '../../models/abstraction/flagd-abstraction-models';
-import { FlagStoreState } from '../../state/current-flag-store.state';
+import { CurrentFlagStoreState } from '../../state/current-flag-store.state';
 import { CreateOrUpdateEnvironment } from '../../state/current-flag-store.actions';
 
 interface EnvironmentForm {
@@ -41,7 +41,7 @@ export class EnvironmentManagerComponent {
     optional: true,
   });
 
-  readonly currentEnvironments = this.ngxsStore.selectSignal(FlagStoreState.environments);
+  readonly currentEnvironments = this.ngxsStore.selectSignal(CurrentFlagStoreState.environments);
 
   readonly environments = signal<Environment[]>([]);
   readonly environmentFilter = signal('');

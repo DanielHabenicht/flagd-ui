@@ -6,7 +6,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 import { provideRouter } from '@angular/router';
 import { App } from './app';
-import { FlagStoreState } from './state/current-flag-store.state';
+import { CurrentFlagStoreState } from './state/current-flag-store.state';
 import { UiPreferencesState } from './state/ui-preferences.state';
 import { PlaygroundPreferencesState } from './state/playground-preferences.state';
 
@@ -18,7 +18,7 @@ describe('App', () => {
         provideAnimationsAsync(),
         provideRouter([]),
         provideHttpClient(),
-        provideStore([FlagStoreState, UiPreferencesState, PlaygroundPreferencesState]),
+        provideStore([CurrentFlagStoreState, UiPreferencesState, PlaygroundPreferencesState]),
         {
           provide: MatDialog,
           useValue: {

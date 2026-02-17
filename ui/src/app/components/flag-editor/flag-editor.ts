@@ -40,7 +40,7 @@ import {
 } from '../../models/abstraction/flagd-abstraction-models';
 import { MetadataEditorComponent } from '../metadata-editor/metadata-editor';
 import { Store } from '@ngxs/store';
-import { FlagStoreState } from '../../state/current-flag-store.state';
+import { CurrentFlagStoreState } from '../../state/current-flag-store.state';
 
 export type EditorMode = 'interactive' | 'json';
 
@@ -105,7 +105,7 @@ export class FlagEditorComponent implements OnInit, OnChanges {
   // Expose JSON to template for object editing
   readonly JSON = JSON;
 
-  readonly environments = this.ngxsStore.selectSignal(FlagStoreState.environments);
+  readonly environments = this.ngxsStore.selectSignal(CurrentFlagStoreState.environments);
   readonly filteredEnvironments = computed(() => {
     const filterValue = this.environmentFilter().trim().toLowerCase();
     const allEnvironments = this.environments();

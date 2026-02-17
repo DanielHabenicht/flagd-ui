@@ -4,7 +4,7 @@ import { Store } from '@ngxs/store';
 import { Navigate } from '@ngxs/router-plugin';
 import { FlagEditorComponent } from '../flag-editor/flag-editor';
 import { DisplayFlag } from '../../models/abstraction/flagd-abstraction-models';
-import { FlagStoreState } from '../../state/current-flag-store.state';
+import { CurrentFlagStoreState } from '../../state/current-flag-store.state';
 import { LoadFlagFile, CreateOrUpdateFlag } from '../../state/current-flag-store.actions';
 
 @Component({
@@ -21,7 +21,7 @@ export class FlagsFileEditPageComponent implements OnInit {
 
   private readonly routeFlagKey = signal<string | null>(null);
 
-  readonly flagEntries = this.ngxsStore.selectSignal(FlagStoreState.flags);
+  readonly flagEntries = this.ngxsStore.selectSignal(CurrentFlagStoreState.flags);
 
   editingFlag = signal<DisplayFlag | null>(null);
   readonly editingDisplayFlag = computed(() => this.editingFlag());

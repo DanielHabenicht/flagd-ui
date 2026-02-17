@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { Action, Selector, State, StateContext } from '@ngxs/store';
+import { Action, createSelector, Selector, State, StateContext } from '@ngxs/store';
 import {
   AddBackend,
   RemoveBackend,
@@ -62,6 +62,9 @@ export const LocalBackendUris = {
 export class FlagFileStore {
   @Selector()
   static backends(state: FlagFileStoreStateModel): Backend[] {
+    if (!state?.backends) {
+      return [];
+    }
     const backends: Backend[] = [];
     for (const typeMap of Object.values(state.backends)) {
       backends.push(...Object.values(typeMap));
@@ -70,17 +73,25 @@ export class FlagFileStore {
   }
 
   @Selector()
-  static backendsByType(backendType: BackendType) {
-    return (state: FlagFileStoreStateModel): Backend[] => {
-      return Object.values(state.backends[backendType] || {});
-    };
+  static backendsMap(
+    state: FlagFileStoreStateModel,
+  ): Record<'local' | 'remote', Record<string, Backend>> {
+    return state?.backends ?? { local: {}, remote: {} };
   }
 
-  @Selector()
+  static backendsByType(backendType: BackendType) {
+    return createSelector([FlagFileStore], (state: FlagFileStoreStateModel): Backend[] => {
+      return Object.values(state?.backends?.[backendType] || {});
+    });
+  }
+
   static backend() {
-    return (state: FlagFileStoreStateModel) =>
-      (backendType: BackendType, uri: string): Backend | undefined =>
-        state.backends[backendType]?.[uri];
+    return (backendType: BackendType, uri: string) =>
+      createSelector(
+        [FlagFileStore],
+        (state: FlagFileStoreStateModel): Backend | undefined =>
+          state?.backends?.[backendType]?.[uri],
+      );
   }
 
   @Action(AddBackend)

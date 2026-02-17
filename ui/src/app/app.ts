@@ -23,7 +23,7 @@ import { PlaygroundDrawerComponent } from './components/playground-drawer/playgr
 import { GlobalLoadingService } from './services/global-loading.service';
 import { SetThemeMode, ThemeMode } from './state/ui-preferences.actions';
 import { UiPreferencesState } from './state/ui-preferences.state';
-import { FlagStoreState } from './state/current-flag-store.state';
+import { CurrentFlagStoreState } from './state/current-flag-store.state';
 import { AddFile } from './state/flag-file-store.actions';
 import { FlagFileStore } from './state/flag-file-store.state';
 
@@ -54,10 +54,10 @@ export class App implements OnDestroy {
   readonly themeMode = this.ngxsStore.selectSignal(UiPreferencesState.themeMode);
 
   // FlagStore selectors
-  readonly currentFlagsFileName = this.ngxsStore.selectSignal(FlagStoreState.fileName);
-  readonly currentFlagsBackendType = this.ngxsStore.selectSignal(FlagStoreState.backendType);
-  readonly currentFlagsBackendUri = this.ngxsStore.selectSignal(FlagStoreState.backendUri);
-  readonly backendSelector = this.ngxsStore.selectSignal(FlagFileStore.backend());
+  readonly currentFlagsFileName = this.ngxsStore.selectSignal(CurrentFlagStoreState.fileName);
+  readonly currentFlagsBackendType = this.ngxsStore.selectSignal(CurrentFlagStoreState.backendType);
+  readonly currentFlagsBackendUri = this.ngxsStore.selectSignal(CurrentFlagStoreState.backendUri);
+  readonly backendsMap = this.ngxsStore.selectSignal(FlagFileStore.backendsMap);
   readonly prefersDark = signal(this.systemPrefersDark());
   readonly theme = computed<AppTheme>(() => {
     const mode = this.themeMode();
@@ -118,7 +118,7 @@ export class App implements OnDestroy {
     const backendUri = this.currentFlagsBackendUri();
     if (!backendType || !backendUri) return null;
 
-    const backend = this.backendSelector()?.(backendType, backendUri);
+    const backend = this.backendsMap()?.[backendType]?.[backendUri];
     if (backendType === 'local') {
       return (
         backend?.label ?? (backendUri === 'disk' ? 'Local Files · Disk' : 'Local Files · Browser')

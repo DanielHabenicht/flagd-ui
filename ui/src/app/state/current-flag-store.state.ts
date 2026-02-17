@@ -15,7 +15,7 @@ import {
   SetMetadata,
 } from './current-flag-store.actions';
 
-export interface FlagStoreStateModel {
+export interface CurrentFlagStoreStateModel {
   // Internal abstraction for the current flag file
   abstraction: FlagdSchemaAbstraction | null;
 
@@ -25,7 +25,7 @@ export interface FlagStoreStateModel {
   fileName: string | null;
 }
 
-@State<FlagStoreStateModel>({
+@State<CurrentFlagStoreStateModel>({
   name: 'currentFlagStore',
   defaults: {
     abstraction: null,
@@ -35,56 +35,56 @@ export interface FlagStoreStateModel {
   },
 })
 @Injectable()
-export class FlagStoreState {
+export class CurrentFlagStoreState {
   // eslint-disable-next-line @angular-eslint/prefer-inject
   constructor(private store: Store) {}
 
   @Selector()
-  static flags(state: FlagStoreStateModel): DisplayFlag[] {
+  static flags(state: CurrentFlagStoreStateModel): DisplayFlag[] {
     return state.abstraction?.getFlags() || [];
   }
 
   @Selector()
-  static environments(state: FlagStoreStateModel): Environment[] {
+  static environments(state: CurrentFlagStoreStateModel): Environment[] {
     return state.abstraction?.getEnvironments() || [];
   }
 
   @Selector()
   static metadata(
-    state: FlagStoreStateModel,
+    state: CurrentFlagStoreStateModel,
   ): Record<string, string | number | boolean> | undefined {
     return state.abstraction?.getMetadata();
   }
 
   @Selector()
   static flagByKey(key: string) {
-    return (state: FlagStoreStateModel): DisplayFlag | undefined => {
+    return (state: CurrentFlagStoreStateModel): DisplayFlag | undefined => {
       return state.abstraction?.getFlagByKey(key);
     };
   }
 
   @Selector()
-  static schema(state: FlagStoreStateModel): Record<string, unknown> | null {
+  static schema(state: CurrentFlagStoreStateModel): Record<string, unknown> | null {
     return state.abstraction?.exportSchema() || null;
   }
 
   @Selector()
-  static backendType(state: FlagStoreStateModel): BackendType | null {
+  static backendType(state: CurrentFlagStoreStateModel): BackendType | null {
     return state.backendType;
   }
 
   @Selector()
-  static backendUri(state: FlagStoreStateModel): string | null {
+  static backendUri(state: CurrentFlagStoreStateModel): string | null {
     return state.backendUri;
   }
 
   @Selector()
-  static fileName(state: FlagStoreStateModel): string | null {
+  static fileName(state: CurrentFlagStoreStateModel): string | null {
     return state.fileName;
   }
 
   @Action(LoadFlagFile)
-  loadFlagFile(ctx: StateContext<FlagStoreStateModel>, action: LoadFlagFile): void {
+  loadFlagFile(ctx: StateContext<CurrentFlagStoreStateModel>, action: LoadFlagFile): void {
     // Retrieve file content from flag-file-store
     const file = this.store.selectSnapshot((state: { flagFileStore: FlagFileStoreStateModel }) => {
       const backend = state.flagFileStore?.backends?.[action.backendType]?.[action.backendUri];
@@ -107,7 +107,7 @@ export class FlagStoreState {
   }
 
   @Action(ClearFlagFile)
-  clearFlagFile(ctx: StateContext<FlagStoreStateModel>): void {
+  clearFlagFile(ctx: StateContext<CurrentFlagStoreStateModel>): void {
     ctx.patchState({
       abstraction: null,
       backendType: null,
@@ -117,7 +117,10 @@ export class FlagStoreState {
   }
 
   @Action(CreateOrUpdateFlag)
-  createOrUpdateFlag(ctx: StateContext<FlagStoreStateModel>, action: CreateOrUpdateFlag): void {
+  createOrUpdateFlag(
+    ctx: StateContext<CurrentFlagStoreStateModel>,
+    action: CreateOrUpdateFlag,
+  ): void {
     const state = ctx.getState();
     if (!state.abstraction) {
       throw new Error('No flag file loaded');
@@ -129,7 +132,7 @@ export class FlagStoreState {
   }
 
   @Action(DeleteFlag)
-  deleteFlag(ctx: StateContext<FlagStoreStateModel>, action: DeleteFlag): void {
+  deleteFlag(ctx: StateContext<CurrentFlagStoreStateModel>, action: DeleteFlag): void {
     const state = ctx.getState();
     if (!state.abstraction) {
       throw new Error('No flag file loaded');
@@ -141,7 +144,7 @@ export class FlagStoreState {
 
   @Action(CreateOrUpdateEnvironment)
   createOrUpdateEnvironment(
-    ctx: StateContext<FlagStoreStateModel>,
+    ctx: StateContext<CurrentFlagStoreStateModel>,
     action: CreateOrUpdateEnvironment,
   ): void {
     const state = ctx.getState();
@@ -154,7 +157,10 @@ export class FlagStoreState {
   }
 
   @Action(DeleteEnvironment)
-  deleteEnvironment(ctx: StateContext<FlagStoreStateModel>, action: DeleteEnvironment): void {
+  deleteEnvironment(
+    ctx: StateContext<CurrentFlagStoreStateModel>,
+    action: DeleteEnvironment,
+  ): void {
     const state = ctx.getState();
     if (!state.abstraction) {
       throw new Error('No flag file loaded');
@@ -165,7 +171,7 @@ export class FlagStoreState {
   }
 
   @Action(SetMetadata)
-  setMetadata(ctx: StateContext<FlagStoreStateModel>, action: SetMetadata): void {
+  setMetadata(ctx: StateContext<CurrentFlagStoreStateModel>, action: SetMetadata): void {
     const state = ctx.getState();
     if (!state.abstraction) {
       throw new Error('No flag file loaded');
