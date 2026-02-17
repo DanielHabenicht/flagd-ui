@@ -14,12 +14,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { FlagEditorComponent } from '../flag-editor/flag-editor';
 import { DisplayFlag } from '../../models/abstraction/flagd-abstraction-models';
 import { CurrentFlagStoreState } from '../../state/current-flag-store.state';
-import {
-  LoadFlagFile,
-  CreateOrUpdateFlag,
-  DeleteFlag,
-} from '../../state/current-flag-store.actions';
-import { BackendType } from '../../state/flag-file-store.actions';
+import { CreateOrUpdateFlag, DeleteFlag } from '../../state/current-flag-store.actions';
 
 @Component({
   selector: 'app-flags-file-detail',
@@ -199,16 +194,6 @@ export class FlagsFileDetailComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    this.route.paramMap.subscribe((params) => {
-      const backendType = (params.get('backendType') as BackendType | null) ?? null;
-      const backendUri = params.get('uri') ?? null;
-      const fileName = params.get('fileName') ?? null;
-
-      if (!backendType || !backendUri || !fileName) return;
-
-      this.ngxsStore.dispatch(new LoadFlagFile(backendType, backendUri, fileName));
-    });
-
     this.route.queryParamMap.subscribe((params) => {
       this.routeSelectedFlagKey.set(params.get('flag'));
     });

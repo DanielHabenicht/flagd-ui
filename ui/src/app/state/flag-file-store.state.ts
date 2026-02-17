@@ -72,11 +72,12 @@ export class FlagFileStore implements NgxsOnInit {
   ) {}
 
   ngxsOnInit(ctx: StateContext<FlagFileStoreStateModel>): void {
-    if (DEFAULT_BACKEND_ROOT === null || DEFAULT_BACKEND_ROOT === undefined) {
-      return;
-    }
+    let defaultRoot = DEFAULT_BACKEND_ROOT;
 
-    const defaultRoot = DEFAULT_BACKEND_ROOT;
+    // If DEFAULT_BACKEND_ROOT is null, undefined, or empty string, use current URL base
+    if (!defaultRoot) {
+      defaultRoot = window.location.origin;
+    }
 
     const normalized = this.normalizeUrl(defaultRoot);
     const state = ctx.getState();

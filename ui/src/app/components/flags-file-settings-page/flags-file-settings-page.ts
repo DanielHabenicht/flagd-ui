@@ -1,12 +1,11 @@
-import { Component, computed, effect, inject, OnInit, signal } from '@angular/core';
-import { ActivatedRoute } from '@angular/router';
+import { Component, computed, effect, inject, signal } from '@angular/core';
 import { Store } from '@ngxs/store';
 import { MatButtonModule } from '@angular/material/button';
 import { MetadataMap } from '../../models/flag.models';
 import { MetadataEditorComponent } from '../metadata-editor/metadata-editor';
 import { EnvironmentManagerComponent } from '../environment-manager/environment-manager';
 import { CurrentFlagStoreState } from '../../state/current-flag-store.state';
-import { LoadFlagFile, SetMetadata } from '../../state/current-flag-store.actions';
+import { SetMetadata } from '../../state/current-flag-store.actions';
 
 @Component({
   selector: 'app-flags-file-settings-page',
@@ -15,9 +14,8 @@ import { LoadFlagFile, SetMetadata } from '../../state/current-flag-store.action
   templateUrl: './flags-file-settings-page.html',
   styleUrl: './flags-file-settings-page.scss',
 })
-export class FlagsFileSettingsPageComponent implements OnInit {
+export class FlagsFileSettingsPageComponent {
   private readonly ngxsStore = inject(Store);
-  private readonly route = inject(ActivatedRoute);
 
   // Selectors for template access
   readonly currentMetadata = this.ngxsStore.selectSignal(CurrentFlagStoreState.metadata);
@@ -35,21 +33,6 @@ export class FlagsFileSettingsPageComponent implements OnInit {
   private readonly syncProjectMetadataDraft = effect(() => {
     this.projectMetadataDraft.set(this.currentMetadata() as MetadataMap | undefined);
   });
-
-  ngOnInit(): void {
-    this.route.paramMap.subscribe((params) => {
-      const name = params.get('name');
-      const backendId = params.get('backendId');
-      if (!name) return;
-
-      const routePath = this.route.snapshot.routeConfig?.path ?? '';
-      if (routePath.startsWith('flags-files/remote')) {
-        this.ngxsStore.dispatch(new LoadFlagFile('remote', backendId ?? '', name));
-      } else {
-        this.ngxsStore.dispatch(new LoadFlagFile('local', 'disk', name));
-      }
-    });
-  }
 
   onProjectMetadataChange(metadata: MetadataMap | undefined): void {
     this.projectMetadataDraft.set(metadata);

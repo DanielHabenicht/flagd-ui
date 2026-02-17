@@ -5,7 +5,7 @@ import { Navigate } from '@ngxs/router-plugin';
 import { FlagEditorComponent } from '../flag-editor/flag-editor';
 import { DisplayFlag } from '../../models/abstraction/flagd-abstraction-models';
 import { CurrentFlagStoreState } from '../../state/current-flag-store.state';
-import { LoadFlagFile, CreateOrUpdateFlag } from '../../state/current-flag-store.actions';
+import { CreateOrUpdateFlag } from '../../state/current-flag-store.actions';
 
 @Component({
   selector: 'app-flags-file-edit-page',
@@ -47,19 +47,7 @@ export class FlagsFileEditPageComponent implements OnInit {
 
   ngOnInit(): void {
     this.route.paramMap.subscribe((params) => {
-      const name = params.get('name');
-      const backendId = params.get('backendId');
       const flagKey = params.get('flagKey');
-
-      if (!name) return;
-
-      const routePath = this.route.snapshot.routeConfig?.path ?? '';
-      if (routePath.startsWith('flags-files/remote')) {
-        this.ngxsStore.dispatch(new LoadFlagFile('remote', backendId ?? '', name));
-      } else {
-        this.ngxsStore.dispatch(new LoadFlagFile('local', 'disk', name));
-      }
-
       this.routeFlagKey.set(flagKey);
     });
   }
@@ -91,56 +79,41 @@ export class FlagsFileEditPageComponent implements OnInit {
   }
 
   private navigateToDetailRoute(flagKey: string | null = null): void {
-    const name = this.route.snapshot.paramMap.get('name');
-    if (!name) return;
-
-    const backendId = this.route.snapshot.paramMap.get('backendId');
-    if (backendId) {
-      this.ngxsStore.dispatch(
-        new Navigate(
-          ['/flags-files', 'remote', backendId, name],
-          {
-            flag: flagKey,
-          },
-          {
-            queryParamsHandling: 'merge',
-          },
-        ),
-      );
-      return;
-    }
-
+    const routeSegments = this.getFlagsFileRouteSegments();
+    if (!routeSegments) return;
     this.ngxsStore.dispatch(
-      new Navigate(
-        ['/flags-files', 'local', name],
-        {
-          flag: flagKey,
-        },
-        {
-          queryParamsHandling: 'merge',
-        },
-      ),
+      new Navigate(routeSegments, { flag: flagKey }, { queryParamsHandling: 'merge' }),
     );
   }
 
   private navigateToEditRoute(flagKey: string): void {
-    const name = this.route.snapshot.paramMap.get('name');
-    if (!name) return;
-
-    const backendId = this.route.snapshot.paramMap.get('backendId');
-    if (backendId) {
-      this.ngxsStore.dispatch(
-        new Navigate(['/flags-files', 'remote', backendId, name, 'edit', flagKey], undefined, {
-          queryParamsHandling: 'merge',
-        }),
-      );
-      return;
-    }
-
+    const routeSegments = this.getFlagsFileRouteSegments();
+    if (!routeSegments) return;
     this.ngxsStore.dispatch(
-      new Navigate(['/flags-files', 'local', name, 'edit', flagKey], undefined, {
+      new Navigate([...routeSegments, 'edit', flagKey], undefined, {
         queryParamsHandling: 'merge',
       }),
     );
+  }
+
+  private getFlagsFileRouteSegments(): string[] | null {
+    const params = this.route.snapshot.paramMap;
+    const backendType = params.get('backendType');
+    const backendUri = params.get('uri');
+    const fileName = params.get('fileName');
+
+    if (backendType && backendUri && fileName) {
+      return ['/', backendType, backendUri, fileName];
+    }
+
+    const name = params.get('name');
+    const backendId = params.get('backendId');
+    if (!name) return null;
+
+    if (backendId) {
+      return ['/flags-files', 'remote', backendId, name];
+    }
+
+    return ['/flags-files', 'local', name];
   }
 }

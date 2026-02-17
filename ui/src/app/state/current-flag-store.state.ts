@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
 import { Action, Selector, State, StateContext, Store } from '@ngxs/store';
+import { RouterNavigation } from '@ngxs/router-plugin';
 import { FlagdSchemaAbstraction } from '../models/abstraction/flagd-schema-abstraction';
 import { DisplayFlag, Environment } from '../models/abstraction/flagd-abstraction-models';
 import { FlagdSchema } from '../models/generated/flagd-schema';
@@ -81,6 +82,42 @@ export class CurrentFlagStoreState {
   @Selector()
   static fileName(state: CurrentFlagStoreStateModel): string | null {
     return state.fileName;
+  }
+
+  @Action(RouterNavigation)
+  onNavigation(
+    ctx: StateContext<CurrentFlagStoreStateModel>,
+    action: RouterNavigation<unknown>,
+  ): void {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const routerState = action.routerState as any;
+    const params = this.collectRouteParams(routerState?.root);
+    const backendType = params['backendType'] as BackendType | undefined;
+    const backendUri = params['uri'] as string | undefined;
+    const fileName = params['fileName'] as string | undefined;
+
+    const state = ctx.getState();
+    if (!backendType || !backendUri || !fileName) {
+      if (state.backendType || state.backendUri || state.fileName || state.abstraction) {
+        ctx.patchState({
+          abstraction: null,
+          backendType: null,
+          backendUri: null,
+          fileName: null,
+        });
+      }
+      return;
+    }
+
+    if (
+      state.backendType === backendType &&
+      state.backendUri === backendUri &&
+      state.fileName === fileName
+    ) {
+      return;
+    }
+
+    ctx.dispatch(new LoadFlagFile(backendType, backendUri, fileName));
   }
 
   @Action(LoadFlagFile)
@@ -180,4 +217,19 @@ export class CurrentFlagStoreState {
     state.abstraction.setMetadata(action.metadata);
     ctx.patchState({ abstraction: state.abstraction });
   }
+
+  private collectRouteParams(route: RouteSnapshotLike | null): Record<string, string> {
+    if (!route) return {};
+    const merged = { ...(route.params ?? {}) };
+    const children = route.children ?? [];
+    for (const child of children) {
+      Object.assign(merged, this.collectRouteParams(child));
+    }
+    return merged;
+  }
+}
+
+interface RouteSnapshotLike {
+  params?: Record<string, string>;
+  children?: RouteSnapshotLike[];
 }
