@@ -54,7 +54,7 @@ pub struct AppState {
 /// Request payload for creating a new flag definition file
 #[derive(Debug, Deserialize, ToSchema)]
 pub struct CreateFlagRequest {
-    /// Name of the flag definition file (without .flagd.json extension)
+    /// Name of the flag definition file
     #[schema(example = "my-flags")]
     pub name: String,
     /// Flag definitions (without $schema property)
@@ -224,7 +224,10 @@ pub async fn create_flag(
     validate_flags(&state.schema, &complete_doc)?;
 
     // Write the file
-    state.storage.write_flag(&payload.name, &complete_doc).await?;
+    state
+        .storage
+        .write_flag(&payload.name, &complete_doc)
+        .await?;
 
     Ok((
         StatusCode::CREATED,

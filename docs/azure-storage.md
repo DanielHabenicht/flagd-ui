@@ -30,15 +30,28 @@ STORAGE_URI=file:///path/to/flags cargo run
 ### Azure Blob Storage
 
 ```bash
-# Using Azure Blob Storage with connection string
-cargo run -- --storage-uri "DefaultEndpointsProtocol=https;AccountName=myaccount;AccountKey=...;EndpointSuffix=core.windows.net;Container=feature-flags"
+# Storage URI now identifies container/blob only
+cargo run -- --storage-uri "azblob://feature-flags/demo.flagd.json"
 
-# Or via environment variable
-export STORAGE_URI="DefaultEndpointsProtocol=https;AccountName=myaccount;AccountKey=...;EndpointSuffix=core.windows.net;Container=feature-flags"
+# Service URL/auth come from Azure env vars (Go CDK style)
+export AZURE_STORAGE_ACCOUNT="myaccount"
+export STORAGE_URI="azblob://feature-flags/demo.flagd.json"
 cargo run
 ```
 
-**Note**: The connection string must include the `Container=<name>` parameter to specify which container to use.
+Supported Azure auth env variables:
+
+- `AZURE_STORAGE_CONNECTION_STRING` or `AZURE_STORAGEBLOB_CONNECTIONSTRING`
+- `AZURE_STORAGE_SAS_TOKEN`
+- Entra ID credentials (for example `AZURE_TENANT_ID`, `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET`)
+
+Service URL shaping env variables:
+
+- `AZURE_STORAGE_ACCOUNT` (required when service URL is derived)
+- `AZURE_STORAGE_DOMAIN` (default `blob.core.windows.net`)
+- `AZURE_STORAGE_PROTOCOL` (`https` default, `http` for local emulator)
+- `AZURE_STORAGE_IS_CDN`
+- `AZURE_STORAGE_IS_LOCAL_EMULATOR`
 
 ### Azurite (Local Development)
 
@@ -48,8 +61,13 @@ For local development and testing with Azure Blob Storage, you can use [Azurite]
 # Start Azurite using Docker Compose
 docker compose up -d azurite
 
-# Use Azurite with connection string
-cargo run -- --storage-uri "DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://127.0.0.1:10000/devstoreaccount1;Container=feature-flags"
+# Use Azurite with URL + env vars
+export STORAGE_URI="azblob://feature-flags/demo.flagd.json"
+export AZURE_STORAGE_ACCOUNT="devstoreaccount1"
+export AZURE_STORAGE_DOMAIN="127.0.0.1:10000"
+export AZURE_STORAGE_PROTOCOL="https"
+export AZURE_STORAGE_IS_LOCAL_EMULATOR="true"
+cargo run
 ```
 
 ## CLI Arguments
@@ -60,7 +78,7 @@ cargo run -- --storage-uri "DefaultEndpointsProtocol=http;AccountName=devstoreac
 
     Supported formats:
     - Local filesystem: file:///path/to/flags or /path/to/flags or ./flags
-    - Azure Blob Storage connection string: DefaultEndpointsProtocol=https;AccountName=...;AccountKey=...;Container=<container>
+    - Azure Blob Storage URL: azblob://my-container/myblob.json
 
     [env: STORAGE_URI=]
 
@@ -114,7 +132,7 @@ pub trait StorageBackend: Send + Sync {
 
 The `create_storage_backend` function automatically selects the appropriate backend based on the URI format:
 
-- Connection string (contains `AccountName=` and `AccountKey=`) → Azure Blob Storage
+- `azblob://...` → Azure Blob Storage
 - `file://` → Local filesystem
 - Relative or absolute paths → Local filesystem (default)
 
@@ -155,7 +173,8 @@ curl -X DELETE http://localhost:3000/api/flags/test-flag
 Same API calls as above, but configure the server to use Azure Blob Storage:
 
 ```bash
-cargo run -- --storage-uri "DefaultEndpointsProtocol=https;AccountName=myaccount;AccountKey=your-key;EndpointSuffix=core.windows.net;Container=feature-flags"
+export AZURE_STORAGE_ACCOUNT="myaccount"
+cargo run -- --storage-uri "azblob://feature-flags/demo.flagd.json"
 ```
 
 ## Future Enhancements
@@ -170,10 +189,10 @@ cargo run -- --storage-uri "DefaultEndpointsProtocol=https;AccountName=myaccount
 
 ### Azure Blob Storage connection issues
 
-1. Verify your connection string is correct and includes all required parameters (AccountName, AccountKey, Container)
-2. Ensure the container exists
-3. Check network connectivity to Azure
-4. Review server logs for detailed error messages
+1. Verify `STORAGE_URI` uses `azblob://my-container/myblob.json`
+2. Ensure `AZURE_STORAGE_ACCOUNT` and related Azure env vars are set correctly
+3. Ensure the target container exists
+4. Review server logs for detailed credential and endpoint errors
 
 ## Contributing
 

@@ -1,9 +1,9 @@
 use async_trait::async_trait;
-use std::path::PathBuf;
 use std::fs;
+use std::path::PathBuf;
 
-use crate::error::{AppError, AppResult};
 use super::StorageBackend;
+use crate::error::{AppError, AppResult};
 
 /// Local file system storage backend
 pub struct LocalStorage {
@@ -31,7 +31,7 @@ impl LocalStorage {
             return Err(AppError::BadRequest("Filename cannot be empty".to_string()));
         }
 
-        Ok(self.base_path.join(format!("{}.flagd.json", name)))
+        Ok(self.base_path.join(name))
     }
 }
 
@@ -59,10 +59,7 @@ impl StorageBackend for LocalStorage {
             if path.is_file() {
                 if let Some(filename) = path.file_name() {
                     if let Some(name_str) = filename.to_str() {
-                        if name_str.ends_with(".flagd.json") {
-                            let name = name_str.trim_end_matches(".flagd.json").to_string();
-                            files.push(name);
-                        }
+                        files.push(name_str.to_string());
                     }
                 }
             }
@@ -99,8 +96,9 @@ impl StorageBackend for LocalStorage {
             })?;
         }
 
-        let json_string = serde_json::to_string_pretty(content)
-            .map_err(|e| AppError::InternalServerError(format!("Failed to serialize JSON: {}", e)))?;
+        let json_string = serde_json::to_string_pretty(content).map_err(|e| {
+            AppError::InternalServerError(format!("Failed to serialize JSON: {}", e))
+        })?;
 
         fs::write(&file_path, json_string)
             .map_err(|e| AppError::InternalServerError(format!("Failed to write file: {}", e)))

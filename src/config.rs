@@ -10,7 +10,8 @@ pub struct CliArgs {
     ///
     /// Supported formats:
     /// - Local filesystem: file:///path/to/flags or /path/to/flags or ./flags
-    /// - Azure Blob Storage connection string: DefaultEndpointsProtocol=https;AccountName=...;AccountKey=...;Container=<container>
+    /// - Azure Blob Storage: azblob://my-container/myblob.json
+    ///   (service endpoint and auth come from Azure environment variables)
     #[arg(long, env = "STORAGE_URI")]
     pub storage_uri: Option<String>,
 
@@ -38,7 +39,7 @@ pub struct ServerConfig {
     pub port: u16,
     /// Directory for static files
     pub static_dir: String,
-    /// Storage URI for feature flags (supports file://, local paths, or Azure connection strings)
+    /// Storage URI for feature flags (supports file://, local paths, or azblob://container/blob)
     pub storage_uri: String,
     /// Path to the flagd JSON schema file
     pub schema_file_path: String,

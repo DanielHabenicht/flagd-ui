@@ -14,7 +14,7 @@ use std::sync::Arc;
 #[async_trait]
 pub trait StorageBackend: Send + Sync {
     /// List all flag definition files
-    /// Returns a vector of flag file names (without .flagd.json extension)
+    /// Returns a vector of flag file names
     async fn list_flags(&self) -> AppResult<Vec<String>>;
 
     /// Read a flag definition file by name

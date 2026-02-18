@@ -3,10 +3,28 @@ use crate::error::{AppError, AppResult};
 use async_trait::async_trait;
 use azure_core::credentials::TokenCredential;
 use azure_core::http::RequestContent;
+use azure_identity::{ClientSecretCredential, DeveloperToolsCredential, ManagedIdentityCredential};
 use azure_storage_blob::clients::BlobContainerClient;
 use azure_storage_blob::BlobServiceClient;
 use futures::StreamExt;
+use std::collections::HashMap;
 use std::sync::Arc;
+
+fn internal_error(message: impl Into<String>) -> AppError {
+    AppError::InternalServerError(message.into())
+}
+
+fn not_found_error(message: impl Into<String>) -> AppError {
+    AppError::NotFound(message.into())
+}
+
+fn sanitize_service_url_for_logs(service_url: &str) -> String {
+    service_url
+        .split('?')
+        .next()
+        .unwrap_or(service_url)
+        .to_string()
+}
 
 #[cfg(feature = "azurite-local-auth")]
 fn local_azurite_credential(is_local: bool) -> AppResult<Option<Arc<dyn TokenCredential>>> {
@@ -21,7 +39,7 @@ fn local_azurite_credential(is_local: bool) -> AppResult<Option<Arc<dyn TokenCre
 #[cfg(not(feature = "azurite-local-auth"))]
 fn local_azurite_credential(is_local: bool) -> AppResult<Option<Arc<dyn TokenCredential>>> {
     if is_local {
-        return Err(AppError::BadRequest(
+        return Err(internal_error(
             "Local Azurite OAuth token auth is disabled. Rebuild with feature 'azurite-local-auth' to enable it."
                 .to_string(),
         ));
@@ -35,15 +53,26 @@ pub struct AzureStorage {
     container_client: Arc<BlobContainerClient>,
 }
 
+#[derive(Default)]
+struct ServiceUrlOptions {
+    account_name: String,
+    storage_domain: String,
+    protocol: String,
+    is_cdn: bool,
+    is_local_emulator: bool,
+    sas_token: String,
+}
+
 impl AzureStorage {
     /// Create a new Azure Blob Storage backend from a URI
     ///
-    /// Expected formats:
-    /// - azblob://container (uses default Azure storage)
-    /// - azblob://account.blob.core.windows.net/container
-    /// - azblob://127.0.0.1:10000/devstoreaccount1/container (for Azurite HTTPS)
+    /// Supported format:
+    /// - azblob://my-container/myblob.json
     pub fn new(uri: &str) -> AppResult<Self> {
-        let container_client = Self::parse_uri(uri)?;
+        let container_name = Self::parse_uri(uri)?;
+        let blob_service = Self::create_blob_service_client()?;
+        let container_client = blob_service.blob_container_client(&container_name);
+
         Ok(Self {
             container_client: Arc::new(container_client),
         })
@@ -51,98 +80,297 @@ impl AzureStorage {
 
     /// Parse URI format
     ///
-    /// Expected formats:
-    /// - azblob://container
-    /// - azblob://account.blob.core.windows.net/container
-    /// - azblob://127.0.0.1:10000/devstoreaccount1/container
-    fn parse_uri(uri: &str) -> AppResult<BlobContainerClient> {
+    /// Supported format:
+    /// - azblob://my-container/myblob.json
+    fn parse_uri(uri: &str) -> AppResult<String> {
         // Remove azblob:// prefix
         let path = uri
             .strip_prefix("azblob://")
-            .ok_or_else(|| AppError::BadRequest("URI must start with azblob://".to_string()))?;
+            .ok_or_else(|| internal_error("URI must start with azblob://".to_string()))?;
 
-        // Parse the URI to extract host, account, and container
         let parts: Vec<&str> = path.split('/').collect();
-
-        let (service_url, container_name) = if parts.len() == 1 {
-            // Format: azblob://container (default Azure)
-            // We need account name from environment or default
-            let account = std::env::var("AZURE_STORAGE_ACCOUNT")
-                .map_err(|_| AppError::BadRequest(
-                    "For azblob://container format, AZURE_STORAGE_ACCOUNT environment variable must be set".to_string()
-                ))?;
-            let url = format!("https://{}.blob.core.windows.net", account);
-            (url, parts[0].to_string())
-        } else if parts.len() == 2 {
-            // Format: azblob://host/container OR azblob://account.blob.core.windows.net/container
-            let host = parts[0];
-            let container = parts[1];
-
-            if host.contains(":") {
-                // Looks like host:port (e.g., 127.0.0.1:10000)
-                // For local Azurite, include account path segment and default to devstoreaccount1.
-                let is_local = host.starts_with("127.0.0.1")
-                    || host.starts_with("localhost")
-                    || host.starts_with("azurite");
-
-                let url = if is_local {
-                    let account = std::env::var("AZURE_STORAGE_ACCOUNT")
-                        .unwrap_or_else(|_| "devstoreaccount1".to_string());
-                    format!("https://{}/{}", host, account)
-                } else {
-                    format!("https://{}", host)
-                };
-
-                (url, container.to_string())
-            } else if host.contains(".") {
-                // Looks like a FQDN (e.g., account.blob.core.windows.net)
-                let url = format!("https://{}", host);
-                (url, container.to_string())
-            } else {
-                // Account name only
-                let url = format!("https://{}.blob.core.windows.net", host);
-                (url, container.to_string())
-            }
-        } else if parts.len() == 3 {
-            // Format: azblob://127.0.0.1:10000/devstoreaccount1/container
-            let host = parts[0];
-            let account = parts[1];
-            let container = parts[2];
-            let url = format!("https://{}/{}", host, account);
-            (url, container.to_string())
-        } else {
-            return Err(AppError::BadRequest(
-                "Invalid URI format. Expected: azblob://container, azblob://host/container, or azblob://host:port/account/container".to_string()
+        if parts[0].is_empty() {
+            // || parts.len() != 2 || parts[1].is_empty() {
+            return Err(internal_error(
+                "Invalid Azure Blob URI format. Expected: azblob://my-container/myblob.json"
+                    .to_string(),
             ));
+        }
+
+        let container_name = parts[0];
+        let starts_valid = container_name
+            .chars()
+            .next()
+            .map(|ch| ch.is_ascii_lowercase() || ch.is_ascii_digit())
+            .unwrap_or(false);
+        let chars_valid = container_name
+            .chars()
+            .all(|ch| ch.is_ascii_lowercase() || ch.is_ascii_digit() || ch == '-');
+        let has_consecutive_hyphens = container_name.contains("--");
+
+        if !starts_valid || !chars_valid || has_consecutive_hyphens {
+            return Err(internal_error(
+                "The container name must start with a letter or number, use only lowercase letters, numbers, and hyphens, and avoid consecutive hyphens."
+                    .to_string(),
+            ));
+        }
+
+        Ok(parts[0].to_string())
+    }
+
+    fn parse_connection_string(connection_string: &str) -> HashMap<String, String> {
+        connection_string
+            .split(';')
+            .filter_map(|part| {
+                let mut key_val = part.splitn(2, '=');
+                let key = key_val.next()?.trim();
+                let value = key_val.next()?.trim();
+
+                if key.is_empty() {
+                    return None;
+                }
+
+                Some((key.to_string(), value.to_string()))
+            })
+            .collect()
+    }
+
+    fn is_true_env(name: &str) -> bool {
+        std::env::var(name)
+            .ok()
+            .map(|value| {
+                matches!(
+                    value.to_ascii_lowercase().as_str(),
+                    "1" | "true" | "yes" | "on"
+                )
+            })
+            .unwrap_or(false)
+    }
+
+    fn connection_string_from_env() -> Option<String> {
+        std::env::var("AZURE_STORAGE_CONNECTION_STRING")
+            .ok()
+            .filter(|value| !value.trim().is_empty())
+            .or_else(|| {
+                std::env::var("AZURE_STORAGEBLOB_CONNECTIONSTRING")
+                    .ok()
+                    .filter(|value| !value.trim().is_empty())
+            })
+    }
+
+    fn resolve_service_url_and_credential() -> AppResult<(String, Option<Arc<dyn TokenCredential>>)>
+    {
+        let connection_string = Self::connection_string_from_env();
+        let has_connection_string = connection_string.is_some();
+        let mut connection_string_values = HashMap::new();
+        if let Some(value) = &connection_string {
+            connection_string_values = Self::parse_connection_string(value);
+        }
+
+        let mut service_opts = ServiceUrlOptions {
+            account_name: std::env::var("AZURE_STORAGE_ACCOUNT").unwrap_or_default(),
+            storage_domain: std::env::var("AZURE_STORAGE_DOMAIN").unwrap_or_default(),
+            protocol: std::env::var("AZURE_STORAGE_PROTOCOL").unwrap_or_default(),
+            is_cdn: Self::is_true_env("AZURE_STORAGE_IS_CDN"),
+            is_local_emulator: Self::is_true_env("AZURE_STORAGE_IS_LOCAL_EMULATOR"),
+            sas_token: std::env::var("AZURE_STORAGE_SAS_TOKEN").unwrap_or_default(),
         };
 
-        // Detect whether this is a local Azurite endpoint
+        if service_opts.account_name.is_empty() {
+            if let Some(account_name) = connection_string_values.get("AccountName") {
+                service_opts.account_name = account_name.clone();
+            }
+        }
+
+        if service_opts.protocol.is_empty() {
+            if let Some(protocol) = connection_string_values.get("DefaultEndpointsProtocol") {
+                service_opts.protocol = protocol.clone();
+            }
+        }
+
+        if service_opts.storage_domain.is_empty() {
+            if let Some(suffix) = connection_string_values.get("EndpointSuffix") {
+                service_opts.storage_domain = format!("blob.{}", suffix);
+            }
+        }
+
+        if service_opts.sas_token.is_empty() {
+            if let Some(sas) = connection_string_values.get("SharedAccessSignature") {
+                service_opts.sas_token = sas.clone();
+            }
+        }
+
+        let explicit_blob_endpoint = connection_string_values.get("BlobEndpoint").cloned();
+
+        let has_shared_key_env = std::env::var("AZURE_STORAGE_ACCOUNT").is_ok()
+            && std::env::var("AZURE_STORAGE_KEY").is_ok();
+        let has_shared_key_connection_string = connection_string_values.contains_key("AccountKey");
+
+        if has_shared_key_env {
+            return Err(internal_error(
+                "AZURE_STORAGE_KEY shared-key auth is not supported by the current Rust Azure Blob SDK integration. Use AZURE_STORAGE_SAS_TOKEN, a connection string with SharedAccessSignature, or Entra ID credentials."
+                    .to_string(),
+            ));
+        }
+
+        if has_shared_key_connection_string && service_opts.sas_token.is_empty() {
+            return Err(internal_error(
+                "Connection strings using AccountKey are not supported by the current Rust Azure Blob SDK integration. Use SharedAccessSignature in the connection string, AZURE_STORAGE_SAS_TOKEN, or Entra ID credentials."
+                    .to_string(),
+            ));
+        }
+
+        let protocol = if service_opts.protocol.is_empty() {
+            "https".to_string()
+        } else {
+            let value = service_opts.protocol.to_ascii_lowercase();
+            if value != "http" && value != "https" {
+                return Err(internal_error(format!(
+                    "Invalid AZURE_STORAGE_PROTOCOL '{}'. Expected 'http' or 'https'.",
+                    service_opts.protocol
+                )));
+            }
+            value
+        };
+
+        let storage_domain = if service_opts.storage_domain.is_empty() {
+            "blob.core.windows.net".to_string()
+        } else {
+            service_opts.storage_domain.clone()
+        };
+
+        if service_opts.account_name.is_empty() {
+            return Err(internal_error(
+                "AZURE_STORAGE_ACCOUNT is required to construct the Azure Blob service URL."
+                    .to_string(),
+            ));
+        }
+
+        let mut service_url = if let Some(blob_endpoint) = explicit_blob_endpoint {
+            blob_endpoint.trim_end_matches('/').to_string()
+        } else if service_opts.is_local_emulator {
+            format!(
+                "{}://{}/{}",
+                protocol, storage_domain, service_opts.account_name
+            )
+        } else if service_opts.is_cdn {
+            format!("{}://{}", protocol, storage_domain)
+        } else {
+            format!(
+                "{}://{}.{}",
+                protocol, service_opts.account_name, storage_domain
+            )
+        };
+
+        if !service_opts.sas_token.is_empty() {
+            let sas = service_opts.sas_token.trim_start_matches('?');
+            if !service_url.contains("?") {
+                service_url.push('?');
+                service_url.push_str(sas);
+            }
+        }
+
         let is_local = service_url.contains("127.0.0.1")
             || service_url.contains("localhost")
-            || service_url.contains("azurite");
+            || service_url.contains("azurite")
+            || service_opts.is_local_emulator;
 
-        let credential = local_azurite_credential(is_local)?;
+        if !service_opts.sas_token.is_empty() {
+            tracing::info!(
+                credential_mode = "sas_token",
+                service_url = %sanitize_service_url_for_logs(&service_url),
+                from_connection_string = has_connection_string,
+                "Azure Blob auth mode selected"
+            );
+            return Ok((service_url, None));
+        }
+
+        if is_local {
+            tracing::info!(
+                credential_mode = "local_azurite_token",
+                service_url = %sanitize_service_url_for_logs(&service_url),
+                "Azure Blob auth mode selected"
+            );
+            return Ok((service_url, local_azurite_credential(true)?));
+        }
+
+        if let (Ok(tenant_id), Ok(client_id), Ok(client_secret)) = (
+            std::env::var("AZURE_TENANT_ID"),
+            std::env::var("AZURE_CLIENT_ID"),
+            std::env::var("AZURE_CLIENT_SECRET"),
+        ) {
+            let credential: Arc<dyn TokenCredential> =
+                ClientSecretCredential::new(&tenant_id, client_id, client_secret.into(), None)
+                    .map_err(|e| {
+                        internal_error(format!(
+                    "Failed to create Azure ClientSecretCredential from environment variables: {}",
+                    e
+                ))
+                    })?;
+            tracing::info!(
+                credential_mode = "client_secret",
+                service_url = %sanitize_service_url_for_logs(&service_url),
+                "Azure Blob auth mode selected"
+            );
+            return Ok((service_url, Some(credential)));
+        }
+
+        if std::env::var("IDENTITY_ENDPOINT").is_ok()
+            || std::env::var("MSI_ENDPOINT").is_ok()
+            || std::env::var("IMDS_ENDPOINT").is_ok()
+        {
+            let credential: Arc<dyn TokenCredential> = ManagedIdentityCredential::new(None)
+                .map_err(|e| {
+                    internal_error(format!(
+                        "Failed to create ManagedIdentityCredential from environment: {}",
+                        e
+                    ))
+                })?;
+            tracing::info!(
+                credential_mode = "managed_identity",
+                service_url = %sanitize_service_url_for_logs(&service_url),
+                "Azure Blob auth mode selected"
+            );
+            return Ok((service_url, Some(credential)));
+        }
+
+        let credential: Arc<dyn TokenCredential> =
+            DeveloperToolsCredential::new(None).map_err(|e| {
+                internal_error(format!("Failed to create DeveloperToolsCredential: {}", e))
+            })?;
+
+        tracing::info!(
+            credential_mode = "developer_tools",
+            service_url = %sanitize_service_url_for_logs(&service_url),
+            "Azure Blob auth mode selected"
+        );
+
+        Ok((service_url, Some(credential)))
+    }
+
+    fn create_blob_service_client() -> AppResult<BlobServiceClient> {
+        let (service_url, credential) = Self::resolve_service_url_and_credential()?;
 
         let blob_service = BlobServiceClient::new(&service_url, credential, None).map_err(|e| {
-            AppError::BadRequest(format!(
+            internal_error(format!(
                 "Failed to create blob service client: {}. \
-                     For local Azurite, ensure certs are generated. \
-                     For Azure, set AZURE_STORAGE_CONNECTION_STRING or appropriate credentials.",
+                     Configure via AZURE_STORAGE_ACCOUNT (plus optional AZURE_STORAGE_DOMAIN/AZURE_STORAGE_PROTOCOL), \
+                     AZURE_STORAGE_CONNECTION_STRING/AZURE_STORAGEBLOB_CONNECTIONSTRING, or AZURE_STORAGE_SAS_TOKEN.",
                 e
             ))
         })?;
 
-        Ok(blob_service.blob_container_client(&container_name))
+        Ok(blob_service)
     }
 
     /// Validate blob name to prevent path traversal
     fn validate_blob_name(&self, name: &str) -> AppResult<String> {
         if name.contains("..") || name.is_empty() {
-            return Err(AppError::BadRequest(
+            return Err(internal_error(
                 "Invalid blob name: cannot contain '..' or be empty".to_string(),
             ));
         }
-        Ok(format!("{}.flagd.json", name))
+        Ok(name.to_owned())
     }
 
     /// Helper to check if an error is a 404
@@ -159,9 +387,10 @@ impl StorageBackend for AzureStorage {
         let mut files = Vec::new();
 
         // List all blobs in the container
-        let mut pager = self.container_client.list_blobs(None).map_err(|e| {
-            AppError::InternalServerError(format!("Failed to create list blobs pager: {}", e))
-        })?;
+        let mut pager = self
+            .container_client
+            .list_blobs(None)
+            .map_err(|e| internal_error(format!("Failed to create list blobs pager: {}", e)))?;
 
         while let Some(result) = pager.next().await {
             match result {
@@ -169,11 +398,7 @@ impl StorageBackend for AzureStorage {
                     if let Some(name) = page.name {
                         // BlobName.content is an Option<String>
                         if let Some(name_str) = &name.content {
-                            if name_str.ends_with(".flagd.json") {
-                                let flag_name =
-                                    name_str.trim_end_matches(".flagd.json").to_string();
-                                files.push(flag_name);
-                            }
+                            files.push(name_str.to_string());
                         }
                     }
                 }
@@ -183,10 +408,7 @@ impl StorageBackend for AzureStorage {
                         tracing::warn!("Container not found, returning empty list");
                         return Ok(vec![]);
                     }
-                    return Err(AppError::InternalServerError(format!(
-                        "Failed to list blobs: {}",
-                        e
-                    )));
+                    return Err(internal_error(format!("Failed to list blobs: {}", e)));
                 }
             }
         }
@@ -202,28 +424,28 @@ impl StorageBackend for AzureStorage {
         // Download the blob
         let response = blob_client.download(None).await.map_err(|e| {
             if Self::is_not_found_error(&e) {
-                AppError::NotFound(format!("Flag definition '{}' not found", name))
+                not_found_error(format!("Flag definition '{}' not found", name))
             } else {
-                AppError::InternalServerError(format!("Failed to read blob: {}", e))
+                internal_error(format!("Failed to read blob: {}", e))
             }
         })?;
 
         let (_, _, body) = response.deconstruct();
-        let bytes = body.collect().await.map_err(|e| {
-            AppError::InternalServerError(format!("Failed to read blob content: {}", e))
-        })?;
+        let bytes = body
+            .collect()
+            .await
+            .map_err(|e| internal_error(format!("Failed to read blob content: {}", e)))?;
 
         serde_json::from_slice(&bytes)
-            .map_err(|e| AppError::InternalServerError(format!("Failed to parse JSON: {}", e)))
+            .map_err(|e| internal_error(format!("Failed to parse JSON: {}", e)))
     }
 
     async fn write_flag(&self, name: &str, content: &serde_json::Value) -> AppResult<()> {
         let blob_name = self.validate_blob_name(name)?;
         let blob_client = self.container_client.blob_client(&blob_name);
 
-        let json_bytes = serde_json::to_vec_pretty(content).map_err(|e| {
-            AppError::InternalServerError(format!("Failed to serialize JSON: {}", e))
-        })?;
+        let json_bytes = serde_json::to_vec_pretty(content)
+            .map_err(|e| internal_error(format!("Failed to serialize JSON: {}", e)))?;
 
         let content_length = json_bytes.len() as u64;
         let request_content = RequestContent::from(json_bytes);
@@ -232,7 +454,7 @@ impl StorageBackend for AzureStorage {
         blob_client
             .upload(request_content, true, content_length, None)
             .await
-            .map_err(|e| AppError::InternalServerError(format!("Failed to write blob: {}", e)))?;
+            .map_err(|e| internal_error(format!("Failed to write blob: {}", e)))?;
 
         Ok(())
     }
@@ -243,9 +465,9 @@ impl StorageBackend for AzureStorage {
 
         blob_client.delete(None).await.map_err(|e| {
             if Self::is_not_found_error(&e) {
-                AppError::NotFound(format!("Flag definition '{}' not found", name))
+                not_found_error(format!("Flag definition '{}' not found", name))
             } else {
-                AppError::InternalServerError(format!("Failed to delete blob: {}", e))
+                internal_error(format!("Failed to delete blob: {}", e))
             }
         })?;
 
@@ -258,7 +480,7 @@ impl StorageBackend for AzureStorage {
 
         match blob_client.exists().await {
             Ok(exists) => Ok(exists),
-            Err(e) => Err(AppError::InternalServerError(format!(
+            Err(e) => Err(internal_error(format!(
                 "Failed to check if blob exists: {}",
                 e
             ))),
