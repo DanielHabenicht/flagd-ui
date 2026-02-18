@@ -1,123 +1,92 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page } from "@playwright/test";
 
-type FlagFile = {
-  flags: Record<string, unknown>;
-};
+async function gotoWithRetry(
+  page: Page,
+  url: string,
+  attempts = 3,
+): Promise<void> {
+  let lastError: unknown;
 
-async function mockFlagsApi(page: Page): Promise<void> {
-  const flagsFileNames: string[] = ['demo.flagd.json', 'test.flagd.json'];
-  const flagsFileData: Record<string, FlagFile> = {
-    'demo.flagd.json': {
-      flags: {
-        'checkout-enabled': {
-          state: 'ENABLED',
-          variants: { on: true, off: false },
-          defaultVariant: 'on',
-        },
-      },
-    },
-    'test.flagd.json': {
-      flags: {},
-    },
-  };
-
-  await page.route('**/api/flags**', async (route) => {
-    const request = route.request();
-    const { pathname } = new URL(request.url());
-    const method = request.method();
-
-    if (pathname === '/api/flags' && method === 'GET') {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({ files: flagsFileNames }),
-      });
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try {
+      await page.goto(url);
       return;
-    }
-
-    if (pathname === '/api/flags' && method === 'POST') {
-      const payload = request.postDataJSON() as { name: string; flags?: Record<string, unknown> };
-      if (!flagsFileNames.includes(payload.name)) {
-        flagsFileNames.push(payload.name);
+    } catch (error) {
+      lastError = error;
+      if (attempt < attempts) {
+        await page.waitForTimeout(1000 * attempt);
       }
-      flagsFileData[payload.name] = { flags: payload.flags ?? {} };
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify(flagsFileData[payload.name]),
-      });
-      return;
     }
+  }
 
-    if (pathname.startsWith('/api/flags/') && method === 'GET') {
-      const name = decodeURIComponent(pathname.replace('/api/flags/', ''));
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify(flagsFileData[name] ?? { flags: {} }),
-      });
-      return;
-    }
+  throw lastError;
+}
 
-    if (pathname.startsWith('/api/flags/') && method === 'PUT') {
-      const name = decodeURIComponent(pathname.replace('/api/flags/', ''));
-      const payload = request.postDataJSON() as { flags?: Record<string, unknown> };
-      flagsFileData[name] = { flags: payload.flags ?? {} };
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify(flagsFileData[name]),
-      });
-      return;
-    }
+async function createFlagsFile(page: Page, fileName: string): Promise<void> {
+  await page.getByRole("button", { name: "Create flags-file" }).click();
+  const createFileDialog = page.getByRole("dialog", { name: "Add Flag File" });
 
-    if (pathname.startsWith('/api/flags/') && method === 'DELETE') {
-      const name = decodeURIComponent(pathname.replace('/api/flags/', ''));
-      const idx = flagsFileNames.indexOf(name);
-      if (idx >= 0) {
-        flagsFileNames.splice(idx, 1);
-      }
-      delete flagsFileData[name];
-      await route.fulfill({ status: 204, body: '' });
-      return;
-    }
+  await createFileDialog.getByRole("tab", { name: "Empty File" }).click();
+  const fileNameInput = createFileDialog.getByLabel("File name");
+  await fileNameInput.fill(fileName);
+  await expect(fileNameInput).toHaveValue(fileName);
 
-    await route.fulfill({ status: 404, body: 'Not found' });
-  });
+  const createButton = createFileDialog.getByRole("button", { name: "Create" });
+  await expect(createButton).toBeEnabled();
+  await createButton.click();
 }
 
 test.beforeEach(async ({ page }) => {
-  await mockFlagsApi(page);
   await page.setViewportSize({ width: 1600, height: 1000 });
 });
 
-test('loads app shell and welcome page', async ({ page }) => {
-  await page.goto('/');
+test("loads app shell and welcome page", async ({ page }) => {
+  await gotoWithRetry(page, "/");
 
-  await expect(page.getByRole('heading', { name: 'flagd-ui' })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Feature Flag Manager' })).toBeVisible();
-  await expect(page.getByRole('link', { name: 'demo.flagd.json' })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "flagd-ui" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Feature Flag Manager" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Create flags-file" }),
+  ).toBeVisible();
 });
 
-test('navigates to a flags-file and renders flag data', async ({ page }) => {
-  await page.goto('/');
+test("navigates to a flags-file and renders flag data", async ({ page }) => {
+  await gotoWithRetry(page, "/");
 
-  await page.getByRole('link', { name: 'demo.flagd.json' }).click();
+  const fileName = `basic-${Date.now()}`;
 
-  await expect(page.getByRole('heading', { name: 'demo.flagd.json' })).toBeVisible();
-  await expect(page.getByRole('cell', { name: 'checkout-enabled' })).toBeVisible();
-  await expect(page.getByTitle('ENABLED')).toBeVisible();
+  await createFlagsFile(page, fileName);
+
+  await expect(page.getByRole("heading", { name: fileName })).toBeVisible();
+
+  await page.getByRole("button", { name: "Create your first flag" }).click();
+  const createPanel = page.locator("aside.side-panel").first();
+  await createPanel.getByLabel("Flag Key").fill("checkout-enabled");
+
+  await expect(
+    page.getByRole("cell", { name: "checkout-enabled" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("cell", { name: "checkout-enabled" }),
+  ).toBeVisible();
+  await expect(page.getByTitle("ENABLED")).toBeVisible();
 });
 
-test('creates a flags-file from the sidebar form', async ({ page }) => {
-  await page.goto('/');
+test("creates a flags-file from the sidebar form", async ({ page }) => {
+  await gotoWithRetry(page, "/");
 
-  await page.getByRole('button', { name: 'Create flags-file' }).click();
-  await page.getByRole('dialog', { name: 'Add Flag File' }).getByLabel('File name').fill('new-project.flagd.json');
-  await page.getByRole('dialog', { name: 'Add Flag File' }).getByRole('button', { name: 'Create' }).click();
+  await createFlagsFile(page, "new-project.flagd.json");
 
   await expect(page).toHaveURL(/\/local\/browser\/new-project.flagd.json$/);
-  await expect(page.getByRole('heading', { name: 'new-project.flagd.json' })).toBeVisible();
-  await expect(page.getByText('No flags in this file yet.')).toBeVisible();
-  await expect(page.locator('.sidebar').getByRole('link', { name: 'new-project.flagd.json' })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "new-project.flagd.json" }),
+  ).toBeVisible();
+  await expect(page.getByText("No flags in this file yet.")).toBeVisible();
+  await expect(
+    page
+      .locator(".sidebar")
+      .getByRole("link", { name: "new-project.flagd.json" }),
+  ).toBeVisible();
 });

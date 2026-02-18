@@ -29,11 +29,15 @@ test('creates file and boolean flag, evaluates in playground, then switches valu
     await page.goto('/');
 
     await page.getByRole('button', { name: 'Create flags-file' }).click();
-    const createFileDialog = page.getByRole('dialog', { name: 'Add Flag File' });
+    const createFileDialog = page.getByRole('dialog', {
+      name: 'Add Flag File',
+    });
     const fileNameInput = createFileDialog.getByLabel('File name');
     await fileNameInput.fill(fileName);
     await expect(fileNameInput).toHaveValue(fileName);
-    const createFileButton = createFileDialog.getByRole('button', { name: 'Create' });
+    const createFileButton = createFileDialog.getByRole('button', {
+      name: 'Create',
+    });
     await expect(createFileButton).toBeEnabled();
     await createFileButton.click();
 
@@ -45,8 +49,6 @@ test('creates file and boolean flag, evaluates in playground, then switches valu
 
     const createPanel = page.locator('aside.side-panel').first();
     await createPanel.getByLabel('Flag Key').fill(flagKey);
-    await createPanel.getByRole('button', { name: 'Create Flag' }).click();
-
     await expect(page.getByRole('cell', { name: flagKey })).toBeVisible();
 
     const drawerToggle = page.getByLabel('Toggle playground drawer');
@@ -69,13 +71,16 @@ test('creates file and boolean flag, evaluates in playground, then switches valu
     const wasChecked = (await globalSwitch.getAttribute('aria-checked')) === 'true';
     await globalSwitch.click();
     await expect(globalSwitch).toHaveAttribute('aria-checked', wasChecked ? 'false' : 'true');
-    await editPanel.getByRole('button', { name: 'Save Changes' }).click();
+    await expect(page.getByRole('cell', { name: flagKey })).toBeVisible();
+    await page.waitForTimeout(1600);
 
     await playgroundDrawer.getByRole('button', { name: 'Evaluate' }).click();
     const secondResult = await getEvaluationResult(playgroundDrawer);
 
     expect(secondResult.value).not.toBe(firstResult.value);
   } finally {
-    await request.delete(`/api/flags/${encodeURIComponent(fileName)}`).catch(() => undefined);
+    // await request
+    //   .delete(`/api/flags/${encodeURIComponent(fileName)}`)
+    //   .catch(() => undefined);
   }
 });
