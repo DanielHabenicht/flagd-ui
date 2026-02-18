@@ -174,3 +174,14 @@ The workflow at `.github/workflows/docker-image.yml` publishes Docker images whe
 Where `<version>` is derived from the tag name (for example, `v1.2.3` -> `1.2.3`).
 
 No extra secrets are required for the default setup; the workflow uses the built-in `GITHUB_TOKEN`.
+
+## Azurite (Local Development)
+
+```
+export STORAGE_URI="azblob://feature-flags/demo.flagd.json"
+export AZURE_STORAGE_ACCOUNT="devstoreaccount1"
+export AZURE_STORAGE_DOMAIN="127.0.0.1:10000"
+export AZURE_STORAGE_PROTOCOL="https"
+export AZURE_STORAGE_IS_LOCAL_EMULATOR="true"
+cargo run --features azurite-local-auth
+```
