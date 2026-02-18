@@ -36,6 +36,7 @@ export interface Backend {
   uri: string; // 'local-browser', 'local-disk', or URL-based id for remote
   label: string; // Display label
   files: FlagFile[]; // Files in this backend
+  isHydrated?: boolean;
 }
 
 export interface FlagFileStoreStateModel {
@@ -57,11 +58,13 @@ export const LocalBackendUris = {
           uri: LocalBackendUris.Browser,
           label: 'Local Files (Browser)',
           files: [],
+          isHydrated: true,
         },
         [LocalBackendUris.Disk]: {
           uri: LocalBackendUris.Disk,
           label: 'Local Files (Disk)',
           files: [],
+          isHydrated: true,
         },
       },
       remote: {},
@@ -102,6 +105,7 @@ export class FlagFileStore implements NgxsOnInit {
             uri: normalized,
             label: defaultRoot,
             files: [],
+            isHydrated: false,
           },
         },
       },
@@ -161,6 +165,7 @@ export class FlagFileStore implements NgxsOnInit {
       uri: normalized,
       label: action.label,
       files: [],
+      isHydrated: false,
     };
 
     ctx.patchState({
@@ -215,6 +220,7 @@ export class FlagFileStore implements NgxsOnInit {
 
     const updatedBackend: Backend = {
       ...backend,
+      isHydrated: action.backendType === 'remote' ? (backend.isHydrated ?? false) || true : true,
       files: [
         ...backend.files,
         {
@@ -330,6 +336,11 @@ export class FlagFileStore implements NgxsOnInit {
     }
 
     if (action.backendType === 'remote') {
+      if (!backend.isHydrated) {
+        await this.importRemoteBackend(ctx, backend);
+        return;
+      }
+
       await this.syncRemoteBackend(ctx, backend);
       await this.importRemoteBackend(ctx, backend);
       return;
@@ -422,9 +433,6 @@ export class FlagFileStore implements NgxsOnInit {
     try {
       const listResponse = await firstValueFrom(api.listFlags());
       const files = listResponse?.files ?? [];
-      if (!files.length) {
-        return;
-      }
 
       const imported = await Promise.all(
         files.map(async (name) => {
@@ -438,6 +446,7 @@ export class FlagFileStore implements NgxsOnInit {
       );
 
       this.upsertBackendFiles(ctx, 'remote', backend.uri, imported);
+      this.markBackendHydrated(ctx, 'remote', backend.uri);
     } catch {
       return;
     }
@@ -541,6 +550,38 @@ export class FlagFileStore implements NgxsOnInit {
   private normalizeUrl(url: string): string {
     // Remove trailing slashes and normalize the URL
     return url.replace(/\/$/, '').toLowerCase();
+  }
+
+  private markBackendHydrated(
+    ctx: StateContext<FlagFileStoreStateModel>,
+    backendType: BackendType,
+    uri: string,
+  ): void {
+    const state = ctx.getState();
+    const uriMap = state.backends[backendType];
+    const backend = uriMap?.[uri];
+    if (!backend) {
+      return;
+    }
+
+    if (backend.isHydrated) {
+      return;
+    }
+
+    const updatedBackend: Backend = {
+      ...backend,
+      isHydrated: true,
+    };
+
+    ctx.patchState({
+      backends: {
+        ...state.backends,
+        [backendType]: {
+          ...uriMap,
+          [uri]: updatedBackend,
+        },
+      },
+    });
   }
 
   private tryParseJson(content: string): unknown | undefined {
