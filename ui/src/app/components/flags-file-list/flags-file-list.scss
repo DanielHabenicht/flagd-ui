@@ -149,6 +149,30 @@ a[mat-list-item].active-link .project-name {
   font-weight: 600;
 }
 
+.github-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  align-self: center;
+  color: var(--color-text-secondary);
+  text-decoration: none;
+  font-size: 0.72rem;
+  opacity: 0.72;
+  transition: opacity 120ms ease-in-out;
+}
+
+.github-link:hover,
+.github-link:focus-visible {
+  opacity: 1;
+}
+
+.github-link mat-icon {
+  font-size: 14px;
+  width: 14px;
+  height: 14px;
+}
+
 .drop-hint {
   padding: 8px 0 0;
   text-align: center;
