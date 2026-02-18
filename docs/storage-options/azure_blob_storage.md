@@ -16,7 +16,7 @@ Specifying the container will allow `flagd-ui` to list all blobs in that contain
 
 ```bash
 docker run --rm -p 3000:3000 \
-	--storage-uri "azblob://feature-flags/demo.flagd.json" \
+	--storage-uri "azblob://feature-flags" \
 	-e AZURE_STORAGE_ACCOUNT="<your-storage-account>" \
 	ghcr.io/danielhabenicht/flagd-ui:latest
 ```
@@ -36,7 +36,7 @@ Service principal example:
 
 ```bash
 docker run --rm -p 3000:3000 \
-	--storage-uri "azblob://feature-flags/demo.flagd.json" \
+	--storage-uri "azblob://feature-flags" \
 	-e AZURE_STORAGE_ACCOUNT="<your-storage-account>" \
 	-e AZURE_TENANT_ID="<tenant-id>" \
 	-e AZURE_CLIENT_ID="<client-id>" \
@@ -54,7 +54,7 @@ Provide a SAS token via `AZURE_STORAGE_SAS_TOKEN`:
 
 ```bash
 docker run --rm -p 3000:3000 \
-	--storage-uri "azblob://feature-flags/demo.flagd.json" \
+	--storage-uri "azblob://feature-flags" \
 	-e AZURE_STORAGE_ACCOUNT="<your-storage-account>" \
 	-e AZURE_STORAGE_SAS_TOKEN="<sas-token-with-list-read-write-if-needed>" \
 	ghcr.io/danielhabenicht/flagd-ui:latest
@@ -112,5 +112,5 @@ services:
 			# Optional URL shaping:
 			# AZURE_STORAGE_DOMAIN: blob.core.windows.net
 			# AZURE_STORAGE_PROTOCOL: https
-        commands: ["--storage-uri", "azblob://feature-flags/demo.flagd.json"]
+        commands: ["--storage-uri", "azblob://feature-flags"]
 ```
