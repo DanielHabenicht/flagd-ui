@@ -7,7 +7,7 @@ use std::sync::Arc;
 ///
 /// generates a JWT signed with the Azurite server key and returns it
 /// as a static bearer token. Azurite accepts OAuth tokens without
-/// validating the signature (see <https://github.com/Azure/Azurite/issues/537>).
+/// validating the signature (see <https://github.com/Azure/azure-sdk-for-rust/issues/2975>).
 #[derive(Clone)]
 struct AzuriteTokenCredential {
     token: String,

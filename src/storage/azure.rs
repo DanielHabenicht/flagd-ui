@@ -26,28 +26,6 @@ fn sanitize_service_url_for_logs(service_url: &str) -> String {
         .to_string()
 }
 
-#[cfg(feature = "azurite-local-auth")]
-fn local_azurite_credential(is_local: bool) -> AppResult<Option<Arc<dyn TokenCredential>>> {
-    if !is_local {
-        return Ok(None);
-    }
-
-    let credential = super::azurite_auth::build_azurite_token_credential()?;
-    Ok(Some(credential))
-}
-
-#[cfg(not(feature = "azurite-local-auth"))]
-fn local_azurite_credential(is_local: bool) -> AppResult<Option<Arc<dyn TokenCredential>>> {
-    if is_local {
-        return Err(internal_error(
-            "Local Azurite OAuth token auth is disabled. Rebuild with feature 'azurite-local-auth' to enable it."
-                .to_string(),
-        ));
-    }
-
-    Ok(None)
-}
-
 /// Azure Blob Storage backend
 pub struct AzureStorage {
     container_client: Arc<BlobContainerClient>,
@@ -58,7 +36,6 @@ struct ServiceUrlOptions {
     account_name: String,
     storage_domain: String,
     protocol: String,
-    is_cdn: bool,
     is_local_emulator: bool,
     sas_token: String,
 }
@@ -161,7 +138,6 @@ impl AzureStorage {
     fn resolve_service_url_and_credential() -> AppResult<(String, Option<Arc<dyn TokenCredential>>)>
     {
         let connection_string = Self::connection_string_from_env();
-        let has_connection_string = connection_string.is_some();
         let mut connection_string_values = HashMap::new();
         if let Some(value) = &connection_string {
             connection_string_values = Self::parse_connection_string(value);
@@ -171,7 +147,6 @@ impl AzureStorage {
             account_name: std::env::var("AZURE_STORAGE_ACCOUNT").unwrap_or_default(),
             storage_domain: std::env::var("AZURE_STORAGE_DOMAIN").unwrap_or_default(),
             protocol: std::env::var("AZURE_STORAGE_PROTOCOL").unwrap_or_default(),
-            is_cdn: Self::is_true_env("AZURE_STORAGE_IS_CDN"),
             is_local_emulator: Self::is_true_env("AZURE_STORAGE_IS_LOCAL_EMULATOR"),
             sas_token: std::env::var("AZURE_STORAGE_SAS_TOKEN").unwrap_or_default(),
         };
@@ -202,18 +177,15 @@ impl AzureStorage {
 
         let explicit_blob_endpoint = connection_string_values.get("BlobEndpoint").cloned();
 
-        let has_shared_key_env = std::env::var("AZURE_STORAGE_ACCOUNT").is_ok()
-            && std::env::var("AZURE_STORAGE_KEY").is_ok();
-        let has_shared_key_connection_string = connection_string_values.contains_key("AccountKey");
-
-        if has_shared_key_env {
+        if std::env::var("AZURE_STORAGE_KEY").is_ok() {
             return Err(internal_error(
                 "AZURE_STORAGE_KEY shared-key auth is not supported by the current Rust Azure Blob SDK integration. Use AZURE_STORAGE_SAS_TOKEN, a connection string with SharedAccessSignature, or Entra ID credentials."
                     .to_string(),
             ));
         }
 
-        if has_shared_key_connection_string && service_opts.sas_token.is_empty() {
+        if connection_string_values.contains_key("AccountKey") && service_opts.sas_token.is_empty()
+        {
             return Err(internal_error(
                 "Connection strings using AccountKey are not supported by the current Rust Azure Blob SDK integration. Use SharedAccessSignature in the connection string, AZURE_STORAGE_SAS_TOKEN, or Entra ID credentials."
                     .to_string(),
@@ -253,8 +225,6 @@ impl AzureStorage {
                 "{}://{}/{}",
                 protocol, storage_domain, service_opts.account_name
             )
-        } else if service_opts.is_cdn {
-            format!("{}://{}", protocol, storage_domain)
         } else {
             format!(
                 "{}://{}.{}",
@@ -262,90 +232,29 @@ impl AzureStorage {
             )
         };
 
-        if !service_opts.sas_token.is_empty() {
-            let sas = service_opts.sas_token.trim_start_matches('?');
-            if !service_url.contains("?") {
-                service_url.push('?');
-                service_url.push_str(sas);
-            }
-        }
-
-        let is_local = service_url.contains("127.0.0.1")
-            || service_url.contains("localhost")
-            || service_url.contains("azurite")
-            || service_opts.is_local_emulator;
-
-        if !service_opts.sas_token.is_empty() {
-            tracing::info!(
-                credential_mode = "sas_token",
-                service_url = %sanitize_service_url_for_logs(&service_url),
-                from_connection_string = has_connection_string,
-                "Azure Blob auth mode selected"
-            );
-            return Ok((service_url, None));
-        }
-
-        if is_local {
+        if service_opts.is_local_emulator {
             tracing::info!(
                 credential_mode = "local_azurite_token",
                 service_url = %sanitize_service_url_for_logs(&service_url),
                 "Azure Blob auth mode selected"
             );
-            return Ok((service_url, local_azurite_credential(true)?));
+            #[cfg(feature = "azurite-local-auth")]
+            return Ok((
+                service_url,
+                Some(super::azurite_auth::build_azurite_token_credential()?),
+            ));
+            #[cfg(not(feature = "azurite-local-auth"))]
+            return Err(internal_error(
+                "Azurite local auth feature is not enabled.".to_string(),
+            ));
         }
-
-        if let (Ok(tenant_id), Ok(client_id), Ok(client_secret)) = (
-            std::env::var("AZURE_TENANT_ID"),
-            std::env::var("AZURE_CLIENT_ID"),
-            std::env::var("AZURE_CLIENT_SECRET"),
-        ) {
-            let credential: Arc<dyn TokenCredential> =
-                ClientSecretCredential::new(&tenant_id, client_id, client_secret.into(), None)
-                    .map_err(|e| {
-                        internal_error(format!(
-                    "Failed to create Azure ClientSecretCredential from environment variables: {}",
-                    e
-                ))
-                    })?;
-            tracing::info!(
-                credential_mode = "client_secret",
-                service_url = %sanitize_service_url_for_logs(&service_url),
-                "Azure Blob auth mode selected"
-            );
-            return Ok((service_url, Some(credential)));
-        }
-
-        if std::env::var("IDENTITY_ENDPOINT").is_ok()
-            || std::env::var("MSI_ENDPOINT").is_ok()
-            || std::env::var("IMDS_ENDPOINT").is_ok()
-        {
-            let credential: Arc<dyn TokenCredential> = ManagedIdentityCredential::new(None)
-                .map_err(|e| {
-                    internal_error(format!(
-                        "Failed to create ManagedIdentityCredential from environment: {}",
-                        e
-                    ))
-                })?;
-            tracing::info!(
-                credential_mode = "managed_identity",
-                service_url = %sanitize_service_url_for_logs(&service_url),
-                "Azure Blob auth mode selected"
-            );
-            return Ok((service_url, Some(credential)));
-        }
-
-        let credential: Arc<dyn TokenCredential> =
-            DeveloperToolsCredential::new(None).map_err(|e| {
-                internal_error(format!("Failed to create DeveloperToolsCredential: {}", e))
-            })?;
 
         tracing::info!(
-            credential_mode = "developer_tools",
+            credential_mode = "default_azure_identity",
             service_url = %sanitize_service_url_for_logs(&service_url),
             "Azure Blob auth mode selected"
         );
-
-        Ok((service_url, Some(credential)))
+        Ok((service_url, None))
     }
 
     fn create_blob_service_client() -> AppResult<BlobServiceClient> {
