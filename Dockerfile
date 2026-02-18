@@ -15,7 +15,6 @@ RUN cargo build --release
 # Copy actual source code
 COPY build.rs ./
 COPY schema ./schema
-COPY flags ./flags
 COPY src ./src
 
 # Build the final release (only user code is recompiled)
