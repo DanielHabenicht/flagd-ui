@@ -14,7 +14,7 @@ use tower_http::{
 };
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 use utoipa::OpenApi;
-use utoipa_swagger_ui::SwaggerUi;
+use utoipa_swagger_ui::{Config as SwaggerConfig, SwaggerUi};
 
 use config::ServerConfig;
 use handlers::{
@@ -85,7 +85,11 @@ fn create_router(config: &ServerConfig, app_state: handlers::api::AppState) -> R
         // Mount API routes under /api prefix
         .nest("/api", api_routes)
         // Swagger UI for interactive API documentation
-        .merge(SwaggerUi::new("/swagger-ui").url("/api/openapi.json", ApiDoc::openapi()))
+        .merge(
+            SwaggerUi::new("/swagger-ui")
+                .url("/api/openapi.json", ApiDoc::openapi())
+                .config(SwaggerConfig::default().try_it_out_enabled(true)),
+        )
         // Serve static files from the public directory
         // This will also fallback to index.html for SPA routing
         .nest_service(
