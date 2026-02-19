@@ -1,0 +1,376 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Bootsharp + SQLite WASM — Todo App</title>
+    <style>
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        font-family:
+          system-ui,
+          -apple-system,
+          sans-serif;
+        max-width: 640px;
+        margin: 2rem auto;
+        padding: 0 1rem;
+        background: #f8f9fa;
+        color: #212529;
+      }
+      h1 {
+        margin-bottom: 0.5rem;
+      }
+      #status {
+        padding: 0.5rem;
+        margin-bottom: 1rem;
+        border-radius: 6px;
+        font-size: 0.9rem;
+        background: #e9ecef;
+      }
+      #status.ready {
+        background: #d4edda;
+        color: #155724;
+      }
+      #status.error {
+        background: #f8d7da;
+        color: #721c24;
+      }
+      .input-row {
+        display: flex;
+        gap: 0.5rem;
+        margin-bottom: 1rem;
+      }
+      .input-row input {
+        flex: 1;
+        padding: 0.5rem 0.75rem;
+        border: 1px solid #ced4da;
+        border-radius: 6px;
+        font-size: 1rem;
+      }
+      button {
+        padding: 0.5rem 1rem;
+        border: none;
+        border-radius: 6px;
+        font-size: 0.9rem;
+        cursor: pointer;
+        background: #0d6efd;
+        color: #fff;
+      }
+      button:hover {
+        background: #0b5ed7;
+      }
+      button.danger {
+        background: #dc3545;
+      }
+      button.danger:hover {
+        background: #bb2d3b;
+      }
+      button.secondary {
+        background: #6c757d;
+      }
+      button.secondary:hover {
+        background: #5c636a;
+      }
+      button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+      #todo-list {
+        list-style: none;
+      }
+      #todo-list li {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.75rem;
+        margin-bottom: 0.5rem;
+        background: #fff;
+        border: 1px solid #dee2e6;
+        border-radius: 6px;
+      }
+      #todo-list li.completed span.title {
+        text-decoration: line-through;
+        color: #6c757d;
+      }
+      #todo-list li span.title {
+        flex: 1;
+      }
+      #todo-list li span.date {
+        font-size: 0.75rem;
+        color: #adb5bd;
+      }
+      .actions {
+        display: flex;
+        gap: 0.5rem;
+        margin-top: 1rem;
+      }
+      #log {
+        margin-top: 1.5rem;
+        padding: 0.75rem;
+        background: #212529;
+        color: #0f0;
+        border-radius: 6px;
+        font-family: monospace;
+        font-size: 0.8rem;
+        max-height: 200px;
+        overflow-y: auto;
+        white-space: pre-wrap;
+      }
+      .count {
+        font-size: 0.85rem;
+        color: #6c757d;
+        margin-bottom: 0.5rem;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>🗄️ SQLite WASM Todo</h1>
+    <p style="margin-bottom: 1rem; font-size: 0.85rem; color: #6c757d">
+      .NET (Bootsharp) + SQLite running in-browser via WebAssembly.<br />
+      Data persists in IndexedDB across page reloads.
+    </p>
+
+    <div id="status">⏳ Booting .NET runtime…</div>
+
+    <div class="input-row">
+      <input type="text" id="todo-input" placeholder="What needs to be done?" disabled />
+      <button id="add-btn" disabled>Add</button>
+    </div>
+
+    <div class="count" id="count"></div>
+    <ul id="todo-list"></ul>
+
+    <div class="actions">
+      <button class="secondary" id="export-btn" disabled>💾 Save to IndexedDB</button>
+      <button class="secondary" id="clear-idb-btn" disabled>🗑️ Clear IndexedDB</button>
+    </div>
+
+    <div id="log"></div>
+
+    <script type="module">
+      // ─── IndexedDB helpers ──────────────────────────────────────────────
+      const DB_NAME = 'bootsharp-sqlite-todo';
+      const STORE_NAME = 'database';
+      const DB_KEY = 'sqlite-bytes';
+
+      function openIdb() {
+        return new Promise((resolve, reject) => {
+          const req = indexedDB.open(DB_NAME, 1);
+          req.onupgradeneeded = () => req.result.createObjectStore(STORE_NAME);
+          req.onsuccess = () => resolve(req.result);
+          req.onerror = () => reject(req.error);
+        });
+      }
+
+      async function saveToIdb(bytes) {
+        const db = await openIdb();
+        return new Promise((resolve, reject) => {
+          const tx = db.transaction(STORE_NAME, 'readwrite');
+          tx.objectStore(STORE_NAME).put(bytes, DB_KEY);
+          tx.oncomplete = () => {
+            db.close();
+            resolve();
+          };
+          tx.onerror = () => {
+            db.close();
+            reject(tx.error);
+          };
+        });
+      }
+
+      async function loadFromIdb() {
+        const db = await openIdb();
+        return new Promise((resolve, reject) => {
+          const tx = db.transaction(STORE_NAME, 'readonly');
+          const req = tx.objectStore(STORE_NAME).get(DB_KEY);
+          req.onsuccess = () => {
+            db.close();
+            resolve(req.result ?? null);
+          };
+          req.onerror = () => {
+            db.close();
+            reject(req.error);
+          };
+        });
+      }
+
+      async function clearIdb() {
+        const db = await openIdb();
+        return new Promise((resolve, reject) => {
+          const tx = db.transaction(STORE_NAME, 'readwrite');
+          tx.objectStore(STORE_NAME).delete(DB_KEY);
+          tx.oncomplete = () => {
+            db.close();
+            resolve();
+          };
+          tx.onerror = () => {
+            db.close();
+            reject(tx.error);
+          };
+        });
+      }
+
+      // ─── UI helpers ─────────────────────────────────────────────────────
+      const statusEl = document.getElementById('status');
+      const logEl = document.getElementById('log');
+      const listEl = document.getElementById('todo-list');
+      const countEl = document.getElementById('count');
+      const input = document.getElementById('todo-input');
+      const addBtn = document.getElementById('add-btn');
+      const exportBtn = document.getElementById('export-btn');
+      const clearIdbBtn = document.getElementById('clear-idb-btn');
+
+      function log(msg) {
+        const ts = new Date().toLocaleTimeString();
+        logEl.textContent += `[${ts}] ${msg}\n`;
+        logEl.scrollTop = logEl.scrollHeight;
+        console.log(msg);
+      }
+
+      function setStatus(text, cls) {
+        statusEl.textContent = text;
+        statusEl.className = cls || '';
+      }
+
+      function enableUI() {
+        input.disabled = false;
+        addBtn.disabled = false;
+        exportBtn.disabled = false;
+        clearIdbBtn.disabled = false;
+        input.focus();
+      }
+
+      // ─── Boot .NET runtime ──────────────────────────────────────────────
+      // Bootsharp publishes a rolled-up ES module in AppBundle/_framework/index.mjs
+      const fw = './Backend/bin/Release/net10.0/browser-wasm/AppBundle/_framework/index.mjs';
+      let Backend;
+
+      try {
+        log('Importing Bootsharp module…');
+        const mod = await import(fw);
+
+        // Subscribe to the "ready" event from Program.cs before booting
+        mod.Program.onReady.subscribe((msg) => log(`[.NET] ${msg}`));
+
+        log('Booting .NET WASM runtime…');
+        await mod.default.boot();
+        Backend = mod.Backend;
+        log('Runtime booted ✓');
+
+        // Try restoring from IndexedDB
+        const saved = await loadFromIdb();
+        if (saved) {
+          log(`Found ${saved.byteLength} bytes in IndexedDB — restoring…`);
+          const result = Backend.TodoService.importDatabase(new Uint8Array(saved));
+          log(`Import: ${result}`);
+        } else {
+          log('No saved data — creating fresh database…');
+          const result = Backend.TodoService.initDatabase();
+          log(`Init: ${result}`);
+        }
+
+        setStatus('✅ Ready — SQLite is running in WASM', 'ready');
+        enableUI();
+        refreshList();
+      } catch (err) {
+        setStatus(`❌ Boot failed: ${err.message}`, 'error');
+        log(`FATAL: ${err.stack || err}`);
+      }
+
+      // ─── Todo CRUD ──────────────────────────────────────────────────────
+      function refreshList() {
+        const raw = Backend.TodoService.getAllTodos();
+        if (raw.startsWith('Error:')) { log(`GetAllTodos failed: ${raw}`); return; }
+        const todos = JSON.parse(raw);
+        const countRaw = Backend.TodoService.getTodoCount();
+        if (countRaw.startsWith('Error:')) { log(`GetTodoCount failed: ${countRaw}`); return; }
+        const { count } = JSON.parse(countRaw);
+
+        countEl.textContent = `${count} todo${count === 1 ? '' : 's'}`;
+        listEl.innerHTML = '';
+
+        for (const t of todos) {
+          const li = document.createElement('li');
+          if (t.completed) li.classList.add('completed');
+
+          const cb = document.createElement('input');
+          cb.type = 'checkbox';
+          cb.checked = t.completed;
+          cb.onchange = () => {
+            Backend.TodoService.toggleTodo(t.id);
+            refreshList();
+            autoSave();
+          };
+
+          const title = document.createElement('span');
+          title.className = 'title';
+          title.textContent = t.title;
+
+          const date = document.createElement('span');
+          date.className = 'date';
+          date.textContent = t.createdAt || '';
+
+          const delBtn = document.createElement('button');
+          delBtn.className = 'danger';
+          delBtn.textContent = '✕';
+          delBtn.onclick = () => {
+            Backend.TodoService.deleteTodo(t.id);
+            refreshList();
+            autoSave();
+          };
+
+          li.append(cb, title, date, delBtn);
+          listEl.appendChild(li);
+        }
+      }
+
+      function addTodo() {
+        const title = input.value.trim();
+        if (!title) return;
+        const result = Backend.TodoService.addTodo(title);
+        log(`Added: ${result}`);
+        input.value = '';
+        refreshList();
+        autoSave();
+        input.focus();
+      }
+
+      // Auto-save to IndexedDB after every mutation
+      async function autoSave() {
+        try {
+          const bytes = Backend.TodoService.exportDatabase();
+          await saveToIdb(bytes.buffer);
+          log(`Auto-saved ${bytes.byteLength} bytes to IndexedDB`);
+        } catch (err) {
+          log(`Auto-save failed: ${err.message}`);
+        }
+      }
+
+      // ─── Event listeners ────────────────────────────────────────────────
+      addBtn.onclick = addTodo;
+      input.onkeydown = (e) => {
+        if (e.key === 'Enter') addTodo();
+      };
+
+      exportBtn.onclick = async () => {
+        try {
+          const bytes = Backend.TodoService.exportDatabase();
+          await saveToIdb(bytes.buffer);
+          log(`Manually saved ${bytes.byteLength} bytes to IndexedDB ✓`);
+        } catch (err) {
+          log(`Save failed: ${err.message}`);
+        }
+      };
+
+      clearIdbBtn.onclick = async () => {
+        if (!confirm('Delete all saved data from IndexedDB?')) return;
+        await clearIdb();
+        log('IndexedDB cleared — data will be lost on reload');
+      };
+    </script>
+  </body>
+</html>
