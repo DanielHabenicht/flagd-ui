@@ -1,0 +1,3 @@
+- suppport flag manifests (https://raw.githubusercontent.com/open-feature/cli/refs/heads/main/schema/v0/flag-manifest.json)
+  - Support: https://github.com/open-feature/cli/blob/main/api/v0/sync.yaml
+- Also support: https://raw.githubusercontent.com/thomaspoignant/go-feature-flag/main/.schema/flag-schema.json
