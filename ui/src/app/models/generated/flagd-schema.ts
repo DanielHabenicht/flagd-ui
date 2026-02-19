@@ -10,7 +10,7 @@
  */
 export type FlagdSchema = FlagdFlagConfiguration & {
   flags: Flags;
-  [k: string]: unknown;
+  [k: string]: unknown | undefined;
 };
 /**
  * Defines targeting logic for flagd; a extension of JSONLogic, including purpose-built feature-flagging operations. Note that this schema applies to top-level objects; no additional properties are supported, including "$schema", which means built-in JSON-schema support is not possible in editors. Please use flags.json (which imports this schema) for a rich editor experience.
@@ -75,7 +75,7 @@ export type IfOperator = [
         | FractionalRule
       )
     | (null | boolean | number | string | unknown[])
-  )[],
+  )[]
 ];
 /**
  * A reference to another entity, used for $evaluators (shared rules).
@@ -126,7 +126,7 @@ export type LoseEqualityOperation = [
         | FractionalRule
       )
     | (null | boolean | number | string | unknown[])
-  ),
+  )
 ];
 /**
  * Tests strict equality. Requires two arguments.
@@ -170,7 +170,7 @@ export type StrictEqualityOperation = [
         | FractionalRule
       )
     | (null | boolean | number | string | unknown[])
-  ),
+  )
 ];
 /**
  * Tests not-equal, with type coercion.
@@ -214,7 +214,7 @@ export type LoseInequalityOperation = [
         | FractionalRule
       )
     | (null | boolean | number | string | unknown[])
-  ),
+  )
 ];
 /**
  * Tests strict not-equal.
@@ -258,7 +258,7 @@ export type StrictInequalityOperation = [
         | FractionalRule
       )
     | (null | boolean | number | string | unknown[])
-  ),
+  )
 ];
 /**
  * @minItems 2
@@ -300,7 +300,7 @@ export type GreaterThanOperation = [
         | FractionalRule
       )
     | (null | boolean | number | string | unknown[])
-  ),
+  )
 ];
 /**
  * @minItems 2
@@ -342,7 +342,7 @@ export type GreaterThanOrEqualToOperation = [
         | FractionalRule
       )
     | (null | boolean | number | string | unknown[])
-  ),
+  )
 ];
 /**
  * Finds the remainder after the first argument is divided by the second argument.
@@ -386,7 +386,7 @@ export type ModuloOperation = [
         | FractionalRule
       )
     | (null | boolean | number | string | unknown[])
-  ),
+  )
 ];
 /**
  * @minItems 2
@@ -428,7 +428,7 @@ export type DivisionOperation = [
         | FractionalRule
       )
     | (null | boolean | number | string | unknown[])
-  ),
+  )
 ];
 /**
  * Perform an action on every member of an array. Note, that inside the logic being used to map, var operations are relative to the array element being worked on.
@@ -472,7 +472,7 @@ export type MapOperation = [
         | FractionalRule
       )
     | (null | boolean | number | string | unknown[])
-  ),
+  )
 ];
 /**
  * Keep only elements of the array that pass a test. Note, that inside the logic being used to filter, var operations are relative to the array element being worked on.
@@ -516,7 +516,7 @@ export type FilterOperation = [
         | FractionalRule
       )
     | (null | boolean | number | string | unknown[])
-  ),
+  )
 ];
 /**
  * Perform a test on each member of that array, returning true if all pass. Inside the test code, var operations are relative to the array element being tested.
@@ -560,7 +560,7 @@ export type AllOperation = [
         | FractionalRule
       )
     | (null | boolean | number | string | unknown[])
-  ),
+  )
 ];
 /**
  * Perform a test on each member of that array, returning true if none pass. Inside the test code, var operations are relative to the array element being tested.
@@ -604,7 +604,7 @@ export type NoneOperation = [
         | FractionalRule
       )
     | (null | boolean | number | string | unknown[])
-  ),
+  )
 ];
 /**
  * Perform a test on each member of that array, returning true if some pass. Inside the test code, var operations are relative to the array element being tested.
@@ -648,7 +648,7 @@ export type SomeOperation = [
         | FractionalRule
       )
     | (null | boolean | number | string | unknown[])
-  ),
+  )
 ];
 /**
  * If the second argument is an array, tests that the first argument is a member of the array.
@@ -692,7 +692,7 @@ export type InOperation = [
         | FractionalRule
       )
     | (null | boolean | number | string | unknown[])
-  ),
+  )
 ];
 /**
  * Get a portion of a string. Give a positive start position to return everything beginning at that index. Give a negative start position to work backwards from the end of the string, then return everything. Give a positive length to express how many characters to return.
@@ -737,7 +737,7 @@ export type SubstringOperation =
             | FractionalRule
           )
         | (null | boolean | number | string | unknown[])
-      ),
+      )
     ]
   | [
       (
@@ -793,7 +793,7 @@ export type SubstringOperation =
             | FractionalRule
           )
         | (null | boolean | number | string | unknown[])
-      ),
+      )
     ];
 /**
  * @minItems 2
@@ -836,7 +836,7 @@ export type LessThanBetweenOperationCanBeUsedToTestThatOneValueIsBetweenTwoOther
             | FractionalRule
           )
         | (null | boolean | number | string | unknown[])
-      ),
+      )
     ]
   | [
       (
@@ -892,7 +892,7 @@ export type LessThanBetweenOperationCanBeUsedToTestThatOneValueIsBetweenTwoOther
             | FractionalRule
           )
         | (null | boolean | number | string | unknown[])
-      ),
+      )
     ];
 /**
  * @minItems 2
@@ -935,7 +935,7 @@ export type LessThanOrEqualToBetweenOperationCanBeUsedToTestThatOneValueIsBetwee
             | FractionalRule
           )
         | (null | boolean | number | string | unknown[])
-      ),
+      )
     ]
   | [
       (
@@ -991,7 +991,7 @@ export type LessThanOrEqualToBetweenOperationCanBeUsedToTestThatOneValueIsBetwee
             | FractionalRule
           )
         | (null | boolean | number | string | unknown[])
-      ),
+      )
     ];
 /**
  * Multiplication; associative, will accept and unlimited amount of arguments.
@@ -1052,7 +1052,7 @@ export type MultiplicationOperation = [
         | FractionalRule
       )
     | (null | boolean | number | string | unknown[])
-  )[],
+  )[]
 ];
 /**
  * Logical negation (“not”). Takes just one argument.
@@ -1074,7 +1074,7 @@ export type NegationOperation =
           | RuleSemVer
           | FractionalRule
         )
-      | (null | boolean | number | string | unknown[]),
+      | (null | boolean | number | string | unknown[])
     ]
   | (
       | Reference
@@ -1114,7 +1114,7 @@ export type DoubleNegationOperation =
           | RuleSemVer
           | FractionalRule
         )
-      | (null | boolean | number | string | unknown[]),
+      | (null | boolean | number | string | unknown[])
     ]
   | (
       | Reference
@@ -1175,7 +1175,7 @@ export type OrOperation = [
         | FractionalRule
       )
     | (null | boolean | number | string | unknown[])
-  )[],
+  )[]
 ];
 /**
  * Simple boolean test, with 1 or more arguments. At a more sophisticated level, "and" returns the first falsy argument, or the last argument.
@@ -1218,7 +1218,7 @@ export type VariadicOp = [
         | FractionalRule
       )
     | (null | boolean | number | string | unknown[])
-  )[],
+  )[]
 ];
 /**
  * Addition; associative, will accept and unlimited amount of arguments.
@@ -1261,7 +1261,7 @@ export type AdditionOperation = [
         | FractionalRule
       )
     | (null | boolean | number | string | unknown[])
-  )[],
+  )[]
 ];
 /**
  * @minItems 1
@@ -1302,7 +1302,7 @@ export type SubtractionOperation = [
         | FractionalRule
       )
     | (null | boolean | number | string | unknown[])
-  )[],
+  )[]
 ];
 /**
  * Return the maximum from a list of values.
@@ -1345,7 +1345,7 @@ export type MaximumOperation = [
         | FractionalRule
       )
     | (null | boolean | number | string | unknown[])
-  )[],
+  )[]
 ];
 /**
  * Return the minimum from a list of values.
@@ -1388,7 +1388,7 @@ export type MinimumOperation = [
         | FractionalRule
       )
     | (null | boolean | number | string | unknown[])
-  )[],
+  )[]
 ];
 /**
  * Takes one or more arrays, and merges them into one array. If arguments aren't arrays, they get cast to arrays.
@@ -1431,7 +1431,7 @@ export type MergeOperation = [
         | FractionalRule
       )
     | (null | boolean | number | string | unknown[])
-  )[],
+  )[]
 ];
 /**
  * Concatenate all the supplied arguments. Note that this is not a join or implode operation, there is no “glue” string.
@@ -1474,7 +1474,7 @@ export type ConcatenateOperation = [
         | FractionalRule
       )
     | (null | boolean | number | string | unknown[])
-  )[],
+  )[]
 ];
 /**
  * Combine all the elements in an array into a single value, like adding up a list of numbers. Note, that inside the logic being used to reduce, var operations only have access to an object with a "current" and a "accumulator".
@@ -1536,7 +1536,7 @@ export type ReduceOperation = [
         | FractionalRule
       )
     | (null | boolean | number | string | unknown[])
-  ),
+  )
 ];
 /**
  * The string attribute starts with the specified string value.
@@ -1578,7 +1578,7 @@ export type StartsWithOperation = [
         | RuleSemVer
         | FractionalRule
       )
-  ),
+  )
 ];
 /**
  * The string attribute ends with the specified string value.
@@ -1620,7 +1620,7 @@ export type EndsWithOperation = [
         | RuleSemVer
         | FractionalRule
       )
-  ),
+  )
 ];
 /**
  * Attribute matches a semantic version condition. Accepts "npm-style" range specifiers: "=", "!=", ">", "<", ">=", "<=", "~" (match minor version), "^" (match major version).
@@ -1631,7 +1631,7 @@ export type EndsWithOperation = [
 export type SemanticVersionOperation = [
   SemanticVersionString | VarOperation,
   '=' | '!=' | '>' | '<' | '>=' | '<=' | '~' | '^',
-  SemanticVersionString | VarOperation,
+  SemanticVersionString | VarOperation
 ];
 /**
  * A string representing a valid semantic version expression as per https://semver.org/.
@@ -1661,7 +1661,7 @@ export type FractionalOp = [
   ),
   FractionalWeightArg,
   FractionalWeightArg,
-  ...FractionalWeightArg[],
+  ...FractionalWeightArg[]
 ];
 /**
  * Distribution for all possible variants, with their associated weighting.
@@ -1673,24 +1673,14 @@ export type FractionalWeightArg = [string] | [string, number];
 /**
  * @minItems 2
  */
-export type FractionalShorthandOp = [
-  FractionalWeightArg,
-  FractionalWeightArg,
-  ...FractionalWeightArg[],
-];
+export type FractionalShorthandOp = [FractionalWeightArg, FractionalWeightArg, ...FractionalWeightArg[]];
 /**
  * This interface was referenced by `Flags`'s JSON-Schema definition
  * via the `patternProperty` "^.{1,}$".
- *
- * This interface was referenced by `undefined`'s JSON-Schema
- * via the `definition` "anyFlag".
  */
 export type AnyFlag = BooleanFlag | NumericFlag | StringFlag | ObjectFlag;
 /**
  * A flag having boolean values.
- *
- * This interface was referenced by `undefined`'s JSON-Schema
- * via the `definition` "booleanFlag".
  */
 export type BooleanFlag = BaseFlag & BooleanVariants;
 /**
@@ -1722,59 +1712,24 @@ export type FlagdTargeting1 =
     );
 /**
  * A flag having numeric values.
- *
- * This interface was referenced by `undefined`'s JSON-Schema
- * via the `definition` "numberFlag".
  */
 export type NumericFlag = BaseFlag & NumberVariants;
 /**
  * A flag having string values.
- *
- * This interface was referenced by `undefined`'s JSON-Schema
- * via the `definition` "stringFlag".
  */
 export type StringFlag = BaseFlag & StringVariants;
 /**
  * A flag having arbitrary object values.
- *
- * This interface was referenced by `undefined`'s JSON-Schema
- * via the `definition` "objectFlag".
  */
 export type ObjectFlag = BaseFlag & ObjectVariants;
-/**
- * Top-level flags array. All flags are defined here.
- *
- * This interface was referenced by `undefined`'s JSON-Schema
- * via the `definition` "flagsArray".
- */
-export type Flags1 = (AnyFlag & {
-  /**
-   * Key of the flag: uniquely identifies this flag within it's flagSet
-   */
-  key: string;
-  [k: string]: unknown;
-})[];
-/**
- * Defines flags for use in the flagd daemon (a superset of what's available in providers), including typed variants and rules. Flags can be defined as an array or an object.
- *
- * This interface was referenced by `undefined`'s JSON-Schema
- * via the `definition` "flagdConfig".
- */
-export type FlagdConfig = FlagdFlagConfiguration & {
-  flags?: Flags | Flags1;
-  [k: string]: unknown;
-};
 
 /**
  * Defines flags for use in flagd providers, including typed variants and rules.
- *
- * This interface was referenced by `undefined`'s JSON-Schema
- * via the `definition` "baseConfig".
  */
 export interface FlagdFlagConfiguration {
   $evaluators?: Evaluators;
   metadata?: FlagSetMetadata;
-  [k: string]: unknown;
+  [k: string]: unknown | undefined;
 }
 /**
  * Reusable targeting rules that can be referenced with "$ref": "myRule" in multiple flags.
@@ -1789,7 +1744,7 @@ export interface VarOperation {
   var?:
     | string
     | {
-        [k: string]: unknown;
+        [k: string]: unknown | undefined;
       }
     | [string, ...(null | boolean | string | number)[]];
 }
@@ -1885,21 +1840,14 @@ export interface FlagSetMetadata {
    * The version of the flag set.
    */
   version?: string;
-  [k: string]: string | number | boolean | undefined;
+  [k: string]: (string | number | boolean) | undefined;
 }
 /**
  * Top-level flags object. All flags are defined here.
- *
- * This interface was referenced by `undefined`'s JSON-Schema
- * via the `definition` "flagsMap".
  */
 export interface Flags {
   [k: string]: AnyFlag;
 }
-/**
- * This interface was referenced by `undefined`'s JSON-Schema
- * via the `definition` "baseFlag".
- */
 export interface BaseFlag {
   state: FlagState;
   defaultVariant?: DefaultVariant;
@@ -1912,18 +1860,14 @@ export interface BaseFlag {
      */
     [k: string]: unknown;
   };
-  [k: string]: unknown;
+  [k: string]: unknown | undefined;
 }
 /**
  * Metadata about an individual feature flag, with keys of type string, and values of type boolean, string, or number.
  */
 export interface FlagMetadata {
-  [k: string]: string | number | boolean;
+  [k: string]: (string | number | boolean) | undefined;
 }
-/**
- * This interface was referenced by `undefined`'s JSON-Schema
- * via the `definition` "booleanVariants".
- */
 export interface BooleanVariants {
   variants?: {
     /**
@@ -1932,12 +1876,8 @@ export interface BooleanVariants {
      */
     [k: string]: boolean;
   };
-  [k: string]: unknown;
+  [k: string]: unknown | undefined;
 }
-/**
- * This interface was referenced by `undefined`'s JSON-Schema
- * via the `definition` "numberVariants".
- */
 export interface NumberVariants {
   variants?: {
     /**
@@ -1946,12 +1886,8 @@ export interface NumberVariants {
      */
     [k: string]: number;
   };
-  [k: string]: unknown;
+  [k: string]: unknown | undefined;
 }
-/**
- * This interface was referenced by `undefined`'s JSON-Schema
- * via the `definition` "stringVariants".
- */
 export interface StringVariants {
   variants?: {
     /**
@@ -1960,12 +1896,8 @@ export interface StringVariants {
      */
     [k: string]: string;
   };
-  [k: string]: unknown;
+  [k: string]: unknown | undefined;
 }
-/**
- * This interface was referenced by `undefined`'s JSON-Schema
- * via the `definition` "objectVariants".
- */
 export interface ObjectVariants {
   variants?: {
     /**
@@ -1973,15 +1905,8 @@ export interface ObjectVariants {
      * via the `patternProperty` "^.{1,}$".
      */
     [k: string]: {
-      [k: string]: unknown;
+      [k: string]: unknown | undefined;
     };
   };
-  [k: string]: unknown;
-}
-/**
- * This interface was referenced by `undefined`'s JSON-Schema
- * via the `definition` "metadata".
- */
-export interface Metadata {
-  [k: string]: string | number | boolean;
+  [k: string]: unknown | undefined;
 }

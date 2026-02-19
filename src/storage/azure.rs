@@ -3,10 +3,8 @@ use crate::error::{AppError, AppResult};
 use async_trait::async_trait;
 use azure_core::credentials::TokenCredential;
 use azure_core::http::RequestContent;
-use azure_identity::{ClientSecretCredential, DeveloperToolsCredential, ManagedIdentityCredential};
 use azure_storage_blob::clients::BlobContainerClient;
 use azure_storage_blob::BlobServiceClient;
-use futures::StreamExt;
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -29,6 +27,7 @@ fn sanitize_service_url_for_logs(service_url: &str) -> String {
 /// Azure Blob Storage backend
 pub struct AzureStorage {
     container_client: Arc<BlobContainerClient>,
+    configured_blob_name: String,
 }
 
 #[derive(Default)]
@@ -46,12 +45,13 @@ impl AzureStorage {
     /// Supported format:
     /// - azblob://my-container/myblob.json
     pub fn new(uri: &str) -> AppResult<Self> {
-        let container_name = Self::parse_uri(uri)?;
+        let (container_name, configured_blob_name) = Self::parse_uri(uri)?;
         let blob_service = Self::create_blob_service_client()?;
         let container_client = blob_service.blob_container_client(&container_name);
 
         Ok(Self {
             container_client: Arc::new(container_client),
+            configured_blob_name,
         })
     }
 
@@ -59,15 +59,14 @@ impl AzureStorage {
     ///
     /// Supported format:
     /// - azblob://my-container/myblob.json
-    fn parse_uri(uri: &str) -> AppResult<String> {
+    fn parse_uri(uri: &str) -> AppResult<(String, String)> {
         // Remove azblob:// prefix
         let path = uri
             .strip_prefix("azblob://")
             .ok_or_else(|| internal_error("URI must start with azblob://".to_string()))?;
 
         let parts: Vec<&str> = path.split('/').collect();
-        if parts[0].is_empty() {
-            // || parts.len() != 2 || parts[1].is_empty() {
+        if parts.len() != 2 || parts[0].is_empty() || parts[1].is_empty() {
             return Err(internal_error(
                 "Invalid Azure Blob URI format. Expected: azblob://my-container/myblob.json"
                     .to_string(),
@@ -92,7 +91,7 @@ impl AzureStorage {
             ));
         }
 
-        Ok(parts[0].to_string())
+        Ok((parts[0].to_string(), parts[1].to_string()))
     }
 
     fn parse_connection_string(connection_string: &str) -> HashMap<String, String> {
@@ -218,7 +217,7 @@ impl AzureStorage {
             ));
         }
 
-        let mut service_url = if let Some(blob_endpoint) = explicit_blob_endpoint {
+        let service_url = if let Some(blob_endpoint) = explicit_blob_endpoint {
             blob_endpoint.trim_end_matches('/').to_string()
         } else if service_opts.is_local_emulator {
             format!(
@@ -274,12 +273,14 @@ impl AzureStorage {
 
     /// Validate blob name to prevent path traversal
     fn validate_blob_name(&self, name: &str) -> AppResult<String> {
-        if name.contains("..") || name.is_empty() {
-            return Err(internal_error(
-                "Invalid blob name: cannot contain '..' or be empty".to_string(),
-            ));
+        if name != self.configured_blob_name {
+            return Err(not_found_error(format!(
+                "Flag definition '{}' not found",
+                name
+            )));
         }
-        Ok(name.to_owned())
+
+        Ok(self.configured_blob_name.clone())
     }
 
     /// Helper to check if an error is a 404
@@ -293,37 +294,22 @@ impl AzureStorage {
 #[async_trait]
 impl StorageBackend for AzureStorage {
     async fn list_flags(&self) -> AppResult<Vec<String>> {
-        let mut files = Vec::new();
-
-        // List all blobs in the container
-        let mut pager = self
+        let blob_client = self
             .container_client
-            .list_blobs(None)
-            .map_err(|e| internal_error(format!("Failed to create list blobs pager: {}", e)))?;
+            .blob_client(&self.configured_blob_name);
 
-        while let Some(result) = pager.next().await {
-            match result {
-                Ok(page) => {
-                    if let Some(name) = page.name {
-                        // BlobName.content is an Option<String>
-                        if let Some(name_str) = &name.content {
-                            files.push(name_str.to_string());
-                        }
-                    }
-                }
-                Err(e) => {
-                    // If container doesn't exist (404), return empty list
-                    if Self::is_not_found_error(&e) {
-                        tracing::warn!("Container not found, returning empty list");
-                        return Ok(vec![]);
-                    }
-                    return Err(internal_error(format!("Failed to list blobs: {}", e)));
+        match blob_client.exists().await {
+            Ok(true) => Ok(vec![self.configured_blob_name.clone()]),
+            Ok(false) => Ok(vec![]),
+            Err(e) => {
+                if Self::is_not_found_error(&e) {
+                    tracing::warn!("Container or blob not found, returning empty list");
+                    Ok(vec![])
+                } else {
+                    Err(internal_error(format!("Failed to list blobs: {}", e)))
                 }
             }
         }
-
-        files.sort();
-        Ok(files)
     }
 
     async fn read_flag(&self, name: &str) -> AppResult<serde_json::Value> {

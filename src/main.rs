@@ -70,10 +70,13 @@ fn create_router(config: &ServerConfig, app_state: handlers::api::AppState) -> R
     // API routes - prefix all with /api
     let api_routes = Router::new()
         // Flag management endpoints
-        .route("/flags", get(list_flags).post(create_flag))
+        .route("/flags", get(list_flags))
         .route(
             "/flags/:name",
-            get(get_flag).put(update_flag).delete(delete_flag),
+            get(get_flag)
+                .post(create_flag)
+                .put(update_flag)
+                .delete(delete_flag),
         )
         .with_state(app_state);
 

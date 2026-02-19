@@ -4,7 +4,6 @@ import { Action, createSelector, NgxsOnInit, Selector, State, StateContext } fro
 import { firstValueFrom } from 'rxjs';
 import { DEFAULT_BACKEND_ROOT } from '../../environments';
 import { FlagsService } from '../api-client/api/flags.service';
-import { CreateFlagRequest } from '../api-client/model/createFlagRequest';
 import { UpdateFlagRequest } from '../api-client/model/updateFlagRequest';
 import { FlagFileContent } from '../models/flag.models';
 import { FileSystemAccess } from '../services/file-system-access';
@@ -381,11 +380,7 @@ export class FlagFileStore implements NgxsOnInit {
         if (remoteFileNames.has(file.name)) {
           await firstValueFrom(api.updateFlag(file.name, updatePayload));
         } else {
-          const createPayload: CreateFlagRequest = {
-            name: file.name,
-            ...updatePayload,
-          };
-          await firstValueFrom(api.createFlag(createPayload));
+          await firstValueFrom(api.createFlag(file.name, updatePayload));
         }
       }
 

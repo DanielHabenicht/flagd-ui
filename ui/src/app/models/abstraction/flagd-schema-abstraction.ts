@@ -107,7 +107,9 @@ export class FlagdSchemaAbstraction {
       } as DisplayFlag;
 
       if (flagDef.metadata) {
-        displayFlag.metadata = flagDef.metadata;
+        displayFlag.metadata = Object.fromEntries(
+          Object.entries(flagDef.metadata).filter(([, v]) => v !== undefined),
+        ) as Record<string, string | number | boolean>;
       }
 
       // Parse time windows from targeting and populate perEnvironmentDefinitions

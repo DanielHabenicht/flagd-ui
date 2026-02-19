@@ -29,7 +29,7 @@ impl IntoResponse for AppError {
             }
             AppError::BadRequest(msg) => {
                 tracing::warn!(error = %msg, "Request failed with bad request error");
-                (StatusCode::BAD_REQUEST, "Bad request".to_string())
+                (StatusCode::BAD_REQUEST, msg)
             }
             AppError::InternalServerError(msg) => {
                 tracing::error!(error = %msg, "Request failed with internal server error");

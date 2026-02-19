@@ -4,7 +4,7 @@ use axum::{
     response::IntoResponse,
     Json,
 };
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use std::{fs, path::PathBuf, sync::Arc};
 use utoipa::ToSchema;
 
@@ -49,50 +49,6 @@ pub struct AppState {
     pub config: Arc<ServerConfig>,
     pub schema: Arc<jsonschema::Validator>,
     pub storage: Arc<dyn StorageBackend>,
-}
-
-/// Request payload for creating a new flag definition file
-#[derive(Debug, Deserialize, ToSchema)]
-pub struct CreateFlagRequest {
-    /// Name of the flag definition file
-    #[schema(example = "my-flags")]
-    pub name: String,
-    /// Flag definitions (without $schema property)
-    #[schema(value_type = Object)]
-    pub flags: serde_json::Value,
-    /// Optional metadata for the full flag set
-    #[schema(value_type = Object)]
-    pub metadata: Option<serde_json::Map<String, serde_json::Value>>,
-    /// Optional reusable evaluators for targeting logic
-    #[serde(rename = "$evaluators")]
-    #[schema(value_type = Object)]
-    pub evaluators: Option<serde_json::Map<String, serde_json::Value>>,
-}
-
-/// Request payload for updating a flag definition file
-#[derive(Debug, Deserialize, ToSchema)]
-pub struct UpdateFlagRequest {
-    /// Flag definitions (without $schema property)
-    #[schema(value_type = Object)]
-    pub flags: serde_json::Value,
-    /// Optional metadata for the full flag set
-    #[schema(value_type = Object)]
-    pub metadata: Option<serde_json::Map<String, serde_json::Value>>,
-    /// Optional reusable evaluators for targeting logic
-    #[serde(rename = "$evaluators")]
-    #[schema(value_type = Object)]
-    pub evaluators: Option<serde_json::Map<String, serde_json::Value>>,
-}
-
-/// Response for a single flag definition file
-#[derive(Debug, Serialize, ToSchema)]
-pub struct FlagDefinitionResponse {
-    /// Name of the flag definition file
-    #[schema(example = "my-flags")]
-    pub name: String,
-    /// Complete flag definition content including $schema
-    #[schema(value_type = Object)]
-    pub content: serde_json::Value,
 }
 
 /// Response for listing all flag definition files
@@ -186,10 +142,13 @@ pub async fn get_flag(
 /// Create a new flag definition file
 #[utoipa::path(
     post,
-    path = "/api/flags",
-    request_body = CreateFlagRequest,
+    path = "/api/flags/{name}",
+    params(
+        ("name" = String, Path, description = "Name of the flag definition file to create")
+    ),
+    request_body = Object,
     responses(
-        (status = 201, description = "Flag definition file created successfully", body = FlagDefinitionResponse),
+        (status = 201, description = "Flag definition file created successfully", body = Object),
         (status = 400, description = "Invalid request or validation failed"),
         (status = 500, description = "Internal server error")
     ),
@@ -197,45 +156,30 @@ pub async fn get_flag(
 )]
 pub async fn create_flag(
     State(state): State<AppState>,
-    Json(payload): Json<CreateFlagRequest>,
+    Path(name): Path<String>,
+    Json(payload): Json<serde_json::Value>,
 ) -> AppResult<impl IntoResponse> {
     // Check if file already exists
-    if state.storage.flag_exists(&payload.name).await? {
+    if state.storage.flag_exists(&name).await? {
         return Err(AppError::BadRequest(format!(
             "Flag definition '{}' already exists",
-            payload.name
+            name
         )));
     }
 
-    let mut complete_doc = serde_json::json!({
-        "$schema": "https://flagd.dev/schema/v0/flags.json",
-        "flags": payload.flags
-    });
-
-    if let Some(metadata) = payload.metadata {
-        complete_doc["metadata"] = serde_json::Value::Object(metadata);
-    }
-
-    if let Some(evaluators) = payload.evaluators {
-        complete_doc["$evaluators"] = serde_json::Value::Object(evaluators);
+    if !payload.is_object() {
+        return Err(AppError::BadRequest(
+            "Request body must be a JSON object".to_string(),
+        ));
     }
 
     // Validate the full document against the schema
-    validate_flags(&state.schema, &complete_doc)?;
+    validate_flags(&state.schema, &payload)?;
 
     // Write the file
-    state
-        .storage
-        .write_flag(&payload.name, &complete_doc)
-        .await?;
+    state.storage.write_flag(&name, &payload).await?;
 
-    Ok((
-        StatusCode::CREATED,
-        Json(FlagDefinitionResponse {
-            name: payload.name,
-            content: complete_doc,
-        }),
-    ))
+    Ok((StatusCode::CREATED, Json(payload)))
 }
 
 /// Update an existing flag definition file
@@ -245,9 +189,9 @@ pub async fn create_flag(
     params(
         ("name" = String, Path, description = "Name of the flag definition file to update")
     ),
-    request_body = UpdateFlagRequest,
+    request_body = Object,
     responses(
-        (status = 200, description = "Flag definition file updated successfully", body = FlagDefinitionResponse),
+        (status = 200, description = "Flag definition file updated successfully", body = Object),
         (status = 404, description = "Flag definition not found"),
         (status = 400, description = "Invalid request or validation failed"),
         (status = 500, description = "Internal server error")
@@ -257,7 +201,7 @@ pub async fn create_flag(
 pub async fn update_flag(
     State(state): State<AppState>,
     Path(name): Path<String>,
-    Json(payload): Json<UpdateFlagRequest>,
+    Json(payload): Json<serde_json::Value>,
 ) -> AppResult<impl IntoResponse> {
     // Check if file exists
     if !state.storage.flag_exists(&name).await? {
@@ -267,45 +211,19 @@ pub async fn update_flag(
         )));
     }
 
-    // Preserve existing metadata if the client does not send it.
-    let existing_json = state.storage.read_flag(&name).await?;
-
-    let existing_metadata = existing_json
-        .get("metadata")
-        .and_then(|value| value.as_object())
-        .cloned();
-
-    let existing_evaluators = existing_json
-        .get("$evaluators")
-        .and_then(|value| value.as_object())
-        .cloned();
-
-    let metadata_to_write = payload.metadata.or(existing_metadata);
-    let evaluators_to_write = payload.evaluators.or(existing_evaluators);
-
-    let mut complete_doc = serde_json::json!({
-        "$schema": "https://flagd.dev/schema/v0/flags.json",
-        "flags": payload.flags
-    });
-
-    if let Some(metadata) = metadata_to_write {
-        complete_doc["metadata"] = serde_json::Value::Object(metadata);
-    }
-
-    if let Some(evaluators) = evaluators_to_write {
-        complete_doc["$evaluators"] = serde_json::Value::Object(evaluators);
+    if !payload.is_object() {
+        return Err(AppError::BadRequest(
+            "Request body must be a JSON object".to_string(),
+        ));
     }
 
     // Validate the full document against the schema
-    validate_flags(&state.schema, &complete_doc)?;
+    validate_flags(&state.schema, &payload)?;
 
     // Write the file
-    state.storage.write_flag(&name, &complete_doc).await?;
+    state.storage.write_flag(&name, &payload).await?;
 
-    Ok(Json(FlagDefinitionResponse {
-        name,
-        content: complete_doc,
-    }))
+    Ok(Json(payload))
 }
 
 /// Delete a flag definition file

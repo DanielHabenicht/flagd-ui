@@ -35,9 +35,7 @@ pub mod flags_impl;
 mod handlers {
     pub mod api {
         pub use crate::flags_impl as flags;
-        pub use crate::flags_impl::{
-            CreateFlagRequest, FlagDefinitionResponse, ListFlagsResponse, UpdateFlagRequest,
-        };
+        pub use crate::flags_impl::ListFlagsResponse;
     }
 }
 

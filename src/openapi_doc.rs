@@ -12,9 +12,6 @@ use utoipa::OpenApi;
     ),
     components(
         schemas(
-            crate::handlers::api::CreateFlagRequest,
-            crate::handlers::api::UpdateFlagRequest,
-            crate::handlers::api::FlagDefinitionResponse,
             crate::handlers::api::ListFlagsResponse,
         )
     ),

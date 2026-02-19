@@ -63,7 +63,7 @@ async function generateTypes() {
       const targetingTypes = await compileFromFile(tempSchemaPath, {
         cwd: SCHEMA_DIR,
         bannerComment: BANNER_COMMENT,
-        unreachableDefinitions: true,
+        strictIndexSignatures: true,
         style: { singleQuote: true },
       });
 
