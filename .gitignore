@@ -7,6 +7,9 @@ tmpclaude-*-cwd
 Cargo.lock
 *.pdb
 
+# wasm-tryout build artifacts
+wasm-tryout/target/
+
 # Environment files
 .env
 .env.local
