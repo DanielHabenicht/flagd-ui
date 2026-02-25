@@ -3,227 +3,310 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Bootsharp + SQLite WASM — Todo App</title>
+    <title>Flagd Schema Manager — WASM</title>
     <style>
-      * {
-        box-sizing: border-box;
-        margin: 0;
-        padding: 0;
-      }
+      * { box-sizing: border-box; margin: 0; padding: 0; }
       body {
-        font-family:
-          system-ui,
-          -apple-system,
-          sans-serif;
-        max-width: 640px;
-        margin: 2rem auto;
-        padding: 0 1rem;
+        font-family: system-ui, -apple-system, sans-serif;
         background: #f8f9fa;
         color: #212529;
-      }
-      h1 {
-        margin-bottom: 0.5rem;
-      }
-      #status {
-        padding: 0.5rem;
-        margin-bottom: 1rem;
-        border-radius: 6px;
-        font-size: 0.9rem;
-        background: #e9ecef;
-      }
-      #status.ready {
-        background: #d4edda;
-        color: #155724;
-      }
-      #status.error {
-        background: #f8d7da;
-        color: #721c24;
-      }
-      .input-row {
+        height: 100vh;
         display: flex;
-        gap: 0.5rem;
-        margin-bottom: 1rem;
+        flex-direction: column;
       }
-      .input-row input {
-        flex: 1;
-        padding: 0.5rem 0.75rem;
-        border: 1px solid #ced4da;
-        border-radius: 6px;
-        font-size: 1rem;
-      }
-      button {
-        padding: 0.5rem 1rem;
-        border: none;
-        border-radius: 6px;
-        font-size: 0.9rem;
-        cursor: pointer;
+      header {
+        padding: 0.75rem 1rem;
         background: #0d6efd;
         color: #fff;
-      }
-      button:hover {
-        background: #0b5ed7;
-      }
-      button.danger {
-        background: #dc3545;
-      }
-      button.danger:hover {
-        background: #bb2d3b;
-      }
-      button.secondary {
-        background: #6c757d;
-      }
-      button.secondary:hover {
-        background: #5c636a;
-      }
-      button:disabled {
-        opacity: 0.5;
-        cursor: not-allowed;
-      }
-      #todo-list {
-        list-style: none;
-      }
-      #todo-list li {
         display: flex;
         align-items: center;
-        gap: 0.75rem;
-        padding: 0.75rem;
-        margin-bottom: 0.5rem;
-        background: #fff;
-        border: 1px solid #dee2e6;
-        border-radius: 6px;
+        gap: 1rem;
       }
-      #todo-list li.completed span.title {
-        text-decoration: line-through;
-        color: #6c757d;
+      header h1 { font-size: 1.1rem; flex: 1; }
+      #status {
+        font-size: 0.8rem;
+        padding: 0.3rem 0.6rem;
+        border-radius: 4px;
+        background: rgba(255,255,255,0.2);
       }
-      #todo-list li span.title {
-        flex: 1;
-      }
-      #todo-list li span.date {
-        font-size: 0.75rem;
-        color: #adb5bd;
-      }
-      .actions {
+      #status.ready  { background: #d4edda; color: #155724; }
+      #status.error  { background: #f8d7da; color: #721c24; }
+      .main {
         display: flex;
-        gap: 0.5rem;
-        margin-top: 1rem;
+        flex: 1;
+        overflow: hidden;
       }
+      /* ── Files panel ── */
+      #files-panel {
+        width: 220px;
+        min-width: 180px;
+        border-right: 1px solid #dee2e6;
+        display: flex;
+        flex-direction: column;
+        background: #fff;
+      }
+      #files-panel h2 {
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: #6c757d;
+        padding: 0.6rem 0.75rem 0.3rem;
+      }
+      #file-list { flex: 1; overflow-y: auto; }
+      .file-item {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        padding: 0.5rem 0.75rem;
+        cursor: pointer;
+        border-bottom: 1px solid #f1f3f5;
+        font-size: 0.9rem;
+      }
+      .file-item:hover { background: #f1f3f5; }
+      .file-item.active { background: #e7f1ff; font-weight: 600; }
+      .file-item span.name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .file-item button { padding: 0.15rem 0.4rem; font-size: 0.75rem; }
+      #new-file-row {
+        display: flex;
+        gap: 0.4rem;
+        padding: 0.5rem;
+        border-top: 1px solid #dee2e6;
+      }
+      #new-file-row input { flex: 1; padding: 0.35rem 0.5rem; font-size: 0.85rem; border: 1px solid #ced4da; border-radius: 4px; }
+      /* ── Content panel ── */
+      #content {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+      #no-file {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex: 1;
+        color: #6c757d;
+        font-size: 0.95rem;
+      }
+      /* tabs */
+      .tabs {
+        display: flex;
+        border-bottom: 2px solid #dee2e6;
+        padding: 0 0.75rem;
+        background: #fff;
+      }
+      .tab-btn {
+        padding: 0.5rem 1rem;
+        border: none;
+        background: none;
+        font-size: 0.9rem;
+        cursor: pointer;
+        color: #6c757d;
+        border-bottom: 2px solid transparent;
+        margin-bottom: -2px;
+      }
+      .tab-btn.active { color: #0d6efd; border-bottom-color: #0d6efd; font-weight: 600; }
+      .tab-panel { display: none; flex: 1; overflow: auto; padding: 0.75rem; }
+      .tab-panel.active { display: flex; flex-direction: column; gap: 0.5rem; }
+      /* tables */
+      table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+      th { text-align: left; padding: 0.4rem 0.5rem; background: #f1f3f5; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em; color: #6c757d; }
+      td { padding: 0.4rem 0.5rem; border-bottom: 1px solid #f1f3f5; vertical-align: middle; }
+      tr:hover td { background: #f8f9fa; }
+      .badge {
+        display: inline-block;
+        padding: 0.1rem 0.4rem;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        background: #e9ecef;
+        color: #495057;
+      }
+      .badge.enabled  { background: #d4edda; color: #155724; }
+      .badge.disabled { background: #f8d7da; color: #721c24; }
+      .badge.boolean  { background: #cfe2ff; color: #084298; }
+      .badge.string   { background: #fff3cd; color: #664d03; }
+      .badge.number   { background: #d1e7dd; color: #0a3622; }
+      .badge.object   { background: #e2d9f3; color: #432874; }
+      /* forms */
+      .form-row { display: flex; gap: 0.5rem; align-items: flex-end; flex-wrap: wrap; }
+      .form-row label { display: flex; flex-direction: column; gap: 0.2rem; font-size: 0.8rem; color: #495057; }
+      .form-row input, .form-row select, .form-row textarea {
+        padding: 0.35rem 0.5rem;
+        border: 1px solid #ced4da;
+        border-radius: 4px;
+        font-size: 0.85rem;
+        font-family: inherit;
+      }
+      .form-row textarea { font-family: monospace; resize: vertical; }
+      /* schema tab */
+      #schema-out { font-family: monospace; font-size: 0.8rem; white-space: pre; background: #212529; color: #a8ff78; padding: 0.75rem; border-radius: 6px; overflow: auto; max-height: 400px; }
+      /* buttons */
+      button { padding: 0.4rem 0.8rem; border: none; border-radius: 4px; font-size: 0.85rem; cursor: pointer; background: #0d6efd; color: #fff; }
+      button:hover { background: #0b5ed7; }
+      button.sm { padding: 0.2rem 0.5rem; font-size: 0.75rem; }
+      button.danger { background: #dc3545; }
+      button.danger:hover { background: #bb2d3b; }
+      button.secondary { background: #6c757d; }
+      button.secondary:hover { background: #5c636a; }
+      button.success { background: #198754; }
+      button.success:hover { background: #146c43; }
+      button:disabled { opacity: 0.5; cursor: not-allowed; }
+      /* log */
       #log {
-        margin-top: 1.5rem;
-        padding: 0.75rem;
+        height: 120px;
+        padding: 0.5rem 0.75rem;
         background: #212529;
         color: #0f0;
-        border-radius: 6px;
         font-family: monospace;
-        font-size: 0.8rem;
-        max-height: 200px;
+        font-size: 0.75rem;
         overflow-y: auto;
         white-space: pre-wrap;
+        flex-shrink: 0;
+        border-top: 2px solid #495057;
       }
-      .count {
-        font-size: 0.85rem;
-        color: #6c757d;
-        margin-bottom: 0.5rem;
+      .idb-bar {
+        display: flex;
+        gap: 0.5rem;
+        padding: 0.4rem 0.75rem;
+        background: #fff;
+        border-top: 1px solid #dee2e6;
       }
     </style>
   </head>
   <body>
-    <h1>🗄️ SQLite WASM Todo</h1>
-    <p style="margin-bottom: 1rem; font-size: 0.85rem; color: #6c757d">
-      .NET (Bootsharp) + SQLite running in-browser via WebAssembly.<br />
-      Data persists in IndexedDB across page reloads.
-    </p>
+    <header>
+      <h1>🏳️ Flagd Schema Manager — WASM</h1>
+      <span id="status">⏳ Booting .NET runtime…</span>
+    </header>
 
-    <div id="status">⏳ Booting .NET runtime…</div>
+    <div class="main">
+      <!-- Files panel -->
+      <div id="files-panel">
+        <h2>Flag Files</h2>
+        <div id="file-list"></div>
+        <div id="new-file-row">
+          <input id="new-file-name" placeholder="new-file.json" />
+          <button id="create-file-btn" disabled>＋</button>
+        </div>
+      </div>
 
-    <div class="input-row">
-      <input type="text" id="todo-input" placeholder="What needs to be done?" disabled />
-      <button id="add-btn" disabled>Add</button>
+      <!-- Content panel -->
+      <div id="content">
+        <div id="no-file">← Select or create a flag file</div>
+
+        <div id="file-content" style="display:none; flex:1; flex-direction:column; overflow:hidden;">
+          <div class="tabs">
+            <button class="tab-btn active" data-tab="flags">🚩 Flags</button>
+            <button class="tab-btn" data-tab="environments">🌍 Environments</button>
+            <button class="tab-btn" data-tab="schema">📄 Schema</button>
+          </div>
+
+          <!-- Flags tab -->
+          <div id="tab-flags" class="tab-panel active">
+            <div class="form-row">
+              <label>Key <input id="flag-key" placeholder="my-flag" /></label>
+              <label>Type
+                <select id="flag-type">
+                  <option value="boolean">boolean</option>
+                  <option value="string">string</option>
+                  <option value="number">number</option>
+                  <option value="object">object</option>
+                </select>
+              </label>
+              <label>State
+                <select id="flag-state">
+                  <option value="ENABLED">ENABLED</option>
+                  <option value="DISABLED">DISABLED</option>
+                </select>
+              </label>
+              <label>Default value (JSON) <input id="flag-value" placeholder="true" /></label>
+              <button id="upsert-flag-btn">Save flag</button>
+              <button class="secondary" id="clear-flag-btn">Clear</button>
+            </div>
+            <table id="flags-table">
+              <thead><tr><th>Key</th><th>Type</th><th>State</th><th>Value</th><th></th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+
+          <!-- Environments tab -->
+          <div id="tab-environments" class="tab-panel">
+            <div class="form-row">
+              <label>Display name <input id="env-name" placeholder="Production" /></label>
+              <label>Aliases (comma-separated) <input id="env-aliases" placeholder="production,prod" /></label>
+              <button id="upsert-env-btn">Save environment</button>
+              <button class="secondary" id="clear-env-btn">Clear</button>
+            </div>
+            <table id="envs-table">
+              <thead><tr><th>Name</th><th>Aliases</th><th></th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+
+          <!-- Schema tab -->
+          <div id="tab-schema" class="tab-panel">
+            <div class="form-row">
+              <button id="export-schema-btn" class="success">⬆️ Export schema</button>
+              <button id="import-schema-btn">⬇️ Import from textarea</button>
+            </div>
+            <label style="font-size:0.8rem;color:#495057">Schema JSON (paste here to import, or see export below)</label>
+            <textarea id="schema-textarea" rows="20" style="font-family:monospace;font-size:0.8rem;width:100%;resize:vertical;padding:0.5rem;border:1px solid #ced4da;border-radius:4px;" placeholder='{"$schema":"…","flags":{…}}'></textarea>
+          </div>
+        </div>
+      </div>
     </div>
 
-    <div class="count" id="count"></div>
-    <ul id="todo-list"></ul>
-
-    <div class="actions">
-      <button class="secondary" id="export-btn" disabled>💾 Save to IndexedDB</button>
-      <button class="secondary" id="clear-idb-btn" disabled>🗑️ Clear IndexedDB</button>
+    <div class="idb-bar">
+      <button class="secondary sm" id="save-idb-btn" disabled>💾 Save to IndexedDB</button>
+      <button class="secondary sm" id="clear-idb-btn" disabled>🗑️ Clear IndexedDB</button>
     </div>
-
     <div id="log"></div>
 
     <script type="module">
       // ─── IndexedDB helpers ──────────────────────────────────────────────
-      const DB_NAME = 'bootsharp-sqlite-todo';
-      const STORE_NAME = 'database';
-      const DB_KEY = 'sqlite-bytes';
+      const IDB_NAME  = 'flagd-schema-manager';
+      const IDB_STORE = 'database';
+      const IDB_KEY   = 'sqlite-bytes';
 
-      function openIdb() {
-        return new Promise((resolve, reject) => {
-          const req = indexedDB.open(DB_NAME, 1);
-          req.onupgradeneeded = () => req.result.createObjectStore(STORE_NAME);
-          req.onsuccess = () => resolve(req.result);
-          req.onerror = () => reject(req.error);
-        });
-      }
+      const openIdb = () => new Promise((res, rej) => {
+        const r = indexedDB.open(IDB_NAME, 1);
+        r.onupgradeneeded = () => r.result.createObjectStore(IDB_STORE);
+        r.onsuccess = () => res(r.result);
+        r.onerror   = () => rej(r.error);
+      });
 
       async function saveToIdb(bytes) {
         const db = await openIdb();
-        return new Promise((resolve, reject) => {
-          const tx = db.transaction(STORE_NAME, 'readwrite');
-          tx.objectStore(STORE_NAME).put(bytes, DB_KEY);
-          tx.oncomplete = () => {
-            db.close();
-            resolve();
-          };
-          tx.onerror = () => {
-            db.close();
-            reject(tx.error);
-          };
+        await new Promise((res, rej) => {
+          const tx = db.transaction(IDB_STORE, 'readwrite');
+          tx.objectStore(IDB_STORE).put(bytes, IDB_KEY);
+          tx.oncomplete = () => { db.close(); res(); };
+          tx.onerror    = () => { db.close(); rej(tx.error); };
         });
       }
 
       async function loadFromIdb() {
         const db = await openIdb();
-        return new Promise((resolve, reject) => {
-          const tx = db.transaction(STORE_NAME, 'readonly');
-          const req = tx.objectStore(STORE_NAME).get(DB_KEY);
-          req.onsuccess = () => {
-            db.close();
-            resolve(req.result ?? null);
-          };
-          req.onerror = () => {
-            db.close();
-            reject(req.error);
-          };
+        return new Promise((res, rej) => {
+          const tx  = db.transaction(IDB_STORE, 'readonly');
+          const req = tx.objectStore(IDB_STORE).get(IDB_KEY);
+          req.onsuccess = () => { db.close(); res(req.result ?? null); };
+          req.onerror   = () => { db.close(); rej(req.error); };
         });
       }
 
       async function clearIdb() {
         const db = await openIdb();
-        return new Promise((resolve, reject) => {
-          const tx = db.transaction(STORE_NAME, 'readwrite');
-          tx.objectStore(STORE_NAME).delete(DB_KEY);
-          tx.oncomplete = () => {
-            db.close();
-            resolve();
-          };
-          tx.onerror = () => {
-            db.close();
-            reject(tx.error);
-          };
+        await new Promise((res, rej) => {
+          const tx = db.transaction(IDB_STORE, 'readwrite');
+          tx.objectStore(IDB_STORE).delete(IDB_KEY);
+          tx.oncomplete = () => { db.close(); res(); };
+          tx.onerror    = () => { db.close(); rej(tx.error); };
         });
       }
 
-      // ─── UI helpers ─────────────────────────────────────────────────────
-      const statusEl = document.getElementById('status');
+      // ─── Logging ────────────────────────────────────────────────────────
       const logEl = document.getElementById('log');
-      const listEl = document.getElementById('todo-list');
-      const countEl = document.getElementById('count');
-      const input = document.getElementById('todo-input');
-      const addBtn = document.getElementById('add-btn');
-      const exportBtn = document.getElementById('export-btn');
-      const clearIdbBtn = document.getElementById('clear-idb-btn');
-
       function log(msg) {
         const ts = new Date().toLocaleTimeString();
         logEl.textContent += `[${ts}] ${msg}\n`;
@@ -231,145 +314,290 @@
         console.log(msg);
       }
 
-      function setStatus(text, cls) {
-        statusEl.textContent = text;
-        statusEl.className = cls || '';
-      }
+      // ─── Status ─────────────────────────────────────────────────────────
+      const statusEl = document.getElementById('status');
+      function setStatus(text, cls) { statusEl.textContent = text; statusEl.className = cls || ''; }
 
-      function enableUI() {
-        input.disabled = false;
-        addBtn.disabled = false;
-        exportBtn.disabled = false;
-        clearIdbBtn.disabled = false;
-        input.focus();
-      }
+      // ─── State ──────────────────────────────────────────────────────────
+      let Backend;
+      let selectedFileId = null;
 
       // ─── Boot .NET runtime ──────────────────────────────────────────────
-      // Bootsharp publishes a rolled-up ES module in AppBundle/_framework/index.mjs
       const fw = './Backend/bin/Release/net10.0/browser-wasm/AppBundle/_framework/index.mjs';
-      let Backend;
-
       try {
         log('Importing Bootsharp module…');
         const mod = await import(fw);
-
-        // Subscribe to the "ready" event from Program.cs before booting
         mod.Program.onReady.subscribe((msg) => log(`[.NET] ${msg}`));
-
         log('Booting .NET WASM runtime…');
         await mod.default.boot();
         Backend = mod.Backend;
         log('Runtime booted ✓');
 
-        // Try restoring from IndexedDB
+        // Restore or initialise database
         const saved = await loadFromIdb();
         if (saved) {
           log(`Found ${saved.byteLength} bytes in IndexedDB — restoring…`);
-          const result = Backend.TodoService.importDatabase(new Uint8Array(saved));
-          log(`Import: ${result}`);
+          log(Backend.FlagdService.importDatabase(new Uint8Array(saved)));
         } else {
           log('No saved data — creating fresh database…');
-          const result = Backend.TodoService.initDatabase();
-          log(`Init: ${result}`);
+          log(Backend.FlagdService.initDatabase());
         }
 
-        setStatus('✅ Ready — SQLite is running in WASM', 'ready');
+        setStatus('✅ Ready — SQLite running in WASM', 'ready');
         enableUI();
-        refreshList();
+        refreshFiles();
       } catch (err) {
         setStatus(`❌ Boot failed: ${err.message}`, 'error');
         log(`FATAL: ${err.stack || err}`);
       }
 
-      // ─── Todo CRUD ──────────────────────────────────────────────────────
-      function refreshList() {
-        const raw = Backend.TodoService.getAllTodos();
-        if (raw.startsWith('Error:')) { log(`GetAllTodos failed: ${raw}`); return; }
-        const todos = JSON.parse(raw);
-        const countRaw = Backend.TodoService.getTodoCount();
-        if (countRaw.startsWith('Error:')) { log(`GetTodoCount failed: ${countRaw}`); return; }
-        const { count } = JSON.parse(countRaw);
+      function enableUI() {
+        document.getElementById('create-file-btn').disabled = false;
+        document.getElementById('save-idb-btn').disabled   = false;
+        document.getElementById('clear-idb-btn').disabled  = false;
+      }
 
-        countEl.textContent = `${count} todo${count === 1 ? '' : 's'}`;
+      // ─── Tab switching ───────────────────────────────────────────────────
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+          document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+          btn.classList.add('active');
+          document.getElementById(`tab-${btn.dataset.tab}`).classList.add('active');
+        });
+      });
+
+      // ─── Files ──────────────────────────────────────────────────────────
+      function refreshFiles() {
+        const raw = Backend.FlagdService.getFiles();
+        if (raw.startsWith('Error:')) { log(raw); return; }
+        const files = JSON.parse(raw);
+        const listEl = document.getElementById('file-list');
         listEl.innerHTML = '';
-
-        for (const t of todos) {
-          const li = document.createElement('li');
-          if (t.completed) li.classList.add('completed');
-
-          const cb = document.createElement('input');
-          cb.type = 'checkbox';
-          cb.checked = t.completed;
-          cb.onchange = () => {
-            Backend.TodoService.toggleTodo(t.id);
-            refreshList();
-            autoSave();
+        for (const f of files) {
+          const item = document.createElement('div');
+          item.className = 'file-item' + (f.id === selectedFileId ? ' active' : '');
+          item.innerHTML = `<span class="name" title="${f.name}">${f.name}</span>
+            <button class="sm danger" data-id="${f.id}" data-action="del-file">✕</button>`;
+          item.querySelector('span').onclick = () => selectFile(f.id, f.name);
+          item.querySelector('button').onclick = (e) => {
+            e.stopPropagation();
+            if (confirm(`Delete file "${f.name}" and all its data?`)) {
+              log(Backend.FlagdService.deleteFile(f.id));
+              if (selectedFileId === f.id) { selectedFileId = null; showNoFile(); }
+              refreshFiles();
+              autoSave();
+            }
           };
-
-          const title = document.createElement('span');
-          title.className = 'title';
-          title.textContent = t.title;
-
-          const date = document.createElement('span');
-          date.className = 'date';
-          date.textContent = t.createdAt || '';
-
-          const delBtn = document.createElement('button');
-          delBtn.className = 'danger';
-          delBtn.textContent = '✕';
-          delBtn.onclick = () => {
-            Backend.TodoService.deleteTodo(t.id);
-            refreshList();
-            autoSave();
-          };
-
-          li.append(cb, title, date, delBtn);
-          listEl.appendChild(li);
+          listEl.appendChild(item);
         }
       }
 
-      function addTodo() {
-        const title = input.value.trim();
-        if (!title) return;
-        const result = Backend.TodoService.addTodo(title);
-        log(`Added: ${result}`);
-        input.value = '';
-        refreshList();
-        autoSave();
-        input.focus();
+      function selectFile(id, name) {
+        selectedFileId = id;
+        refreshFiles();
+        document.getElementById('no-file').style.display = 'none';
+        const fc = document.getElementById('file-content');
+        fc.style.display = 'flex';
+        refreshFlags();
+        refreshEnvs();
       }
 
-      // Auto-save to IndexedDB after every mutation
+      function showNoFile() {
+        document.getElementById('no-file').style.display = 'flex';
+        document.getElementById('file-content').style.display = 'none';
+      }
+
+      document.getElementById('create-file-btn').onclick = () => {
+        const input = document.getElementById('new-file-name');
+        const name = input.value.trim() || 'flags.json';
+        const raw = Backend.FlagdService.createFile(name);
+        if (raw.startsWith('Error:')) { log(raw); return; }
+        const f = JSON.parse(raw);
+        log(`Created file: ${f.name} (id=${f.id})`);
+        input.value = '';
+        refreshFiles();
+        selectFile(f.id, f.name);
+        autoSave();
+      };
+
+      // ─── Flags ──────────────────────────────────────────────────────────
+      function refreshFlags() {
+        if (!selectedFileId) return;
+        const raw = Backend.FlagdService.getFlags(selectedFileId);
+        if (raw.startsWith('Error:')) { log(raw); return; }
+        const flags = JSON.parse(raw);
+        const tbody = document.querySelector('#flags-table tbody');
+        tbody.innerHTML = '';
+        for (const f of flags) {
+          const tr = document.createElement('tr');
+          const valDisplay = f.valueJson !== undefined && f.valueJson !== null ? f.valueJson : '—';
+          tr.innerHTML = `
+            <td><code>${f.key}</code></td>
+            <td><span class="badge ${f.type}">${f.type}</span></td>
+            <td><span class="badge ${f.state.toLowerCase()}">${f.state}</span></td>
+            <td><code>${valDisplay}</code></td>
+            <td>
+              <button class="sm secondary">Edit</button>
+              <button class="sm danger">✕</button>
+            </td>`;
+          tr.querySelectorAll('button')[0].onclick = () => editFlag(f);
+          tr.querySelectorAll('button')[1].onclick = () => {
+            if (confirm(`Delete flag "${f.key}"?`)) {
+              log(Backend.FlagdService.deleteFlag(selectedFileId, f.key));
+              refreshFlags();
+              autoSave();
+            }
+          };
+          tbody.appendChild(tr);
+        }
+      }
+
+      function editFlag(f) {
+        document.getElementById('flag-key').value   = f.key;
+        document.getElementById('flag-type').value  = f.type;
+        document.getElementById('flag-state').value = f.state;
+        document.getElementById('flag-value').value = f.valueJson ?? '';
+      }
+
+      document.getElementById('upsert-flag-btn').onclick = () => {
+        if (!selectedFileId) return;
+        const key   = document.getElementById('flag-key').value.trim();
+        const type  = document.getElementById('flag-type').value;
+        const state = document.getElementById('flag-state').value;
+        const rawVal = document.getElementById('flag-value').value.trim();
+        if (!key) { log('Flag key is required'); return; }
+        // Validate JSON value if provided
+        if (rawVal) {
+          try { JSON.parse(rawVal); } catch (e) { log(`Value must be valid JSON: ${e.message}`); return; }
+        }
+        const dto = { key, type, state, valueJson: rawVal || null };
+        const result = Backend.FlagdService.upsertFlag(selectedFileId, JSON.stringify(dto));
+        log(result.startsWith('Error:') ? result : `Saved flag: ${key}`);
+        if (!result.startsWith('Error:')) {
+          clearFlagForm();
+          refreshFlags();
+          autoSave();
+        }
+      };
+
+      document.getElementById('clear-flag-btn').onclick = clearFlagForm;
+      function clearFlagForm() {
+        ['flag-key','flag-value'].forEach(id => document.getElementById(id).value = '');
+        document.getElementById('flag-type').value  = 'boolean';
+        document.getElementById('flag-state').value = 'ENABLED';
+      }
+
+      // ─── Environments ────────────────────────────────────────────────────
+      function refreshEnvs() {
+        if (!selectedFileId) return;
+        const raw = Backend.FlagdService.getEnvironments(selectedFileId);
+        if (raw.startsWith('Error:')) { log(raw); return; }
+        const envs = JSON.parse(raw);
+        const tbody = document.querySelector('#envs-table tbody');
+        tbody.innerHTML = '';
+        for (const e of envs) {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td>${e.displayName}</td>
+            <td>${e.aliases.map(a => `<span class="badge">${a}</span>`).join(' ')}</td>
+            <td>
+              <button class="sm secondary">Edit</button>
+              <button class="sm danger">✕</button>
+            </td>`;
+          tr.querySelectorAll('button')[0].onclick = () => editEnv(e);
+          tr.querySelectorAll('button')[1].onclick = () => {
+            if (confirm(`Delete environment "${e.displayName}"?`)) {
+              log(Backend.FlagdService.deleteEnvironment(selectedFileId, e.name));
+              refreshEnvs();
+              autoSave();
+            }
+          };
+          tbody.appendChild(tr);
+        }
+      }
+
+      function editEnv(e) {
+        document.getElementById('env-name').value    = e.displayName;
+        document.getElementById('env-aliases').value = e.aliases.join(', ');
+      }
+
+      document.getElementById('upsert-env-btn').onclick = () => {
+        if (!selectedFileId) return;
+        const displayName = document.getElementById('env-name').value.trim();
+        const aliasesRaw  = document.getElementById('env-aliases').value;
+        if (!displayName) { log('Environment name is required'); return; }
+        const aliases = aliasesRaw.split(',').map(a => a.trim()).filter(Boolean);
+        const dto = { name: displayName.toLowerCase(), displayName, aliases };
+        const result = Backend.FlagdService.upsertEnvironment(selectedFileId, JSON.stringify(dto));
+        log(result.startsWith('Error:') ? result : `Saved environment: ${displayName}`);
+        if (!result.startsWith('Error:')) {
+          clearEnvForm();
+          refreshEnvs();
+          autoSave();
+        }
+      };
+
+      document.getElementById('clear-env-btn').onclick = clearEnvForm;
+      function clearEnvForm() {
+        document.getElementById('env-name').value    = '';
+        document.getElementById('env-aliases').value = '';
+      }
+
+      // ─── Schema import / export ──────────────────────────────────────────
+      document.getElementById('export-schema-btn').onclick = () => {
+        if (!selectedFileId) return;
+        const schema = Backend.FlagdService.exportSchema(selectedFileId);
+        document.getElementById('schema-textarea').value = schema;
+        log('Schema exported ✓');
+      };
+
+      document.getElementById('import-schema-btn').onclick = () => {
+        if (!selectedFileId) return;
+        const json = document.getElementById('schema-textarea').value.trim();
+        if (!json) { log('Paste a schema JSON first'); return; }
+        const result = Backend.FlagdService.importSchema(selectedFileId, json);
+        log(result);
+        if (!result.startsWith('Error:')) {
+          refreshFlags();
+          refreshEnvs();
+          autoSave();
+        }
+      };
+
+      // ─── IndexedDB persistence ───────────────────────────────────────────
       async function autoSave() {
         try {
-          const bytes = Backend.TodoService.exportDatabase();
+          const bytes = Backend.FlagdService.exportDatabase();
           await saveToIdb(bytes.buffer);
           log(`Auto-saved ${bytes.byteLength} bytes to IndexedDB`);
-        } catch (err) {
-          log(`Auto-save failed: ${err.message}`);
-        }
+        } catch (err) { log(`Auto-save failed: ${err.message}`); }
       }
 
-      // ─── Event listeners ────────────────────────────────────────────────
-      addBtn.onclick = addTodo;
-      input.onkeydown = (e) => {
-        if (e.key === 'Enter') addTodo();
-      };
-
-      exportBtn.onclick = async () => {
+      document.getElementById('save-idb-btn').onclick = async () => {
         try {
-          const bytes = Backend.TodoService.exportDatabase();
+          const bytes = Backend.FlagdService.exportDatabase();
           await saveToIdb(bytes.buffer);
-          log(`Manually saved ${bytes.byteLength} bytes to IndexedDB ✓`);
-        } catch (err) {
-          log(`Save failed: ${err.message}`);
-        }
+          log(`Saved ${bytes.byteLength} bytes to IndexedDB ✓`);
+        } catch (err) { log(`Save failed: ${err.message}`); }
       };
 
-      clearIdbBtn.onclick = async () => {
+      document.getElementById('clear-idb-btn').onclick = async () => {
         if (!confirm('Delete all saved data from IndexedDB?')) return;
         await clearIdb();
         log('IndexedDB cleared — data will be lost on reload');
+      };
+
+      // ─── Controller demo (REST-style API via WASM) ───────────────────────
+      // Expose a thin helper so the browser console can try REST calls:
+      //   window.api('GET', '/api/files')
+      //   window.api('POST', '/api/files', {name:'demo.json'})
+      window.api = (method, path, body) => {
+        if (!Backend) { console.warn('Runtime not ready'); return; }
+        const bodyStr = body ? JSON.stringify(body) : null;
+        const result = Backend.FlagdController.handleRequest(method, path, bodyStr);
+        console.log(result);
+        return result;
       };
     </script>
   </body>
