@@ -19,7 +19,10 @@ builder.Services.AddDbContext<FlagdDbContext>(options =>
     options.UseSqlite(connectionString));
 
 builder.Services.AddScoped<FlagdService>(sp =>
-    new FlagdService(() => sp.GetRequiredService<FlagdDbContext>(), validator));
+    new FlagdService(() => sp.GetRequiredService<FlagdDbContext>()));
+
+builder.Services.AddScoped<FlagdSchemaService>(sp =>
+    new FlagdSchemaService(sp.GetRequiredService<FlagdService>(), validator));
 
 var app = builder.Build();
 
@@ -82,10 +85,10 @@ app.MapDelete("/api/files/{id}/environments/{name}", (long id, string name, Flag
 
 // ─── Schema endpoints ─────────────────────────────────────────────────
 
-app.MapGet("/api/files/{id}/schema", (long id, FlagdService svc) =>
+app.MapGet("/api/files/{id}/schema", (long id, FlagdSchemaService svc) =>
     Results.Content(svc.ExportSchema(id), "application/json"));
 
-app.MapPost("/api/files/{id}/schema", async (long id, HttpRequest request, FlagdService svc) =>
+app.MapPost("/api/files/{id}/schema", async (long id, HttpRequest request, FlagdSchemaService svc) =>
 {
     using var reader = new StreamReader(request.Body);
     var body = await reader.ReadToEndAsync();

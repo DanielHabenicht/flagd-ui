@@ -1,5 +1,6 @@
 <Solution>
   <Project Path="OpenFeatureManager.Api/OpenFeatureManager.Api.csproj" />
+  <Project Path="OpenFeatureManager.Tests/OpenFeatureManager.Tests.csproj" />
   <Project Path="OpenFeatureManager.Wasm/OpenFeatureManager.Wasm.csproj" />
   <Project Path="OpenFeatureManager/OpenFeatureManager.csproj" />
 </Solution>

@@ -1,39 +1,36 @@
-using System.Text;
 using System.Text.Json;
-using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using OpenFeatureManager.Data;
 using OpenFeatureManager.Entities;
-using OpenFeatureManager.Generated;
 using OpenFeatureManager.Models;
 
 namespace OpenFeatureManager.Services;
 
 /// <summary>
-/// SQLite-backed flagd schema service.
+/// SQLite-backed flagd CRUD service.
 ///
-/// Provides multi-file flag/environment management and FlagdSchema JSON import/export.
+/// Provides multi-file flag/environment management.
 /// Instantiate with a <see cref="Func{FlagdDbContext}"/> factory so that callers
 /// (WASM, REST API, tests) can supply their own DB configuration.
 /// </summary>
 public class FlagdService
 {
-    private const string EnvironmentEvaluatorPrefix = "is";
-    private const string EnvironmentVarName = "environment";
-    private const string BooleanOnVariant = "on";
-    private const string DefaultVariant = "default";
-
     private static readonly FlagdJsonContext JsonCtx = FlagdJsonContext.Default;
     private readonly Func<FlagdDbContext> _contextFactory;
-    private readonly SchemaValidator? _validator;
 
-    public FlagdService(Func<FlagdDbContext> contextFactory, SchemaValidator? validator = null)
+    public FlagdService(Func<FlagdDbContext> contextFactory)
     {
         _contextFactory = contextFactory;
-        _validator = validator;
     }
 
     // ─── File management ──────────────────────────────────────────────────
+
+    public FlagFileDto GetFile(long id)
+    {
+        using var db = _contextFactory();
+        var file = db.FlagFiles.Find(id) ?? throw new KeyNotFoundException($"File {id} not found");
+        return ToDto(file);
+    }
 
     public FlagFileDto CreateFile(string name)
     {
@@ -66,6 +63,24 @@ public class FlagdService
         db.FlagEntries.RemoveRange(db.FlagEntries.Where(f => f.FileId == id));
         db.EnvironmentEntries.RemoveRange(db.EnvironmentEntries.Where(e => e.FileId == id));
         db.FlagFiles.Remove(file);
+        db.SaveChanges();
+    }
+
+    public void ClearFileData(long fileId)
+    {
+        using var db = _contextFactory();
+        if (!db.FlagFiles.Any(f => f.Id == fileId))
+            throw new KeyNotFoundException($"File {fileId} not found");
+        db.EnvironmentEntries.RemoveRange(db.EnvironmentEntries.Where(e => e.FileId == fileId));
+        db.FlagEntries.RemoveRange(db.FlagEntries.Where(f => f.FileId == fileId));
+        db.SaveChanges();
+    }
+
+    public void UpdateFileMetadata(long fileId, string? metadataJson)
+    {
+        using var db = _contextFactory();
+        var file = db.FlagFiles.Find(fileId) ?? throw new KeyNotFoundException($"File {fileId} not found");
+        file.MetadataJson = metadataJson;
         db.SaveChanges();
     }
 
@@ -171,228 +186,6 @@ public class FlagdService
         db.SaveChanges();
     }
 
-    // ─── Schema import / export ───────────────────────────────────────────
-
-    /// <summary>
-    /// Parse a FlagdSchema JSON string into the database for the given file.
-    /// Validates the JSON against the flagd schema (if a validator is configured),
-    /// then deserialises into generated <see cref="ProviderConfig"/> classes.
-    /// Existing flags and environments for the file are replaced.
-    /// </summary>
-    public void ImportSchema(long fileId, string schemaJson)
-    {
-        _validator?.ValidateOrThrow(schemaJson);
-
-        var config = JsonSerializer.Deserialize<ProviderConfig>(schemaJson)
-            ?? throw new ArgumentException("Failed to deserialize schema JSON");
-
-        using var db = _contextFactory();
-
-        if (!db.FlagFiles.Any(f => f.Id == fileId))
-            throw new KeyNotFoundException($"File {fileId} not found");
-
-        // Clear existing data for this file
-        db.EnvironmentEntries.RemoveRange(db.EnvironmentEntries.Where(e => e.FileId == fileId));
-        db.FlagEntries.RemoveRange(db.FlagEntries.Where(f => f.FileId == fileId));
-        db.SaveChanges();
-
-        // Update file-level metadata if present
-        if (config.Metadata is { Count: > 0 })
-        {
-            var file = db.FlagFiles.Find(fileId);
-            if (file is not null)
-                file.MetadataJson = JsonSerializer.Serialize(config.Metadata);
-        }
-
-        // Parse $evaluators → environments  (pattern: "isXxx")
-        if (config.Evaluators != null)
-        {
-            foreach (var (key, evalValue) in config.Evaluators)
-            {
-                if (evalValue?.AdditionalProperties is null) continue;
-                if (!key.StartsWith(EnvironmentEvaluatorPrefix) || key.Length <= EnvironmentEvaluatorPrefix.Length)
-                    continue;
-
-                if (!evalValue.AdditionalProperties.TryGetValue("in", out var inObj)
-                    || inObj is not JsonElement inElem
-                    || inElem.ValueKind != JsonValueKind.Array
-                    || inElem.GetArrayLength() != 2)
-                    continue;
-
-                var varPart = inElem[0];
-                var aliasesPart = inElem[1];
-
-                if (!varPart.TryGetProperty("var", out var varValue) ||
-                    varValue.GetString() != EnvironmentVarName ||
-                    aliasesPart.ValueKind != JsonValueKind.Array)
-                    continue;
-
-                var envName = key[EnvironmentEvaluatorPrefix.Length..].ToLowerInvariant();
-                var aliases = aliasesPart.EnumerateArray()
-                    .Select(a => a.GetString() ?? string.Empty)
-                    .Where(a => !string.IsNullOrEmpty(a))
-                    .ToArray();
-
-                db.EnvironmentEntries.Add(new EnvironmentEntry
-                {
-                    FileId = fileId,
-                    Name = envName,
-                    AliasesJson = JsonSerializer.Serialize(aliases, JsonCtx.StringArray),
-                });
-            }
-        }
-
-        // Parse flags using generated FlagDefinition typed properties
-        foreach (var (flagKey, flagDef) in config.Flags)
-        {
-            if (flagDef is null) continue;
-
-            var state = flagDef.State.ToString();
-            var flagType = "object";
-            string? valueJson = null;
-
-            if (flagDef.Variants != null && !string.IsNullOrEmpty(flagDef.DefaultVariant)
-                && flagDef.Variants.TryGetValue(flagDef.DefaultVariant, out var defaultValue))
-            {
-                flagType = defaultValue.ValueKind switch
-                {
-                    JsonValueKind.True or JsonValueKind.False => "boolean",
-                    JsonValueKind.Number => "number",
-                    JsonValueKind.String => "string",
-                    _ => "object",
-                };
-                valueJson = defaultValue.GetRawText();
-            }
-
-            string? metadataJson = flagDef.FlagMetadata.HasValue
-                ? flagDef.FlagMetadata.Value.GetRawText() : null;
-
-            string? targetingJson = flagDef.Targeting.HasValue
-                ? flagDef.Targeting.Value.GetRawText() : null;
-
-            db.FlagEntries.Add(new FlagEntry
-            {
-                FileId = fileId,
-                FlagKey = flagKey,
-                Type = flagType,
-                State = state,
-                ValueJson = valueJson,
-                MetadataJson = metadataJson,
-                TargetingJson = targetingJson,
-            });
-        }
-
-        db.SaveChanges();
-    }
-
-    /// <summary>
-    /// Reconstruct and return a FlagdSchema JSON string from the database state.
-    /// Validates the output against the flagd schema (if a validator is configured).
-    /// </summary>
-    public string ExportSchema(long fileId)
-    {
-        using var db = _contextFactory();
-
-        var file = db.FlagFiles.Find(fileId)
-            ?? throw new KeyNotFoundException($"File {fileId} not found");
-
-        var environments = db.EnvironmentEntries
-            .Where(e => e.FileId == fileId)
-            .OrderBy(e => e.Name)
-            .ToList();
-
-        var flagEntries = db.FlagEntries
-            .Where(f => f.FileId == fileId)
-            .OrderBy(f => f.FlagKey)
-            .ToList();
-
-        using var stream = new MemoryStream();
-        using var writer = new Utf8JsonWriter(stream, new JsonWriterOptions { Indented = true });
-
-        writer.WriteStartObject();
-        writer.WriteString("$schema", "https://flagd.dev/schema/v0/flags.json");
-
-        // flags
-        writer.WritePropertyName("flags");
-        writer.WriteStartObject();
-        foreach (var flag in flagEntries)
-        {
-            writer.WritePropertyName(flag.FlagKey);
-            writer.WriteStartObject();
-
-            writer.WriteString("state", flag.State);
-
-            var variantKey = flag.Type == "boolean" ? BooleanOnVariant : DefaultVariant;
-            writer.WritePropertyName("variants");
-            writer.WriteStartObject();
-            writer.WritePropertyName(variantKey);
-            WriteRawOrNull(writer, flag.ValueJson);
-            writer.WriteEndObject();
-
-            writer.WriteString("defaultVariant", variantKey);
-
-            if (!string.IsNullOrEmpty(flag.TargetingJson))
-            {
-                writer.WritePropertyName("targeting");
-                WriteRaw(writer, flag.TargetingJson);
-            }
-
-            if (!string.IsNullOrEmpty(flag.MetadataJson))
-            {
-                writer.WritePropertyName("metadata");
-                WriteRaw(writer, flag.MetadataJson);
-            }
-
-            writer.WriteEndObject();
-        }
-        writer.WriteEndObject(); // flags
-
-        // $evaluators (from environments)
-        if (environments.Count > 0)
-        {
-            writer.WritePropertyName("$evaluators");
-            writer.WriteStartObject();
-            foreach (var env in environments)
-            {
-                if (string.IsNullOrEmpty(env.Name)) continue;
-                var refKey = EnvironmentEvaluatorPrefix +
-                             char.ToUpperInvariant(env.Name[0]) +
-                             env.Name[1..];
-                var aliases = JsonSerializer.Deserialize(env.AliasesJson, JsonCtx.StringArray) ?? [];
-
-                writer.WritePropertyName(refKey);
-                writer.WriteStartObject();
-                writer.WritePropertyName("in");
-                writer.WriteStartArray();
-                writer.WriteStartObject();
-                writer.WriteString("var", EnvironmentVarName);
-                writer.WriteEndObject();
-                writer.WriteStartArray();
-                foreach (var alias in aliases) writer.WriteStringValue(alias);
-                writer.WriteEndArray();
-                writer.WriteEndArray();
-                writer.WriteEndObject();
-            }
-            writer.WriteEndObject(); // $evaluators
-        }
-
-        // file-level metadata
-        if (!string.IsNullOrEmpty(file.MetadataJson))
-        {
-            writer.WritePropertyName("metadata");
-            WriteRaw(writer, file.MetadataJson);
-        }
-
-        writer.WriteEndObject(); // root
-        writer.Flush();
-
-        var json = Encoding.UTF8.GetString(stream.ToArray());
-
-        _validator?.ValidateOrThrow(json);
-
-        return json;
-    }
-
     // ─── Private helpers ──────────────────────────────────────────────────
 
     private static FlagFileDto ToDto(FlagFile f) =>
@@ -408,19 +201,5 @@ public class FlagdService
             ? e.Name
             : char.ToUpperInvariant(e.Name[0]) + e.Name[1..];
         return new EnvironmentEntryDto(e.Name, displayName, aliases);
-    }
-
-    private static void WriteRaw(Utf8JsonWriter writer, string rawJson)
-    {
-        using var doc = JsonDocument.Parse(rawJson);
-        doc.RootElement.WriteTo(writer);
-    }
-
-    private static void WriteRawOrNull(Utf8JsonWriter writer, string? rawJson)
-    {
-        if (string.IsNullOrEmpty(rawJson))
-            writer.WriteNullValue();
-        else
-            WriteRaw(writer, rawJson);
     }
 }
