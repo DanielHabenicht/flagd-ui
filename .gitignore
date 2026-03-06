@@ -38,3 +38,8 @@ services/azurite/azurite-store/
 services/azurite/azurite-logs/
 services/azurite/certs/*
 !services/azurite/certs/.gitkeep
+
+# sqlite
+*.db
+*.db-shm
+*.db-wal
