@@ -24,6 +24,8 @@ builder.Services.AddScoped<FlagdService>(sp =>
 builder.Services.AddScoped<FlagdSchemaService>(sp =>
     new FlagdSchemaService(sp.GetRequiredService<FlagdService>(), validator));
 
+builder.Services.AddOpenApi("openapi");
+
 var app = builder.Build();
 
 // Ensure database is created on startup
@@ -33,68 +35,82 @@ using (var scope = app.Services.CreateScope())
     db.Database.EnsureCreated();
 }
 
+app.MapOpenApi();
+
 // ─── File endpoints ───────────────────────────────────────────────────
 
-app.MapGet("/api/files", (FlagdService svc) => Results.Ok(svc.GetFiles()));
+app.MapGet("/api/files", (FlagdService svc) => TypedResults.Ok(svc.GetFiles()))
+    .WithName("listFiles").WithTags("files");
 
 app.MapPost("/api/files", (CreateFileRequest req, FlagdService svc) =>
-    Results.Created($"/api/files/{req.Name}", svc.CreateFile(req.Name)));
+{
+    var file = svc.CreateFile(req.Name);
+    return TypedResults.Created($"/api/files/{file.Id}", file);
+}).WithName("createFile").WithTags("files");
 
 app.MapPut("/api/files/{id}", (long id, RenameFileRequest req, FlagdService svc) =>
-    Results.Ok(svc.RenameFile(id, req.Name)));
+    TypedResults.Ok(svc.RenameFile(id, req.Name)))
+    .WithName("renameFile").WithTags("files");
 
 app.MapDelete("/api/files/{id}", (long id, FlagdService svc) =>
 {
     svc.DeleteFile(id);
-    return Results.NoContent();
-});
+    return TypedResults.NoContent();
+}).WithName("deleteFile").WithTags("files");
 
 // ─── Flag endpoints ───────────────────────────────────────────────────
 
 app.MapGet("/api/files/{id}/flags", (long id, FlagdService svc) =>
-    Results.Ok(svc.GetFlags(id)));
+    TypedResults.Ok(svc.GetFlags(id)))
+    .WithName("getFlags").WithTags("flags");
 
 app.MapPost("/api/files/{id}/flags", (long id, FlagEntryDto dto, FlagdService svc) =>
-    Results.Ok(svc.UpsertFlag(id, dto)));
+    TypedResults.Ok(svc.UpsertFlag(id, dto)))
+    .WithName("createFlag").WithTags("flags");
 
 app.MapPut("/api/files/{id}/flags", (long id, FlagEntryDto dto, FlagdService svc) =>
-    Results.Ok(svc.UpsertFlag(id, dto)));
+    TypedResults.Ok(svc.UpsertFlag(id, dto)))
+    .WithName("updateFlag").WithTags("flags");
 
 app.MapDelete("/api/files/{id}/flags/{key}", (long id, string key, FlagdService svc) =>
 {
     svc.DeleteFlag(id, Uri.UnescapeDataString(key));
-    return Results.NoContent();
-});
+    return TypedResults.NoContent();
+}).WithName("deleteFlag").WithTags("flags");
 
 // ─── Environment endpoints ────────────────────────────────────────────
 
 app.MapGet("/api/files/{id}/environments", (long id, FlagdService svc) =>
-    Results.Ok(svc.GetEnvironments(id)));
+    TypedResults.Ok(svc.GetEnvironments(id)))
+    .WithName("getEnvironments").WithTags("environments");
 
 app.MapPost("/api/files/{id}/environments", (long id, EnvironmentEntryDto dto, FlagdService svc) =>
-    Results.Ok(svc.UpsertEnvironment(id, dto)));
+    TypedResults.Ok(svc.UpsertEnvironment(id, dto)))
+    .WithName("createEnvironment").WithTags("environments");
 
 app.MapPut("/api/files/{id}/environments", (long id, EnvironmentEntryDto dto, FlagdService svc) =>
-    Results.Ok(svc.UpsertEnvironment(id, dto)));
+    TypedResults.Ok(svc.UpsertEnvironment(id, dto)))
+    .WithName("updateEnvironment").WithTags("environments");
 
 app.MapDelete("/api/files/{id}/environments/{name}", (long id, string name, FlagdService svc) =>
 {
     svc.DeleteEnvironment(id, Uri.UnescapeDataString(name));
-    return Results.NoContent();
-});
+    return TypedResults.NoContent();
+}).WithName("deleteEnvironment").WithTags("environments");
 
 // ─── Schema endpoints ─────────────────────────────────────────────────
 
 app.MapGet("/api/files/{id}/schema", (long id, FlagdSchemaService svc) =>
-    Results.Content(svc.ExportSchema(id), "application/json"));
+    TypedResults.Text(svc.ExportSchema(id), "application/json"))
+    .WithName("exportSchema").WithTags("schema");
 
 app.MapPost("/api/files/{id}/schema", async (long id, HttpRequest request, FlagdSchemaService svc) =>
 {
     using var reader = new StreamReader(request.Body);
     var body = await reader.ReadToEndAsync();
     svc.ImportSchema(id, body);
-    return Results.Ok("Schema imported successfully.");
-});
+    return TypedResults.Ok("Schema imported successfully.");
+}).WithName("importSchema").WithTags("schema");
 
 app.Run();
 

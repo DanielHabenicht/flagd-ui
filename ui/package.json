@@ -48,6 +48,7 @@
     "@openfeature/ofrep-web-provider": "^0.3.5",
     "@openfeature/web-sdk": "^1.7.2",
     "ajv": "^8.12.0",
+    "bootsharp": "file:../src/OpenFeatureManager.Wasm/bin/bootsharp",
     "json-logic-engine": "^5.0.6",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0"

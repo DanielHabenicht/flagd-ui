@@ -4,10 +4,24 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <OpenApiDocumentsDirectory>$(MSBuildProjectDirectory)/../../ui/</OpenApiDocumentsDirectory>
+    <OpenApiGenerateDocumentsOnBuild>true</OpenApiGenerateDocumentsOnBuild>
   </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.3" />
+    <PackageReference Include="Microsoft.Extensions.ApiDescription.Server" Version="10.0.3" />
+  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\OpenFeatureManager\OpenFeatureManager.csproj" />
   </ItemGroup>
+
+  <Target Name="RenameOpenApiDocument" AfterTargets="Build" Condition="Exists('$(OpenApiDocumentsDirectory)$(AssemblyName)_openapi.json')">
+    <Copy SourceFiles="$(OpenApiDocumentsDirectory)$(AssemblyName)_openapi.json"
+          DestinationFiles="$(OpenApiDocumentsDirectory)openapi.json"
+          OverwriteReadOnlyFiles="true" />
+    <Delete Files="$(OpenApiDocumentsDirectory)$(AssemblyName)_openapi.json" />
+  </Target>
 
 </Project>
