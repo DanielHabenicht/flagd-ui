@@ -247,7 +247,7 @@ public class FlagdService
         {
             if (flagDef is null) continue;
 
-            var state = flagDef.State ?? "ENABLED";
+            var state = flagDef.State.ToString();
             var flagType = "object";
             string? valueJson = null;
 
