@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
+using OpenFeatureManager.Entities;
 
-namespace OpenFeatureManager;
+namespace OpenFeatureManager.Data;
 
 public class FlagdDbContext : DbContext
 {

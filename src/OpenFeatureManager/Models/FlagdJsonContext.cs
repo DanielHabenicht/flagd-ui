@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace OpenFeatureManager;
+namespace OpenFeatureManager.Models;
 
 /// <summary>DTO for a flag file (schema document).</summary>
 public record FlagFileDto(long Id, string Name, DateTime CreatedAt, string? MetadataJson = null);

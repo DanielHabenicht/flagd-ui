@@ -2,8 +2,11 @@ using System.Text;
 using System.Text.Json;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using OpenFeatureManager.Data;
+using OpenFeatureManager.Entities;
+using OpenFeatureManager.Models;
 
-namespace OpenFeatureManager;
+namespace OpenFeatureManager.Services;
 
 /// <summary>
 /// SQLite-backed flagd schema service.

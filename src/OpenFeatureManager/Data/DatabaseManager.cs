@@ -1,6 +1,6 @@
 using Microsoft.Data.Sqlite;
 
-namespace OpenFeatureManager;
+namespace OpenFeatureManager.Data;
 
 /// <summary>
 /// Manages SQLite in-memory database lifecycle: initialization, export, and import.

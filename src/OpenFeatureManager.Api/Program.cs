@@ -1,5 +1,7 @@
-using OpenFeatureManager;
 using Microsoft.EntityFrameworkCore;
+using OpenFeatureManager.Data;
+using OpenFeatureManager.Models;
+using OpenFeatureManager.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 

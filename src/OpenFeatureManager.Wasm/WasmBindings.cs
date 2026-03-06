@@ -1,5 +1,6 @@
 using Bootsharp;
-using OpenFeatureManager;
+using OpenFeatureManager.Data;
+using OpenFeatureManager.Services;
 
 namespace OpenFeatureManager.Wasm;
 
