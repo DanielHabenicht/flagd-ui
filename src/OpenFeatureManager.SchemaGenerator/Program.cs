@@ -1,4 +1,5 @@
-﻿using NJsonSchema;
+﻿using System.Text.RegularExpressions;
+using NJsonSchema;
 using NJsonSchema.CodeGeneration;
 using NJsonSchema.CodeGeneration.CSharp;
 
@@ -22,7 +23,7 @@ var schema = await JsonSchema.FromFileAsync(schemaPath);
 var settings = new CSharpGeneratorSettings
 {
     Namespace = "OpenFeatureManager.Generated",
-    GenerateDataAnnotations = false,
+    GenerateDataAnnotations = true,
     GenerateJsonMethods = false,
     ClassStyle = CSharpClassStyle.Poco,
     JsonLibrary = CSharpJsonLibrary.SystemTextJson,
@@ -56,6 +57,17 @@ code = code.Replace(
             [System.Runtime.Serialization.EnumMember(Value = @"^")]
             MatchMajor = 7,
     """);
+
+// Post-process: rename anonymous types to meaningful names.
+code = Regex.Replace(code, @"\bAnonymous3\b", "FlagDefinition");
+code = Regex.Replace(code, @"\bAnonymous5\b", "SemVerOperator");
+code = Regex.Replace(code, @"\bAnonymous2\b", "BaseConfig");
+code = Regex.Replace(code, @"\bAnonymous\b", "ProviderConfig");
+
+// Post-process: fix Metadata type (schema allows string|number|boolean, not just number).
+code = code.Replace(
+    "public partial class Metadata : System.Collections.Generic.Dictionary<string, double>",
+    "public partial class Metadata : System.Collections.Generic.Dictionary<string, System.Text.Json.JsonElement>");
 
 Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
 await File.WriteAllTextAsync(outputPath, code);

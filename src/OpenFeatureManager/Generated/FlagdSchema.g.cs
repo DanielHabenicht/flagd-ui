@@ -16,7 +16,7 @@ namespace OpenFeatureManager.Generated
     /// Defines flags for use in providers (not flagd), including typed variants and rules.
     /// </summary>
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "11.5.2.0 (Newtonsoft.Json v13.0.0.0)")]
-    public partial class Anonymous : Anonymous2
+    public partial class ProviderConfig : BaseConfig
     {
 
         [System.Text.Json.Serialization.JsonPropertyName("flags")]
@@ -28,7 +28,7 @@ namespace OpenFeatureManager.Generated
     /// Defines flags for use in flagd providers, including typed variants and rules.
     /// </summary>
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "11.5.2.0 (Newtonsoft.Json v13.0.0.0)")]
-    public partial class Anonymous2
+    public partial class BaseConfig
     {
 
         /// <summary>
@@ -58,7 +58,7 @@ namespace OpenFeatureManager.Generated
     /// Top-level flags object. All flags are defined here.
     /// </summary>
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "11.5.2.0 (Newtonsoft.Json v13.0.0.0)")]
-    public partial class Flags : System.Collections.Generic.Dictionary<string, Anonymous3?>
+    public partial class Flags : System.Collections.Generic.Dictionary<string, FlagDefinition?>
     {
 
     }
@@ -410,7 +410,7 @@ namespace OpenFeatureManager.Generated
         /// Attribute matches a semantic version condition. Accepts "npm-style" range specifiers: "=", "!=", "&gt;", "&lt;", "&gt;=", "&lt;=", "~" (match minor version), "^" (match major version).
         /// </summary>
         [System.Text.Json.Serialization.JsonPropertyName("sem_ver")]
-        public System.Tuple<string, Anonymous5, string>? Sem_ver { get; set; } = default!;
+        public System.Tuple<string, SemVerOperator, string>? Sem_ver { get; set; } = default!;
 
     }
 
@@ -472,13 +472,13 @@ namespace OpenFeatureManager.Generated
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "11.5.2.0 (Newtonsoft.Json v13.0.0.0)")]
-    public partial class Metadata : System.Collections.Generic.Dictionary<string, double>
+    public partial class Metadata : System.Collections.Generic.Dictionary<string, System.Text.Json.JsonElement>
     {
 
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "11.5.2.0 (Newtonsoft.Json v13.0.0.0)")]
-    public partial class Anonymous3
+    public partial class FlagDefinition
     {
 
         private System.Collections.Generic.IDictionary<string, object>? _additionalProperties;
@@ -511,7 +511,7 @@ namespace OpenFeatureManager.Generated
     /// Range specifiers: "=", "!=", "&gt;", "&lt;", "&gt;=", "&lt;=", "~" (match minor version), "^" (match major version).
     /// </summary>
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "11.5.2.0 (Newtonsoft.Json v13.0.0.0)")]
-    public enum Anonymous5
+    public enum SemVerOperator
     {
 
         [System.Runtime.Serialization.EnumMember(Value = @"=")]

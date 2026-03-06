@@ -12,14 +12,12 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.3" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.3" />
+    <PackageReference Include="NJsonSchema" Version="11.5.2" />
   </ItemGroup>
 
   <!-- Build and run the schema generator before compilation -->
-  <Target Name="GenerateSchemaClasses" BeforeTargets="CoreCompile"
-          Inputs="$(SchemaFile)"
-          Outputs="$(GeneratedSchemaFile)">
-    <Exec Command="dotnet run --project &quot;$(GeneratorProject)&quot; -- &quot;$(SchemaFile)&quot; &quot;$(GeneratedSchemaFile)&quot;"
-          ConsoleToMsBuild="true" />
+  <Target Name="GenerateSchemaClasses" BeforeTargets="CoreCompile" Inputs="$(SchemaFile)" Outputs="$(GeneratedSchemaFile)">
+    <Exec Command="dotnet run --project &quot;$(GeneratorProject)&quot; -- &quot;$(SchemaFile)&quot; &quot;$(GeneratedSchemaFile)&quot;" ConsoleToMsBuild="true" />
   </Target>
 
 </Project>

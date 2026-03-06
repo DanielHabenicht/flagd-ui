@@ -8,11 +8,18 @@ var builder = WebApplication.CreateBuilder(args);
 var connectionString = builder.Configuration.GetConnectionString("Flagd")
     ?? "Data Source=flagd.db";
 
+var schemaPath = builder.Configuration["FlagdSchemaFile"]
+    ?? FindSchemaFile();
+
+SchemaValidator? validator = null;
+if (schemaPath != null && File.Exists(schemaPath))
+    validator = SchemaValidator.CreateAsync(Path.GetFullPath(schemaPath)).GetAwaiter().GetResult();
+
 builder.Services.AddDbContext<FlagdDbContext>(options =>
     options.UseSqlite(connectionString));
 
 builder.Services.AddScoped<FlagdService>(sp =>
-    new FlagdService(() => sp.GetRequiredService<FlagdDbContext>()));
+    new FlagdService(() => sp.GetRequiredService<FlagdDbContext>(), validator));
 
 var app = builder.Build();
 
@@ -87,6 +94,21 @@ app.MapPost("/api/files/{id}/schema", async (long id, HttpRequest request, Flagd
 });
 
 app.Run();
+
+// ─── Local helpers ────────────────────────────────────────────────────
+
+static string? FindSchemaFile()
+{
+    var dir = new DirectoryInfo(Directory.GetCurrentDirectory());
+    while (dir != null)
+    {
+        var candidate = Path.Combine(dir.FullName, "schema", "flagd-schema.json");
+        if (File.Exists(candidate))
+            return candidate;
+        dir = dir.Parent;
+    }
+    return null;
+}
 
 // ─── Request DTOs ─────────────────────────────────────────────────────
 
