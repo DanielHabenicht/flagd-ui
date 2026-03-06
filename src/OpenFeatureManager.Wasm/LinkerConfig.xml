@@ -4,5 +4,6 @@
   <assembly fullname="Microsoft.EntityFrameworkCore.Sqlite" preserve="all" />
   <assembly fullname="Microsoft.EntityFrameworkCore.Abstractions" preserve="all" />
   <assembly fullname="Microsoft.Data.Sqlite" preserve="all" />
-  <assembly fullname="Backend" preserve="all" />
+  <assembly fullname="OpenFeatureManager.Wasm" preserve="all" />
+  <assembly fullname="OpenFeatureManager" preserve="all" />
 </linker>

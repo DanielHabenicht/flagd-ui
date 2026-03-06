@@ -1,7 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace Backend;
+namespace OpenFeatureManager;
 
 [Table("environment_entries")]
 public class EnvironmentEntry

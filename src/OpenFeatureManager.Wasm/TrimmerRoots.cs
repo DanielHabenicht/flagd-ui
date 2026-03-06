@@ -1,7 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 
-namespace Backend;
+namespace OpenFeatureManager.Wasm;
 
 /// <summary>
 /// Prevents the trimmer from removing types that EF Core needs via reflection.

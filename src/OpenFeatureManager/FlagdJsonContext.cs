@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace Backend;
+namespace OpenFeatureManager;
 
 /// <summary>DTO for a flag file (schema document).</summary>
 public record FlagFileDto(long Id, string Name, DateTime CreatedAt, string? MetadataJson = null);
@@ -8,7 +8,7 @@ public record FlagFileDto(long Id, string Name, DateTime CreatedAt, string? Meta
 /// <summary>
 /// DTO for a single flag entry.
 /// <c>ValueJson</c>, <c>MetadataJson</c>, and <c>TargetingJson</c> carry raw JSON text
-/// so that arbitrary flag values and targeting rules survive the WASM boundary without
+/// so that arbitrary flag values and targeting rules survive serialisation boundaries without
 /// further reflection-based serialisation.
 /// </summary>
 public record FlagEntryDto(

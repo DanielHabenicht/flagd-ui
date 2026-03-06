@@ -1,5 +1,5 @@
 using Bootsharp;
-using Backend;
+using OpenFeatureManager.Wasm;
 
 public static partial class Program
 {
@@ -13,3 +13,4 @@ public static partial class Program
     [JSEvent]
     public static partial void OnReady(string message);
 }
+

@@ -1,7 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace Backend;
+namespace OpenFeatureManager;
 
 [Table("flag_entries")]
 public class FlagEntry
