@@ -33,23 +33,23 @@ public class FlagdSchemaService
     /// then parses the JSON document directly.
     /// Existing flags and environments for the file are replaced.
     /// </summary>
-    public void ImportSchema(long fileId, string schemaJson)
+    public void ImportSchema(long collectionId, string schemaJson)
     {
         _validator?.ValidateOrThrow(schemaJson);
 
         using var doc = JsonDocument.Parse(schemaJson);
         var root = doc.RootElement;
 
-        // Clear existing data for this file
-        _flagdService.ClearFileData(fileId);
+        // Clear existing data for this collection
+        _flagdService.ClearCollectionData(collectionId);
 
-        // Update file-level metadata if present
+        // Update collection-level metadata if present
         if (root.TryGetProperty("metadata", out var metadataElem)
             && metadataElem.ValueKind == JsonValueKind.Object
             && metadataElem.EnumerateObject().Any())
         {
             var metadata = ParseMetadata(metadataElem);
-            _flagdService.UpdateFileMetadata(fileId, metadata);
+            _flagdService.UpdateCollectionMetadata(collectionId, metadata);
         }
 
         // Parse $evaluators → environments  (pattern: "isXxx")
@@ -83,7 +83,7 @@ public class FlagdSchemaService
                     .Where(a => !string.IsNullOrEmpty(a))
                     .ToArray();
 
-                _flagdService.UpsertEnvironment(fileId, new EnvironmentEntryDto(envName, aliases));
+                _flagdService.UpsertEnvironment(collectionId, new EnvironmentEntryDto(envName, aliases));
             }
         }
 
@@ -148,7 +148,7 @@ public class FlagdSchemaService
                     flagMetadata = ParseMetadata(flagMetaElem);
                 }
 
-                _flagdService.UpsertFlag(fileId, new FlagEntryDto(
+                _flagdService.UpsertFlag(collectionId, new FlagEntryDto(
                     flagKey, flagType, state,
                     boolVal, strVal, numVal, objVal,
                     flagMetadata));
@@ -160,11 +160,11 @@ public class FlagdSchemaService
     /// Reconstruct and return a FlagdSchema JSON string from the stored data.
     /// Validates the output against the flagd schema (if a validator is configured).
     /// </summary>
-    public string ExportSchema(long fileId)
+    public string ExportSchema(long collectionId)
     {
-        var file = _flagdService.GetFile(fileId);
-        var flags = _flagdService.GetFlags(fileId);
-        var environments = _flagdService.GetEnvironments(fileId);
+        var collection = _flagdService.GetCollection(collectionId);
+        var flags = _flagdService.GetFlags(collectionId);
+        var environments = _flagdService.GetEnvironments(collectionId);
 
         using var stream = new MemoryStream();
         using var writer = new Utf8JsonWriter(stream, new JsonWriterOptions { Indented = true });
@@ -227,11 +227,11 @@ public class FlagdSchemaService
             writer.WriteEndObject(); // $evaluators
         }
 
-        // file-level metadata
-        if (file.Metadata is { Count: > 0 })
+        // collection-level metadata
+        if (collection.Metadata is { Count: > 0 })
         {
             writer.WritePropertyName("metadata");
-            WriteMetadata(writer, file.Metadata);
+            WriteMetadata(writer, collection.Metadata);
         }
 
         writer.WriteEndObject(); // root

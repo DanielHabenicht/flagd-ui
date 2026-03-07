@@ -2,8 +2,8 @@ using System.Text.Json.Serialization;
 
 namespace OpenFeatureManager.Models;
 
-/// <summary>DTO for a flag file (schema document).</summary>
-public record FlagFileDto(
+/// <summary>DTO for a flags collection (schema document).</summary>
+public record FlagsCollectionDto(
     long Id,
     string Name,
     DateTime CreatedAt,
@@ -56,8 +56,8 @@ public record EnvironmentEntryDto(string Name, string[] Aliases);
 public record TimeWindowDto(long Id, string Name, DateTime? StartTime = null, DateTime? EndTime = null);
 
 [JsonSerializable(typeof(string[]))]
-[JsonSerializable(typeof(FlagFileDto))]
-[JsonSerializable(typeof(List<FlagFileDto>))]
+[JsonSerializable(typeof(FlagsCollectionDto))]
+[JsonSerializable(typeof(List<FlagsCollectionDto>))]
 [JsonSerializable(typeof(FlagEntryDto))]
 [JsonSerializable(typeof(List<FlagEntryDto>))]
 [JsonSerializable(typeof(MetadataEntryDto))]

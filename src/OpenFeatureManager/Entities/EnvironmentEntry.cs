@@ -11,8 +11,8 @@ public class EnvironmentEntry
     [Column("id")]
     public long Id { get; set; }
 
-    [Column("file_id")]
-    public long FileId { get; set; }
+    [Column("collection_id")]
+    public long CollectionId { get; set; }
 
     /// <summary>Human-readable environment name, e.g. "Production", "Staging"</summary>
     [Required]

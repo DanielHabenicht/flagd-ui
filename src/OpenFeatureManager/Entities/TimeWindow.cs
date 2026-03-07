@@ -11,8 +11,8 @@ public class TimeWindow
     [Column("id")]
     public long Id { get; set; }
 
-    [Column("file_id")]
-    public long FileId { get; set; }
+    [Column("collection_id")]
+    public long CollectionId { get; set; }
 
     /// <summary>Human-readable name, e.g. "Christmas Time", "Black Friday"</summary>
     [Required]

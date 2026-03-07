@@ -20,76 +20,76 @@ public class FlagdService
         _contextFactory = contextFactory;
     }
 
-    // ─── File management ──────────────────────────────────────────────────
+    // ─── Collection management ──────────────────────────────────────────
 
-    public FlagFileDto GetFile(long id)
+    public FlagsCollectionDto GetCollection(long id)
     {
         using var db = _contextFactory();
-        var file = db.FlagFiles.Include(f => f.Metadata).FirstOrDefault(f => f.Id == id)
-            ?? throw new KeyNotFoundException($"File {id} not found");
-        return ToDto(file);
+        var collection = db.FlagsCollections.Include(f => f.Metadata).FirstOrDefault(f => f.Id == id)
+            ?? throw new KeyNotFoundException($"Collection {id} not found");
+        return ToDto(collection);
     }
 
-    public FlagFileDto CreateFile(string name)
+    public FlagsCollectionDto CreateCollection(string name)
     {
         using var db = _contextFactory();
-        var file = new FlagFile { Name = name };
-        db.FlagFiles.Add(file);
+        var collection = new FlagsCollection { Name = name };
+        db.FlagsCollections.Add(collection);
         db.SaveChanges();
-        return ToDto(file);
+        return ToDto(collection);
     }
 
-    public List<FlagFileDto> GetFiles()
+    public List<FlagsCollectionDto> GetCollections()
     {
         using var db = _contextFactory();
-        return db.FlagFiles.Include(f => f.Metadata).OrderBy(f => f.Id).ToList().Select(ToDto).ToList();
+        return db.FlagsCollections.Include(f => f.Metadata).OrderBy(f => f.Id).ToList().Select(ToDto).ToList();
     }
 
-    public FlagFileDto RenameFile(long id, string name)
+    public FlagsCollectionDto RenameCollection(long id, string name)
     {
         using var db = _contextFactory();
-        var file = db.FlagFiles.Include(f => f.Metadata).FirstOrDefault(f => f.Id == id)
-            ?? throw new KeyNotFoundException($"File {id} not found");
-        file.Name = name;
+        var collection = db.FlagsCollections.Include(f => f.Metadata).FirstOrDefault(f => f.Id == id)
+            ?? throw new KeyNotFoundException($"Collection {id} not found");
+        collection.Name = name;
         db.SaveChanges();
-        return ToDto(file);
+        return ToDto(collection);
     }
 
-    public void DeleteFile(long id)
+    public void DeleteCollection(long id)
     {
         using var db = _contextFactory();
-        var file = db.FlagFiles.Find(id) ?? throw new KeyNotFoundException($"File {id} not found");
-        db.FileMetadataEntries.RemoveRange(db.FileMetadataEntries.Where(m => m.FileId == id));
-        db.FlagEntries.RemoveRange(db.FlagEntries.Where(f => f.FileId == id));
-        db.EnvironmentEntries.RemoveRange(db.EnvironmentEntries.Where(e => e.FileId == id));
-        db.TimeWindows.RemoveRange(db.TimeWindows.Where(t => t.FileId == id));
-        db.FlagFiles.Remove(file);
-        db.SaveChanges();
-    }
-
-    public void ClearFileData(long fileId)
-    {
-        using var db = _contextFactory();
-        if (!db.FlagFiles.Any(f => f.Id == fileId))
-            throw new KeyNotFoundException($"File {fileId} not found");
-        db.FileMetadataEntries.RemoveRange(db.FileMetadataEntries.Where(m => m.FileId == fileId));
-        db.EnvironmentEntries.RemoveRange(db.EnvironmentEntries.Where(e => e.FileId == fileId));
-        db.FlagEntries.RemoveRange(db.FlagEntries.Where(f => f.FileId == fileId));
-        db.TimeWindows.RemoveRange(db.TimeWindows.Where(t => t.FileId == fileId));
+        var collection = db.FlagsCollections.Find(id) ?? throw new KeyNotFoundException($"Collection {id} not found");
+        db.CollectionMetadataEntries.RemoveRange(db.CollectionMetadataEntries.Where(m => m.CollectionId == id));
+        db.FlagEntries.RemoveRange(db.FlagEntries.Where(f => f.CollectionId == id));
+        db.EnvironmentEntries.RemoveRange(db.EnvironmentEntries.Where(e => e.CollectionId == id));
+        db.TimeWindows.RemoveRange(db.TimeWindows.Where(t => t.CollectionId == id));
+        db.FlagsCollections.Remove(collection);
         db.SaveChanges();
     }
 
-    public void UpdateFileMetadata(long fileId, List<MetadataEntryDto> metadata)
+    public void ClearCollectionData(long collectionId)
     {
         using var db = _contextFactory();
-        var file = db.FlagFiles.Find(fileId) ?? throw new KeyNotFoundException($"File {fileId} not found");
+        if (!db.FlagsCollections.Any(f => f.Id == collectionId))
+            throw new KeyNotFoundException($"Collection {collectionId} not found");
+        db.CollectionMetadataEntries.RemoveRange(db.CollectionMetadataEntries.Where(m => m.CollectionId == collectionId));
+        db.EnvironmentEntries.RemoveRange(db.EnvironmentEntries.Where(e => e.CollectionId == collectionId));
+        db.FlagEntries.RemoveRange(db.FlagEntries.Where(f => f.CollectionId == collectionId));
+        db.TimeWindows.RemoveRange(db.TimeWindows.Where(t => t.CollectionId == collectionId));
+        db.SaveChanges();
+    }
 
-        db.FileMetadataEntries.RemoveRange(db.FileMetadataEntries.Where(m => m.FileId == fileId));
+    public void UpdateCollectionMetadata(long collectionId, List<MetadataEntryDto> metadata)
+    {
+        using var db = _contextFactory();
+        var collection = db.FlagsCollections.Find(collectionId) ?? throw new KeyNotFoundException($"Collection {collectionId} not found");
+
+        db.CollectionMetadataEntries.RemoveRange(db.CollectionMetadataEntries.Where(m => m.CollectionId == collectionId));
         foreach (var entry in metadata)
         {
-            db.FileMetadataEntries.Add(new FileMetadataEntry
+            db.CollectionMetadataEntries.Add(new CollectionMetadataEntry
             {
-                FileId = fileId,
+                CollectionId = collectionId,
                 Key = entry.Key,
                 StringValue = entry.StringValue,
                 NumberValue = entry.NumberValue,
@@ -101,15 +101,15 @@ public class FlagdService
 
     // ─── Flag management ──────────────────────────────────────────────────
 
-    public List<FlagEntryDto> GetFlags(long fileId)
+    public List<FlagEntryDto> GetFlags(long collectionId)
     {
         using var db = _contextFactory();
         var envLookup = db.EnvironmentEntries
-            .Where(e => e.FileId == fileId)
+            .Where(e => e.CollectionId == collectionId)
             .ToDictionary(e => e.Id, e => e.Name);
 
         return db.FlagEntries
-            .Where(f => f.FileId == fileId)
+            .Where(f => f.CollectionId == collectionId)
             .Include(f => f.Metadata)
             .Include(f => f.PerEnvironmentDefinitions)
             .OrderBy(f => f.FlagKey)
@@ -125,21 +125,21 @@ public class FlagdService
     /// Per-environment definitions are keyed by environment name; the service
     /// resolves names to EnvironmentEntry IDs.
     /// </summary>
-    public FlagEntryDto UpsertFlag(long fileId, FlagEntryDto dto)
+    public FlagEntryDto UpsertFlag(long collectionId, FlagEntryDto dto)
     {
         using var db = _contextFactory();
 
         // Handle rename: remove the old entry when the key changes
         if (!string.IsNullOrEmpty(dto.PreviousKey) && dto.PreviousKey != dto.Key)
         {
-            var old = db.FlagEntries.FirstOrDefault(f => f.FileId == fileId && f.FlagKey == dto.PreviousKey);
+            var old = db.FlagEntries.FirstOrDefault(f => f.CollectionId == collectionId && f.FlagKey == dto.PreviousKey);
             if (old is not null) db.FlagEntries.Remove(old);
         }
 
         var existing = db.FlagEntries
             .Include(f => f.Metadata)
             .Include(f => f.PerEnvironmentDefinitions)
-            .FirstOrDefault(f => f.FileId == fileId && f.FlagKey == dto.Key);
+            .FirstOrDefault(f => f.CollectionId == collectionId && f.FlagKey == dto.Key);
 
         if (existing is not null)
         {
@@ -154,7 +154,7 @@ public class FlagdService
 
         if (existing is null)
         {
-            existing = CreateFlagEntry(dto.Type, fileId, dto.Key);
+            existing = CreateFlagEntry(dto.Type, collectionId, dto.Key);
             db.FlagEntries.Add(existing);
         }
 
@@ -187,13 +187,13 @@ public class FlagdService
         if (dto.PerEnvironmentDefinitions is not null)
         {
             var envNameToId = db.EnvironmentEntries
-                .Where(e => e.FileId == fileId)
+                .Where(e => e.CollectionId == collectionId)
                 .ToDictionary(e => e.Name, e => e.Id);
 
             foreach (var (envName, envDef) in dto.PerEnvironmentDefinitions)
             {
                 if (!envNameToId.TryGetValue(envName, out var envId))
-                    throw new KeyNotFoundException($"Environment '{envName}' not found in file {fileId}");
+                    throw new KeyNotFoundException($"Environment '{envName}' not found in collection {collectionId}");
 
                 existing.PerEnvironmentDefinitions.Add(new PerEnvironmentDefinition
                 {
@@ -210,27 +210,27 @@ public class FlagdService
         db.SaveChanges();
 
         var envLookup = db.EnvironmentEntries
-            .Where(e => e.FileId == fileId)
+            .Where(e => e.CollectionId == collectionId)
             .ToDictionary(e => e.Id, e => e.Name);
         return ToDto(existing, envLookup);
     }
 
-    public void DeleteFlag(long fileId, string flagKey)
+    public void DeleteFlag(long collectionId, string flagKey)
     {
         using var db = _contextFactory();
-        var entry = db.FlagEntries.FirstOrDefault(f => f.FileId == fileId && f.FlagKey == flagKey)
-            ?? throw new KeyNotFoundException($"Flag '{flagKey}' not found in file {fileId}");
+        var entry = db.FlagEntries.FirstOrDefault(f => f.CollectionId == collectionId && f.FlagKey == flagKey)
+            ?? throw new KeyNotFoundException($"Flag '{flagKey}' not found in collection {collectionId}");
         db.FlagEntries.Remove(entry);
         db.SaveChanges();
     }
 
     // ─── Environment management ───────────────────────────────────────────
 
-    public List<EnvironmentEntryDto> GetEnvironments(long fileId)
+    public List<EnvironmentEntryDto> GetEnvironments(long collectionId)
     {
         using var db = _contextFactory();
         return db.EnvironmentEntries
-            .Where(e => e.FileId == fileId)
+            .Where(e => e.CollectionId == collectionId)
             .Include(e => e.Aliases)
             .OrderBy(e => e.Name)
             .ToList()
@@ -238,7 +238,7 @@ public class FlagdService
             .ToList();
     }
 
-    public EnvironmentEntryDto UpsertEnvironment(long fileId, EnvironmentEntryDto dto)
+    public EnvironmentEntryDto UpsertEnvironment(long collectionId, EnvironmentEntryDto dto)
     {
         if (string.IsNullOrWhiteSpace(dto.Name))
             throw new ArgumentException("Environment name is required");
@@ -247,13 +247,13 @@ public class FlagdService
 
         var existing = db.EnvironmentEntries
             .Include(e => e.Aliases)
-            .FirstOrDefault(e => e.FileId == fileId && e.Name == dto.Name);
+            .FirstOrDefault(e => e.CollectionId == collectionId && e.Name == dto.Name);
 
         if (existing is null)
         {
             existing = new EnvironmentEntry
             {
-                FileId = fileId,
+                CollectionId = collectionId,
                 Name = dto.Name
             };
             db.EnvironmentEntries.Add(existing);
@@ -271,40 +271,40 @@ public class FlagdService
         return ToDto(existing);
     }
 
-    public void DeleteEnvironment(long fileId, string name)
+    public void DeleteEnvironment(long collectionId, string name)
     {
         using var db = _contextFactory();
-        var entry = db.EnvironmentEntries.FirstOrDefault(e => e.FileId == fileId && e.Name == name)
-            ?? throw new KeyNotFoundException($"Environment '{name}' not found in file {fileId}");
+        var entry = db.EnvironmentEntries.FirstOrDefault(e => e.CollectionId == collectionId && e.Name == name)
+            ?? throw new KeyNotFoundException($"Environment '{name}' not found in collection {collectionId}");
         db.EnvironmentEntries.Remove(entry);
         db.SaveChanges();
     }
 
     // ─── Time window management ───────────────────────────────────────────
 
-    public List<TimeWindowDto> GetTimeWindows(long fileId)
+    public List<TimeWindowDto> GetTimeWindows(long collectionId)
     {
         using var db = _contextFactory();
         return db.TimeWindows
-            .Where(t => t.FileId == fileId)
+            .Where(t => t.CollectionId == collectionId)
             .OrderBy(t => t.Name)
             .ToList()
             .Select(ToDto)
             .ToList();
     }
 
-    public TimeWindowDto CreateTimeWindow(long fileId, TimeWindowDto dto)
+    public TimeWindowDto CreateTimeWindow(long collectionId, TimeWindowDto dto)
     {
         if (string.IsNullOrWhiteSpace(dto.Name))
             throw new ArgumentException("Time window name is required");
 
         using var db = _contextFactory();
-        if (!db.FlagFiles.Any(f => f.Id == fileId))
-            throw new KeyNotFoundException($"File {fileId} not found");
+        if (!db.FlagsCollections.Any(f => f.Id == collectionId))
+            throw new KeyNotFoundException($"Collection {collectionId} not found");
 
         var tw = new TimeWindow
         {
-            FileId = fileId,
+            CollectionId = collectionId,
             Name = dto.Name,
             StartTime = dto.StartTime,
             EndTime = dto.EndTime
@@ -314,11 +314,11 @@ public class FlagdService
         return ToDto(tw);
     }
 
-    public TimeWindowDto UpdateTimeWindow(long fileId, long timeWindowId, TimeWindowDto dto)
+    public TimeWindowDto UpdateTimeWindow(long collectionId, long timeWindowId, TimeWindowDto dto)
     {
         using var db = _contextFactory();
-        var tw = db.TimeWindows.FirstOrDefault(t => t.Id == timeWindowId && t.FileId == fileId)
-            ?? throw new KeyNotFoundException($"Time window {timeWindowId} not found in file {fileId}");
+        var tw = db.TimeWindows.FirstOrDefault(t => t.Id == timeWindowId && t.CollectionId == collectionId)
+            ?? throw new KeyNotFoundException($"Time window {timeWindowId} not found in collection {collectionId}");
 
         tw.Name = dto.Name;
         tw.StartTime = dto.StartTime;
@@ -327,11 +327,11 @@ public class FlagdService
         return ToDto(tw);
     }
 
-    public void DeleteTimeWindow(long fileId, long timeWindowId)
+    public void DeleteTimeWindow(long collectionId, long timeWindowId)
     {
         using var db = _contextFactory();
-        var tw = db.TimeWindows.FirstOrDefault(t => t.Id == timeWindowId && t.FileId == fileId)
-            ?? throw new KeyNotFoundException($"Time window {timeWindowId} not found in file {fileId}");
+        var tw = db.TimeWindows.FirstOrDefault(t => t.Id == timeWindowId && t.CollectionId == collectionId)
+            ?? throw new KeyNotFoundException($"Time window {timeWindowId} not found in collection {collectionId}");
         db.TimeWindows.Remove(tw);
         db.SaveChanges();
     }
@@ -347,12 +347,12 @@ public class FlagdService
         _ => throw new InvalidOperationException($"Unknown flag entry type: {entry.GetType()}")
     };
 
-    private static FlagEntry CreateFlagEntry(string type, long fileId, string flagKey) => type switch
+    private static FlagEntry CreateFlagEntry(string type, long collectionId, string flagKey) => type switch
     {
-        "boolean" => new BooleanFlagEntry { FileId = fileId, FlagKey = flagKey },
-        "string" => new StringFlagEntry { FileId = fileId, FlagKey = flagKey },
-        "number" => new NumberFlagEntry { FileId = fileId, FlagKey = flagKey },
-        "object" => new ObjectFlagEntry { FileId = fileId, FlagKey = flagKey },
+        "boolean" => new BooleanFlagEntry { CollectionId = collectionId, FlagKey = flagKey },
+        "string" => new StringFlagEntry { CollectionId = collectionId, FlagKey = flagKey },
+        "number" => new NumberFlagEntry { CollectionId = collectionId, FlagKey = flagKey },
+        "object" => new ObjectFlagEntry { CollectionId = collectionId, FlagKey = flagKey },
         _ => throw new ArgumentException($"Unknown flag type: {type}")
     };
 
@@ -378,7 +378,7 @@ public class FlagdService
         }
     }
 
-    private static FlagFileDto ToDto(FlagFile f) =>
+    private static FlagsCollectionDto ToDto(FlagsCollection f) =>
         new(f.Id, f.Name, f.CreatedAt,
             f.Metadata.Count > 0
                 ? f.Metadata.Select(m => new MetadataEntryDto(m.Key, m.StringValue, m.NumberValue, m.BooleanValue)).ToList()

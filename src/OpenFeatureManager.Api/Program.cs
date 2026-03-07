@@ -37,42 +37,42 @@ using (var scope = app.Services.CreateScope())
 
 app.MapOpenApi();
 
-// ─── File endpoints ───────────────────────────────────────────────────
+// ─── Collection endpoints ─────────────────────────────────────────────
 
-app.MapGet("/api/files", (FlagdService svc) => TypedResults.Ok(svc.GetFiles()))
-    .WithName("listFiles").WithTags("files");
+app.MapGet("/api/collections", (FlagdService svc) => TypedResults.Ok(svc.GetCollections()))
+    .WithName("listCollections").WithTags("collections");
 
-app.MapPost("/api/files", (CreateFileRequest req, FlagdService svc) =>
+app.MapPost("/api/collections", (CreateCollectionRequest req, FlagdService svc) =>
 {
-    var file = svc.CreateFile(req.Name);
-    return TypedResults.Created($"/api/files/{file.Id}", file);
-}).WithName("createFile").WithTags("files");
+    var collection = svc.CreateCollection(req.Name);
+    return TypedResults.Created($"/api/collections/{collection.Id}", collection);
+}).WithName("createCollection").WithTags("collections");
 
-app.MapPut("/api/files/{id}", (long id, RenameFileRequest req, FlagdService svc) =>
-    TypedResults.Ok(svc.RenameFile(id, req.Name)))
-    .WithName("renameFile").WithTags("files");
+app.MapPut("/api/collections/{id}", (long id, RenameCollectionRequest req, FlagdService svc) =>
+    TypedResults.Ok(svc.RenameCollection(id, req.Name)))
+    .WithName("renameCollection").WithTags("collections");
 
-app.MapDelete("/api/files/{id}", (long id, FlagdService svc) =>
+app.MapDelete("/api/collections/{id}", (long id, FlagdService svc) =>
 {
-    svc.DeleteFile(id);
+    svc.DeleteCollection(id);
     return TypedResults.NoContent();
-}).WithName("deleteFile").WithTags("files");
+}).WithName("deleteCollection").WithTags("collections");
 
 // ─── Flag endpoints ───────────────────────────────────────────────────
 
-app.MapGet("/api/files/{id}/flags", (long id, FlagdService svc) =>
+app.MapGet("/api/collections/{id}/flags", (long id, FlagdService svc) =>
     TypedResults.Ok(svc.GetFlags(id)))
     .WithName("getFlags").WithTags("flags");
 
-app.MapPost("/api/files/{id}/flags", (long id, FlagEntryDto dto, FlagdService svc) =>
+app.MapPost("/api/collections/{id}/flags", (long id, FlagEntryDto dto, FlagdService svc) =>
     TypedResults.Ok(svc.UpsertFlag(id, dto)))
     .WithName("createFlag").WithTags("flags");
 
-app.MapPut("/api/files/{id}/flags", (long id, FlagEntryDto dto, FlagdService svc) =>
+app.MapPut("/api/collections/{id}/flags", (long id, FlagEntryDto dto, FlagdService svc) =>
     TypedResults.Ok(svc.UpsertFlag(id, dto)))
     .WithName("updateFlag").WithTags("flags");
 
-app.MapDelete("/api/files/{id}/flags/{key}", (long id, string key, FlagdService svc) =>
+app.MapDelete("/api/collections/{id}/flags/{key}", (long id, string key, FlagdService svc) =>
 {
     svc.DeleteFlag(id, Uri.UnescapeDataString(key));
     return TypedResults.NoContent();
@@ -80,19 +80,19 @@ app.MapDelete("/api/files/{id}/flags/{key}", (long id, string key, FlagdService 
 
 // ─── Environment endpoints ────────────────────────────────────────────
 
-app.MapGet("/api/files/{id}/environments", (long id, FlagdService svc) =>
+app.MapGet("/api/collections/{id}/environments", (long id, FlagdService svc) =>
     TypedResults.Ok(svc.GetEnvironments(id)))
     .WithName("getEnvironments").WithTags("environments");
 
-app.MapPost("/api/files/{id}/environments", (long id, EnvironmentEntryDto dto, FlagdService svc) =>
+app.MapPost("/api/collections/{id}/environments", (long id, EnvironmentEntryDto dto, FlagdService svc) =>
     TypedResults.Ok(svc.UpsertEnvironment(id, dto)))
     .WithName("createEnvironment").WithTags("environments");
 
-app.MapPut("/api/files/{id}/environments", (long id, EnvironmentEntryDto dto, FlagdService svc) =>
+app.MapPut("/api/collections/{id}/environments", (long id, EnvironmentEntryDto dto, FlagdService svc) =>
     TypedResults.Ok(svc.UpsertEnvironment(id, dto)))
     .WithName("updateEnvironment").WithTags("environments");
 
-app.MapDelete("/api/files/{id}/environments/{name}", (long id, string name, FlagdService svc) =>
+app.MapDelete("/api/collections/{id}/environments/{name}", (long id, string name, FlagdService svc) =>
 {
     svc.DeleteEnvironment(id, Uri.UnescapeDataString(name));
     return TypedResults.NoContent();
@@ -100,21 +100,21 @@ app.MapDelete("/api/files/{id}/environments/{name}", (long id, string name, Flag
 
 // ─── Time window endpoints ────────────────────────────────────────────
 
-app.MapGet("/api/files/{id}/timewindows", (long id, FlagdService svc) =>
+app.MapGet("/api/collections/{id}/timewindows", (long id, FlagdService svc) =>
     TypedResults.Ok(svc.GetTimeWindows(id)))
     .WithName("getTimeWindows").WithTags("timewindows");
 
-app.MapPost("/api/files/{id}/timewindows", (long id, TimeWindowDto dto, FlagdService svc) =>
+app.MapPost("/api/collections/{id}/timewindows", (long id, TimeWindowDto dto, FlagdService svc) =>
 {
     var tw = svc.CreateTimeWindow(id, dto);
-    return TypedResults.Created($"/api/files/{id}/timewindows/{tw.Id}", tw);
+    return TypedResults.Created($"/api/collections/{id}/timewindows/{tw.Id}", tw);
 }).WithName("createTimeWindow").WithTags("timewindows");
 
-app.MapPut("/api/files/{id}/timewindows/{twId}", (long id, long twId, TimeWindowDto dto, FlagdService svc) =>
+app.MapPut("/api/collections/{id}/timewindows/{twId}", (long id, long twId, TimeWindowDto dto, FlagdService svc) =>
     TypedResults.Ok(svc.UpdateTimeWindow(id, twId, dto)))
     .WithName("updateTimeWindow").WithTags("timewindows");
 
-app.MapDelete("/api/files/{id}/timewindows/{twId}", (long id, long twId, FlagdService svc) =>
+app.MapDelete("/api/collections/{id}/timewindows/{twId}", (long id, long twId, FlagdService svc) =>
 {
     svc.DeleteTimeWindow(id, twId);
     return TypedResults.NoContent();
@@ -122,11 +122,11 @@ app.MapDelete("/api/files/{id}/timewindows/{twId}", (long id, long twId, FlagdSe
 
 // ─── Schema endpoints ─────────────────────────────────────────────────
 
-app.MapGet("/api/files/{id}/schema", (long id, FlagdSchemaService svc) =>
+app.MapGet("/api/collections/{id}/schema", (long id, FlagdSchemaService svc) =>
     TypedResults.Text(svc.ExportSchema(id), "application/json"))
     .WithName("exportSchema").WithTags("schema");
 
-app.MapPost("/api/files/{id}/schema", async (long id, HttpRequest request, FlagdSchemaService svc) =>
+app.MapPost("/api/collections/{id}/schema", async (long id, HttpRequest request, FlagdSchemaService svc) =>
 {
     using var reader = new StreamReader(request.Body);
     var body = await reader.ReadToEndAsync();
@@ -153,5 +153,5 @@ static string? FindSchemaFile()
 
 // ─── Request DTOs ─────────────────────────────────────────────────────
 
-record CreateFileRequest(string Name);
-record RenameFileRequest(string Name);
+record CreateCollectionRequest(string Name);
+record RenameCollectionRequest(string Name);

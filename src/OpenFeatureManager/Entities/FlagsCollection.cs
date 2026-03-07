@@ -3,8 +3,8 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace OpenFeatureManager.Entities;
 
-[Table("flag_files")]
-public class FlagFile
+[Table("flags_collections")]
+public class FlagsCollection
 {
     [Key]
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
@@ -18,7 +18,7 @@ public class FlagFile
     [Column("created_at")]
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
-    public List<FileMetadataEntry> Metadata { get; set; } = [];
+    public List<CollectionMetadataEntry> Metadata { get; set; } = [];
     public List<FlagEntry> Flags { get; set; } = [];
     public List<EnvironmentEntry> Environments { get; set; } = [];
     public List<TimeWindow> TimeWindows { get; set; } = [];

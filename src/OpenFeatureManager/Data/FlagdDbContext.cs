@@ -8,7 +8,7 @@ public class FlagdDbContext : DbContext
 {
     private readonly string? _connectionString;
 
-    public DbSet<FlagFile> FlagFiles => Set<FlagFile>();
+    public DbSet<FlagsCollection> FlagsCollections => Set<FlagsCollection>();
     public DbSet<FlagEntry> FlagEntries => Set<FlagEntry>();
     public DbSet<BooleanFlagEntry> BooleanFlagEntries => Set<BooleanFlagEntry>();
     public DbSet<StringFlagEntry> StringFlagEntries => Set<StringFlagEntry>();
@@ -17,7 +17,7 @@ public class FlagdDbContext : DbContext
     public DbSet<EnvironmentEntry> EnvironmentEntries => Set<EnvironmentEntry>();
     public DbSet<EnvironmentAlias> EnvironmentAliases => Set<EnvironmentAlias>();
     public DbSet<FlagMetadataEntry> FlagMetadataEntries => Set<FlagMetadataEntry>();
-    public DbSet<FileMetadataEntry> FileMetadataEntries => Set<FileMetadataEntry>();
+    public DbSet<CollectionMetadataEntry> CollectionMetadataEntries => Set<CollectionMetadataEntry>();
     public DbSet<PerEnvironmentDefinition> PerEnvironmentDefinitions => Set<PerEnvironmentDefinition>();
     public DbSet<TimeWindow> TimeWindows => Set<TimeWindow>();
 
@@ -38,17 +38,17 @@ public class FlagdDbContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        modelBuilder.Entity<FlagFile>(entity =>
+        modelBuilder.Entity<FlagsCollection>(entity =>
         {
-            entity.ToTable("flag_files");
+            entity.ToTable("flags_collections");
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Id).ValueGeneratedOnAdd();
             entity.Property(e => e.Name).IsRequired();
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("datetime('now')");
-            entity.HasMany(e => e.Metadata).WithOne().HasForeignKey(e => e.FileId).OnDelete(DeleteBehavior.Cascade);
-            entity.HasMany(e => e.Flags).WithOne().HasForeignKey(e => e.FileId).OnDelete(DeleteBehavior.Cascade);
-            entity.HasMany(e => e.Environments).WithOne().HasForeignKey(e => e.FileId).OnDelete(DeleteBehavior.Cascade);
-            entity.HasMany(e => e.TimeWindows).WithOne().HasForeignKey(e => e.FileId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasMany(e => e.Metadata).WithOne().HasForeignKey(e => e.CollectionId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasMany(e => e.Flags).WithOne().HasForeignKey(e => e.CollectionId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasMany(e => e.Environments).WithOne().HasForeignKey(e => e.CollectionId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasMany(e => e.TimeWindows).WithOne().HasForeignKey(e => e.CollectionId).OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<FlagEntry>(entity =>
@@ -57,7 +57,7 @@ public class FlagdDbContext : DbContext
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Id).ValueGeneratedOnAdd();
             entity.Property(e => e.FlagKey).IsRequired();
-            entity.HasIndex(e => new { e.FileId, e.FlagKey }).IsUnique();
+            entity.HasIndex(e => new { e.CollectionId, e.FlagKey }).IsUnique();
             entity.Property(e => e.State).HasConversion(new EnumToStringConverter<FlagState>());
             entity.HasDiscriminator<string>("type")
                 .HasValue<BooleanFlagEntry>("boolean")
@@ -75,7 +75,7 @@ public class FlagdDbContext : DbContext
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Id).ValueGeneratedOnAdd();
             entity.Property(e => e.Name).IsRequired();
-            entity.HasIndex(e => new { e.FileId, e.Name }).IsUnique();
+            entity.HasIndex(e => new { e.CollectionId, e.Name }).IsUnique();
             entity.HasMany(e => e.Aliases).WithOne().HasForeignKey(e => e.EnvironmentEntryId).OnDelete(DeleteBehavior.Cascade);
         });
 
@@ -87,13 +87,13 @@ public class FlagdDbContext : DbContext
             entity.Property(e => e.Alias).IsRequired();
         });
 
-        modelBuilder.Entity<FileMetadataEntry>(entity =>
+        modelBuilder.Entity<CollectionMetadataEntry>(entity =>
         {
-            entity.ToTable("file_metadata_entries");
+            entity.ToTable("collection_metadata_entries");
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Id).ValueGeneratedOnAdd();
             entity.Property(e => e.Key).IsRequired();
-            entity.HasIndex(e => new { e.FileId, e.Key }).IsUnique();
+            entity.HasIndex(e => new { e.CollectionId, e.Key }).IsUnique();
         });
 
         modelBuilder.Entity<FlagMetadataEntry>(entity =>
@@ -121,7 +121,7 @@ public class FlagdDbContext : DbContext
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Id).ValueGeneratedOnAdd();
             entity.Property(e => e.Name).IsRequired();
-            entity.HasIndex(e => new { e.FileId, e.Name }).IsUnique();
+            entity.HasIndex(e => new { e.CollectionId, e.Name }).IsUnique();
         });
     }
 }
