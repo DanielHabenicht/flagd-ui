@@ -98,6 +98,28 @@ app.MapDelete("/api/files/{id}/environments/{name}", (long id, string name, Flag
     return TypedResults.NoContent();
 }).WithName("deleteEnvironment").WithTags("environments");
 
+// ─── Time window endpoints ────────────────────────────────────────────
+
+app.MapGet("/api/files/{id}/timewindows", (long id, FlagdService svc) =>
+    TypedResults.Ok(svc.GetTimeWindows(id)))
+    .WithName("getTimeWindows").WithTags("timewindows");
+
+app.MapPost("/api/files/{id}/timewindows", (long id, TimeWindowDto dto, FlagdService svc) =>
+{
+    var tw = svc.CreateTimeWindow(id, dto);
+    return TypedResults.Created($"/api/files/{id}/timewindows/{tw.Id}", tw);
+}).WithName("createTimeWindow").WithTags("timewindows");
+
+app.MapPut("/api/files/{id}/timewindows/{twId}", (long id, long twId, TimeWindowDto dto, FlagdService svc) =>
+    TypedResults.Ok(svc.UpdateTimeWindow(id, twId, dto)))
+    .WithName("updateTimeWindow").WithTags("timewindows");
+
+app.MapDelete("/api/files/{id}/timewindows/{twId}", (long id, long twId, FlagdService svc) =>
+{
+    svc.DeleteTimeWindow(id, twId);
+    return TypedResults.NoContent();
+}).WithName("deleteTimeWindow").WithTags("timewindows");
+
 // ─── Schema endpoints ─────────────────────────────────────────────────
 
 app.MapGet("/api/files/{id}/schema", (long id, FlagdSchemaService svc) =>

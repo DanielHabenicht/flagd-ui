@@ -4,7 +4,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 namespace OpenFeatureManager.Entities;
 
 [Table("flag_entries")]
-public class FlagEntry
+public abstract class FlagEntry
 {
     [Key]
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
@@ -18,23 +18,14 @@ public class FlagEntry
     [Column("flag_key")]
     public string FlagKey { get; set; } = string.Empty;
 
-    /// <summary>Flag type: boolean | string | number | object</summary>
-    [Column("type")]
-    public string Type { get; set; } = "boolean";
-
-    /// <summary>Flag state: ENABLED | DISABLED</summary>
     [Column("state")]
-    public string State { get; set; } = "ENABLED";
+    public FlagState State { get; set; } = FlagState.ENABLED;
 
-    /// <summary>Raw JSON text of the flag's default value</summary>
-    [Column("value_json")]
-    public string? ValueJson { get; set; }
+    [Column("global_time_window_id")]
+    public long? GlobalTimeWindowId { get; set; }
 
-    /// <summary>Raw JSON text of the flag's metadata object</summary>
-    [Column("metadata_json")]
-    public string? MetadataJson { get; set; }
+    public TimeWindow? GlobalTimeWindow { get; set; }
 
-    /// <summary>Raw JSON text of the flag's targeting rule</summary>
-    [Column("targeting_json")]
-    public string? TargetingJson { get; set; }
+    public List<FlagMetadataEntry> Metadata { get; set; } = [];
+    public List<PerEnvironmentDefinition> PerEnvironmentDefinitions { get; set; } = [];
 }

@@ -3,8 +3,8 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace OpenFeatureManager.Entities;
 
-[Table("environment_entries")]
-public class EnvironmentEntry
+[Table("time_windows")]
+public class TimeWindow
 {
     [Key]
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
@@ -14,10 +14,14 @@ public class EnvironmentEntry
     [Column("file_id")]
     public long FileId { get; set; }
 
-    /// <summary>Human-readable environment name, e.g. "Production", "Staging"</summary>
+    /// <summary>Human-readable name, e.g. "Christmas Time", "Black Friday"</summary>
     [Required]
     [Column("name")]
     public string Name { get; set; } = string.Empty;
 
-    public List<EnvironmentAlias> Aliases { get; set; } = [];
+    [Column("start_time")]
+    public DateTime? StartTime { get; set; }
+
+    [Column("end_time")]
+    public DateTime? EndTime { get; set; }
 }

@@ -18,6 +18,8 @@ public class FlagFile
     [Column("created_at")]
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
-    [Column("metadata_json")]
-    public string? MetadataJson { get; set; }
+    public List<FileMetadataEntry> Metadata { get; set; } = [];
+    public List<FlagEntry> Flags { get; set; } = [];
+    public List<EnvironmentEntry> Environments { get; set; } = [];
+    public List<TimeWindow> TimeWindows { get; set; } = [];
 }

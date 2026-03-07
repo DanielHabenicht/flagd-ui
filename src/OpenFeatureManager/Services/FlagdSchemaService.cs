@@ -7,9 +7,9 @@ namespace OpenFeatureManager.Services;
 /// <summary>
 /// Handles import and export of flagd JSON Schema documents.
 ///
-/// Converts between the flagd JSON schema format and the normalised DTO model
-/// exposed by <see cref="FlagdService"/>, using raw <see cref="JsonDocument"/>
-/// parsing so there is no dependency on generated schema types.
+/// Converts between the flagd JSON schema format and the typed DTO model
+/// exposed by <see cref="FlagdService"/>. Values are stored with their native
+/// types rather than as raw JSON strings.
 /// </summary>
 public class FlagdSchemaService
 {
@@ -48,7 +48,8 @@ public class FlagdSchemaService
             && metadataElem.ValueKind == JsonValueKind.Object
             && metadataElem.EnumerateObject().Any())
         {
-            _flagdService.UpdateFileMetadata(fileId, metadataElem.GetRawText());
+            var metadata = ParseMetadata(metadataElem);
+            _flagdService.UpdateFileMetadata(fileId, metadata);
         }
 
         // Parse $evaluators → environments  (pattern: "isXxx")
@@ -76,14 +77,13 @@ public class FlagdSchemaService
                     aliasesPart.ValueKind != JsonValueKind.Array)
                     continue;
 
-                var envName = key[EnvironmentEvaluatorPrefix.Length..].ToLowerInvariant();
-                var displayName = char.ToUpperInvariant(envName[0]) + envName[1..];
+                var envName = key[EnvironmentEvaluatorPrefix.Length..]; // "Production" from "isProduction"
                 var aliases = aliasesPart.EnumerateArray()
                     .Select(a => a.GetString() ?? string.Empty)
                     .Where(a => !string.IsNullOrEmpty(a))
                     .ToArray();
 
-                _flagdService.UpsertEnvironment(fileId, new EnvironmentEntryDto(envName, displayName, aliases));
+                _flagdService.UpsertEnvironment(fileId, new EnvironmentEntryDto(envName, aliases));
             }
         }
 
@@ -102,7 +102,10 @@ public class FlagdSchemaService
                     : "ENABLED";
 
                 var flagType = "object";
-                string? valueJson = null;
+                bool? boolVal = null;
+                string? strVal = null;
+                double? numVal = null;
+                string? objVal = null;
 
                 if (flagDef.TryGetProperty("defaultVariant", out var defaultVariantElem)
                     && flagDef.TryGetProperty("variants", out var variantsElem)
@@ -112,26 +115,43 @@ public class FlagdSchemaService
                     if (!string.IsNullOrEmpty(defaultVariantName)
                         && variantsElem.TryGetProperty(defaultVariantName, out var defaultValue))
                     {
-                        flagType = defaultValue.ValueKind switch
+                        switch (defaultValue.ValueKind)
                         {
-                            JsonValueKind.True or JsonValueKind.False => "boolean",
-                            JsonValueKind.Number => "number",
-                            JsonValueKind.String => "string",
-                            _ => "object",
-                        };
-                        valueJson = defaultValue.GetRawText();
+                            case JsonValueKind.True:
+                                flagType = "boolean";
+                                boolVal = true;
+                                break;
+                            case JsonValueKind.False:
+                                flagType = "boolean";
+                                boolVal = false;
+                                break;
+                            case JsonValueKind.Number:
+                                flagType = "number";
+                                numVal = defaultValue.GetDouble();
+                                break;
+                            case JsonValueKind.String:
+                                flagType = "string";
+                                strVal = defaultValue.GetString();
+                                break;
+                            default:
+                                flagType = "object";
+                                objVal = defaultValue.GetRawText();
+                                break;
+                        }
                     }
                 }
 
-                string? flagMetadataJson = flagDef.TryGetProperty("metadata", out var flagMetaElem)
-                    && flagMetaElem.ValueKind == JsonValueKind.Object
-                    ? flagMetaElem.GetRawText() : null;
+                List<MetadataEntryDto>? flagMetadata = null;
+                if (flagDef.TryGetProperty("metadata", out var flagMetaElem)
+                    && flagMetaElem.ValueKind == JsonValueKind.Object)
+                {
+                    flagMetadata = ParseMetadata(flagMetaElem);
+                }
 
-                string? targetingJson = flagDef.TryGetProperty("targeting", out var targetingElem)
-                    && targetingElem.ValueKind == JsonValueKind.Object
-                    ? targetingElem.GetRawText() : null;
-
-                _flagdService.UpsertFlag(fileId, new FlagEntryDto(flagKey, flagType, state, valueJson, flagMetadataJson, targetingJson));
+                _flagdService.UpsertFlag(fileId, new FlagEntryDto(
+                    flagKey, flagType, state,
+                    boolVal, strVal, numVal, objVal,
+                    flagMetadata));
             }
         }
     }
@@ -166,21 +186,15 @@ public class FlagdSchemaService
             writer.WritePropertyName("variants");
             writer.WriteStartObject();
             writer.WritePropertyName(variantKey);
-            WriteRawOrNull(writer, flag.ValueJson);
+            WriteFlagValue(writer, flag);
             writer.WriteEndObject();
 
             writer.WriteString("defaultVariant", variantKey);
 
-            if (!string.IsNullOrEmpty(flag.TargetingJson))
-            {
-                writer.WritePropertyName("targeting");
-                WriteRaw(writer, flag.TargetingJson);
-            }
-
-            if (!string.IsNullOrEmpty(flag.MetadataJson))
+            if (flag.Metadata is { Count: > 0 })
             {
                 writer.WritePropertyName("metadata");
-                WriteRaw(writer, flag.MetadataJson);
+                WriteMetadata(writer, flag.Metadata);
             }
 
             writer.WriteEndObject();
@@ -195,9 +209,7 @@ public class FlagdSchemaService
             foreach (var env in environments)
             {
                 if (string.IsNullOrEmpty(env.Name)) continue;
-                var refKey = EnvironmentEvaluatorPrefix +
-                             char.ToUpperInvariant(env.Name[0]) +
-                             env.Name[1..];
+                var refKey = EnvironmentEvaluatorPrefix + env.Name; // "is" + "Production" = "isProduction"
 
                 writer.WritePropertyName(refKey);
                 writer.WriteStartObject();
@@ -216,10 +228,10 @@ public class FlagdSchemaService
         }
 
         // file-level metadata
-        if (!string.IsNullOrEmpty(file.MetadataJson))
+        if (file.Metadata is { Count: > 0 })
         {
             writer.WritePropertyName("metadata");
-            WriteRaw(writer, file.MetadataJson);
+            WriteMetadata(writer, file.Metadata);
         }
 
         writer.WriteEndObject(); // root
@@ -234,17 +246,76 @@ public class FlagdSchemaService
 
     // ─── Private helpers ──────────────────────────────────────────────────
 
-    private static void WriteRaw(Utf8JsonWriter writer, string rawJson)
+    private static List<MetadataEntryDto> ParseMetadata(JsonElement metadataObj)
     {
-        using var doc = JsonDocument.Parse(rawJson);
-        doc.RootElement.WriteTo(writer);
+        var result = new List<MetadataEntryDto>();
+        foreach (var prop in metadataObj.EnumerateObject())
+        {
+            var dto = prop.Value.ValueKind switch
+            {
+                JsonValueKind.String => new MetadataEntryDto(prop.Name, StringValue: prop.Value.GetString()),
+                JsonValueKind.Number => new MetadataEntryDto(prop.Name, NumberValue: prop.Value.GetDouble()),
+                JsonValueKind.True => new MetadataEntryDto(prop.Name, BooleanValue: true),
+                JsonValueKind.False => new MetadataEntryDto(prop.Name, BooleanValue: false),
+                _ => null
+            };
+            if (dto is not null) result.Add(dto);
+        }
+        return result;
     }
 
-    private static void WriteRawOrNull(Utf8JsonWriter writer, string? rawJson)
+    private static void WriteFlagValue(Utf8JsonWriter writer, FlagEntryDto flag)
     {
-        if (string.IsNullOrEmpty(rawJson))
-            writer.WriteNullValue();
-        else
-            WriteRaw(writer, rawJson);
+        switch (flag.Type)
+        {
+            case "boolean":
+                if (flag.BooleanValue.HasValue)
+                    writer.WriteBooleanValue(flag.BooleanValue.Value);
+                else
+                    writer.WriteNullValue();
+                break;
+            case "string":
+                if (flag.StringValue is not null)
+                    writer.WriteStringValue(flag.StringValue);
+                else
+                    writer.WriteNullValue();
+                break;
+            case "number":
+                if (flag.NumberValue.HasValue)
+                    writer.WriteNumberValue(flag.NumberValue.Value);
+                else
+                    writer.WriteNullValue();
+                break;
+            case "object":
+                if (!string.IsNullOrEmpty(flag.ObjectValue))
+                {
+                    using var doc = JsonDocument.Parse(flag.ObjectValue);
+                    doc.RootElement.WriteTo(writer);
+                }
+                else
+                    writer.WriteNullValue();
+                break;
+            default:
+                writer.WriteNullValue();
+                break;
+        }
+    }
+
+    private static void WriteMetadata(Utf8JsonWriter writer, List<MetadataEntryDto> metadata)
+    {
+        writer.WriteStartObject();
+        foreach (var entry in metadata)
+        {
+            writer.WritePropertyName(entry.Key);
+            if (entry.StringValue is not null)
+                writer.WriteStringValue(entry.StringValue);
+            else if (entry.NumberValue.HasValue)
+                writer.WriteNumberValue(entry.NumberValue.Value);
+            else if (entry.BooleanValue.HasValue)
+                writer.WriteBooleanValue(entry.BooleanValue.Value);
+            else
+                writer.WriteNullValue();
+        }
+        writer.WriteEndObject();
     }
 }
