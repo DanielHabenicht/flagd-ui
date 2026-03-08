@@ -16,6 +16,8 @@
 
   <ItemGroup>
     <PackageReference Include="Bootsharp" Version="0.7.0" />
+    <PackageReference Include="Bootsharp.Inject" Version="0.7.0" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.3" />
   </ItemGroup>
 
   <ItemGroup>

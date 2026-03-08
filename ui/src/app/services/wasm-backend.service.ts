@@ -1,15 +1,23 @@
 import { Injectable, signal } from '@angular/core';
 
+// Re-export generated DTO types from bootsharp for consumers
+export type { OpenFeatureManager as OpenFeatureManagerTypes } from 'bootsharp';
+
+export type FlagsCollectionDto = import('bootsharp').OpenFeatureManager.Models.FlagsCollectionDto;
+export type MetadataEntryDto = import('bootsharp').OpenFeatureManager.Models.MetadataEntryDto;
+export type FlagEntryDto = import('bootsharp').OpenFeatureManager.Models.FlagEntryDto;
+export type GlobalTimeWindowDto = import('bootsharp').OpenFeatureManager.Models.GlobalTimeWindowDto;
+export type EnvironmentEntryDto = import('bootsharp').OpenFeatureManager.Models.EnvironmentEntryDto;
+export type TimeWindowDto = import('bootsharp').OpenFeatureManager.Models.TimeWindowDto;
+
 export type WasmBackendStatus = 'not-initialized' | 'booting' | 'ready' | 'error';
 
 /**
  * Angular service wrapping the Bootsharp-compiled .NET WASM backend.
  *
  * Call {@link boot} once to initialise the .NET runtime and in-memory database.
- * After the returned promise resolves the bindings are available via
- * {@link initDatabase}, {@link importDatabase}, and {@link exportDatabase}.
- *
- * Usage is NOT yet wired into any component — this service only exposes the API.
+ * After the returned promise resolves, all database lifecycle and flagd domain
+ * operations are available.
  */
 @Injectable({ providedIn: 'root' })
 export class WasmBackendService {
@@ -48,35 +56,107 @@ export class WasmBackendService {
     }
   }
 
-  /**
-   * Initialise a fresh in-memory SQLite database inside the WASM runtime.
-   * The runtime must be booted first.
-   */
+  // ─── Database lifecycle ───────────────────────────────────────────────
+
   initDatabase(): string {
-    this.ensureReady();
-    const { OpenFeatureManager } = this.getBindings();
-    return OpenFeatureManager.Wasm.WasmBindings.initDatabase();
+    return this.db().initDatabase();
   }
 
-  /**
-   * Import an SQLite database from raw bytes.
-   * The runtime must be booted first.
-   */
   importDatabase(data: Uint8Array): string {
-    this.ensureReady();
-    const { OpenFeatureManager } = this.getBindings();
-    return OpenFeatureManager.Wasm.WasmBindings.importDatabase(data);
+    return this.db().importDatabase(data);
   }
 
-  /**
-   * Export the current in-memory SQLite database as raw bytes.
-   * The runtime must be booted first.
-   */
   exportDatabase(): Uint8Array {
-    this.ensureReady();
-    const { OpenFeatureManager } = this.getBindings();
-    return OpenFeatureManager.Wasm.WasmBindings.exportDatabase();
+    return this.db().exportDatabase();
   }
+
+  // ─── Collections ──────────────────────────────────────────────────────
+
+  getCollections(): FlagsCollectionDto[] {
+    return this.flagd().getCollections();
+  }
+
+  getCollection(id: bigint): FlagsCollectionDto {
+    return this.flagd().getCollection(id);
+  }
+
+  createCollection(name: string): FlagsCollectionDto {
+    return this.flagd().createCollection(name);
+  }
+
+  renameCollection(id: bigint, name: string): FlagsCollectionDto {
+    return this.flagd().renameCollection(id, name);
+  }
+
+  deleteCollection(id: bigint): void {
+    this.flagd().deleteCollection(id);
+  }
+
+  clearCollectionData(collectionId: bigint): void {
+    this.flagd().clearCollectionData(collectionId);
+  }
+
+  updateCollectionMetadata(collectionId: bigint, metadata: MetadataEntryDto[]): void {
+    this.flagd().updateCollectionMetadata(collectionId, metadata);
+  }
+
+  // ─── Flags ────────────────────────────────────────────────────────────
+
+  getFlags(collectionId: bigint): FlagEntryDto[] {
+    return this.flagd().getFlags(collectionId);
+  }
+
+  upsertFlag(collectionId: bigint, dto: FlagEntryDto): FlagEntryDto {
+    return this.flagd().upsertFlag(collectionId, dto);
+  }
+
+  deleteFlag(collectionId: bigint, flagKey: string): void {
+    this.flagd().deleteFlag(collectionId, flagKey);
+  }
+
+  // ─── Environments ─────────────────────────────────────────────────────
+
+  getEnvironments(collectionId: bigint): EnvironmentEntryDto[] {
+    return this.flagd().getEnvironments(collectionId);
+  }
+
+  upsertEnvironment(collectionId: bigint, dto: EnvironmentEntryDto): EnvironmentEntryDto {
+    return this.flagd().upsertEnvironment(collectionId, dto);
+  }
+
+  deleteEnvironment(collectionId: bigint, name: string): void {
+    this.flagd().deleteEnvironment(collectionId, name);
+  }
+
+  // ─── Time Windows ─────────────────────────────────────────────────────
+
+  getTimeWindows(collectionId: bigint): TimeWindowDto[] {
+    return this.flagd().getTimeWindows(collectionId);
+  }
+
+  createTimeWindow(collectionId: bigint, dto: TimeWindowDto): TimeWindowDto {
+    return this.flagd().createTimeWindow(collectionId, dto);
+  }
+
+  updateTimeWindow(collectionId: bigint, timeWindowId: bigint, dto: TimeWindowDto): TimeWindowDto {
+    return this.flagd().updateTimeWindow(collectionId, timeWindowId, dto);
+  }
+
+  deleteTimeWindow(collectionId: bigint, timeWindowId: bigint): void {
+    this.flagd().deleteTimeWindow(collectionId, timeWindowId);
+  }
+
+  // ─── Schema ───────────────────────────────────────────────────────────
+
+  exportSchema(collectionId: bigint): string {
+    return this.flagd().exportSchema(collectionId);
+  }
+
+  importSchema(collectionId: bigint, schemaJson: string): void {
+    this.flagd().importSchema(collectionId, schemaJson);
+  }
+
+  // ─── Private helpers ──────────────────────────────────────────────────
 
   private ensureReady(): void {
     if (this.status() !== 'ready') {
@@ -89,5 +169,15 @@ export class WasmBackendService {
       throw new Error('Bootsharp module not loaded.');
     }
     return this.bootsharpModule;
+  }
+
+  private db() {
+    this.ensureReady();
+    return this.getBindings().OpenFeatureManager.Wasm.DatabaseWasmService;
+  }
+
+  private flagd() {
+    this.ensureReady();
+    return this.getBindings().OpenFeatureManager.Wasm.FlagdWasmService;
   }
 }
