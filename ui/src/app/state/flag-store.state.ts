@@ -1,16 +1,13 @@
 import { inject, Injectable } from '@angular/core';
 import { Action, createSelector, NgxsOnInit, Selector, State, StateContext } from '@ngxs/store';
-import { firstValueFrom } from 'rxjs';
-import { CollectionsService } from '../api-client/api/collections.service';
-import { FlagsService } from '../api-client/api/flags.service';
-import { EnvironmentsService } from '../api-client/api/environments.service';
-import { TimewindowsService } from '../api-client/api/timewindows.service';
-import { SchemaService } from '../api-client/api/schema.service';
-import { FlagsCollectionDto } from '../api-client/model/flagsCollectionDto';
-import { FlagEntryDto } from '../api-client/model/flagEntryDto';
-import { EnvironmentEntryDto } from '../api-client/model/environmentEntryDto';
-import { TimeWindowDto } from '../api-client/model/timeWindowDto';
-import { RenameCollectionIdParameter } from '../api-client/model/renameCollectionIdParameter';
+import {
+  CollectionDto,
+  EnvironmentDto,
+  FLAG_BACKEND,
+  FlagBackend,
+  FlagDto,
+  TimeWindowDto,
+} from '../services/flag-backend';
 import {
   LoadCollections,
   CreateCollection,
@@ -35,15 +32,15 @@ import {
 } from './flag-store.actions';
 
 export interface FlagStoreStateModel {
-  collections: FlagsCollectionDto[];
+  collections: CollectionDto[];
   collectionsLoading: boolean;
 
-  selectedCollectionId: RenameCollectionIdParameter | null;
+  selectedCollectionId: number | null;
 
-  flags: FlagEntryDto[];
+  flags: FlagDto[];
   flagsLoading: boolean;
 
-  environments: EnvironmentEntryDto[];
+  environments: EnvironmentDto[];
   environmentsLoading: boolean;
 
   timeWindows: TimeWindowDto[];
@@ -69,13 +66,12 @@ export interface FlagStoreStateModel {
 })
 @Injectable()
 export class FlagStoreState implements NgxsOnInit {
-  private readonly collectionsService = inject(CollectionsService);
-  private readonly flagsService = inject(FlagsService);
-  private readonly environmentsService = inject(EnvironmentsService);
-  private readonly timeWindowsService = inject(TimewindowsService);
-  private readonly schemaService = inject(SchemaService);
+  private readonly backend: FlagBackend = inject(FLAG_BACKEND);
 
-  ngxsOnInit(ctx: StateContext<FlagStoreStateModel>): void {
+  async ngxsOnInit(ctx: StateContext<FlagStoreStateModel>): Promise<void> {
+    if (this.backend.init) {
+      await this.backend.init();
+    }
     ctx.dispatch(new LoadCollections());
   }
 
@@ -84,7 +80,7 @@ export class FlagStoreState implements NgxsOnInit {
   // ============================================================================
 
   @Selector()
-  static collections(state: FlagStoreStateModel): FlagsCollectionDto[] {
+  static collections(state: FlagStoreStateModel): CollectionDto[] {
     return state.collections;
   }
 
@@ -94,18 +90,18 @@ export class FlagStoreState implements NgxsOnInit {
   }
 
   @Selector()
-  static selectedCollectionId(state: FlagStoreStateModel): RenameCollectionIdParameter | null {
+  static selectedCollectionId(state: FlagStoreStateModel): number | null {
     return state.selectedCollectionId;
   }
 
   @Selector()
-  static selectedCollection(state: FlagStoreStateModel): FlagsCollectionDto | undefined {
+  static selectedCollection(state: FlagStoreStateModel): CollectionDto | undefined {
     if (!state.selectedCollectionId) return undefined;
     return state.collections.find((c) => c.id === state.selectedCollectionId);
   }
 
   @Selector()
-  static flags(state: FlagStoreStateModel): FlagEntryDto[] {
+  static flags(state: FlagStoreStateModel): FlagDto[] {
     return state.flags;
   }
 
@@ -115,15 +111,13 @@ export class FlagStoreState implements NgxsOnInit {
   }
 
   static flagByKey(key: string) {
-    return createSelector(
-      [FlagStoreState],
-      (state: FlagStoreStateModel): FlagEntryDto | undefined =>
-        state.flags.find((f) => f.key === key),
+    return createSelector([FlagStoreState], (state: FlagStoreStateModel): FlagDto | undefined =>
+      state.flags.find((f) => f.key === key),
     );
   }
 
   @Selector()
-  static environments(state: FlagStoreStateModel): EnvironmentEntryDto[] {
+  static environments(state: FlagStoreStateModel): EnvironmentDto[] {
     return state.environments;
   }
 
@@ -155,7 +149,7 @@ export class FlagStoreState implements NgxsOnInit {
   async loadCollections(ctx: StateContext<FlagStoreStateModel>): Promise<void> {
     ctx.patchState({ collectionsLoading: true, error: null });
     try {
-      const collections = await firstValueFrom(this.collectionsService.listCollections());
+      const collections = await this.backend.listCollections();
       ctx.patchState({ collections, collectionsLoading: false });
     } catch (e) {
       ctx.patchState({
@@ -172,9 +166,7 @@ export class FlagStoreState implements NgxsOnInit {
   ): Promise<void> {
     ctx.patchState({ error: null });
     try {
-      const collection = await firstValueFrom(
-        this.collectionsService.createCollection({ name: action.name }),
-      );
+      const collection = await this.backend.createCollection(action.name);
       const state = ctx.getState();
       ctx.patchState({ collections: [...state.collections, collection] });
     } catch (e) {
@@ -191,9 +183,7 @@ export class FlagStoreState implements NgxsOnInit {
   ): Promise<void> {
     ctx.patchState({ error: null });
     try {
-      const updated = await firstValueFrom(
-        this.collectionsService.renameCollection(action.id, { name: action.name }),
-      );
+      const updated = await this.backend.renameCollection(action.id, action.name);
       const state = ctx.getState();
       ctx.patchState({
         collections: state.collections.map((c) => (c.id === action.id ? updated : c)),
@@ -212,7 +202,7 @@ export class FlagStoreState implements NgxsOnInit {
   ): Promise<void> {
     ctx.patchState({ error: null });
     try {
-      await firstValueFrom(this.collectionsService.deleteCollection(action.id));
+      await this.backend.deleteCollection(action.id);
       const state = ctx.getState();
       const collections = state.collections.filter((c) => c.id !== action.id);
       const patch: Partial<FlagStoreStateModel> = { collections };
@@ -267,7 +257,7 @@ export class FlagStoreState implements NgxsOnInit {
   async loadFlags(ctx: StateContext<FlagStoreStateModel>, action: LoadFlags): Promise<void> {
     ctx.patchState({ flagsLoading: true, error: null });
     try {
-      const flags = await firstValueFrom(this.flagsService.getFlags(action.collectionId));
+      const flags = await this.backend.getFlags(action.collectionId);
       ctx.patchState({ flags, flagsLoading: false });
     } catch (e) {
       ctx.patchState({
@@ -281,9 +271,7 @@ export class FlagStoreState implements NgxsOnInit {
   async createFlag(ctx: StateContext<FlagStoreStateModel>, action: CreateFlag): Promise<void> {
     ctx.patchState({ error: null });
     try {
-      const created = await firstValueFrom(
-        this.flagsService.createFlag(action.collectionId, action.flag),
-      );
+      const created = await this.backend.createFlag(action.collectionId, action.flag);
       const state = ctx.getState();
       ctx.patchState({ flags: [...state.flags, created] });
     } catch (e) {
@@ -297,9 +285,7 @@ export class FlagStoreState implements NgxsOnInit {
   async updateFlag(ctx: StateContext<FlagStoreStateModel>, action: UpdateFlag): Promise<void> {
     ctx.patchState({ error: null });
     try {
-      const updated = await firstValueFrom(
-        this.flagsService.updateFlag(action.collectionId, action.flag),
-      );
+      const updated = await this.backend.updateFlag(action.collectionId, action.flag);
       const state = ctx.getState();
       const oldKey = action.flag.previousKey ?? action.flag.key;
       ctx.patchState({
@@ -316,7 +302,7 @@ export class FlagStoreState implements NgxsOnInit {
   async deleteFlag(ctx: StateContext<FlagStoreStateModel>, action: DeleteFlag): Promise<void> {
     ctx.patchState({ error: null });
     try {
-      await firstValueFrom(this.flagsService.deleteFlag(action.collectionId, action.flagKey));
+      await this.backend.deleteFlag(action.collectionId, action.flagKey);
       const state = ctx.getState();
       ctx.patchState({
         flags: state.flags.filter((f) => f.key !== action.flagKey),
@@ -339,9 +325,7 @@ export class FlagStoreState implements NgxsOnInit {
   ): Promise<void> {
     ctx.patchState({ environmentsLoading: true, error: null });
     try {
-      const environments = await firstValueFrom(
-        this.environmentsService.getEnvironments(action.collectionId),
-      );
+      const environments = await this.backend.getEnvironments(action.collectionId);
       ctx.patchState({ environments, environmentsLoading: false });
     } catch (e) {
       ctx.patchState({
@@ -358,9 +342,7 @@ export class FlagStoreState implements NgxsOnInit {
   ): Promise<void> {
     ctx.patchState({ error: null });
     try {
-      const created = await firstValueFrom(
-        this.environmentsService.createEnvironment(action.collectionId, action.environment),
-      );
+      const created = await this.backend.createEnvironment(action.collectionId, action.environment);
       const state = ctx.getState();
       ctx.patchState({ environments: [...state.environments, created] });
     } catch (e) {
@@ -377,9 +359,7 @@ export class FlagStoreState implements NgxsOnInit {
   ): Promise<void> {
     ctx.patchState({ error: null });
     try {
-      const updated = await firstValueFrom(
-        this.environmentsService.updateEnvironment(action.collectionId, action.environment),
-      );
+      const updated = await this.backend.updateEnvironment(action.collectionId, action.environment);
       const state = ctx.getState();
       ctx.patchState({
         environments: state.environments.map((e) =>
@@ -400,9 +380,7 @@ export class FlagStoreState implements NgxsOnInit {
   ): Promise<void> {
     ctx.patchState({ error: null });
     try {
-      await firstValueFrom(
-        this.environmentsService.deleteEnvironment(action.collectionId, action.name),
-      );
+      await this.backend.deleteEnvironment(action.collectionId, action.name);
       const state = ctx.getState();
       ctx.patchState({
         environments: state.environments.filter((e) => e.name !== action.name),
@@ -425,9 +403,7 @@ export class FlagStoreState implements NgxsOnInit {
   ): Promise<void> {
     ctx.patchState({ timeWindowsLoading: true, error: null });
     try {
-      const timeWindows = await firstValueFrom(
-        this.timeWindowsService.getTimeWindows(action.collectionId),
-      );
+      const timeWindows = await this.backend.getTimeWindows(action.collectionId);
       ctx.patchState({ timeWindows, timeWindowsLoading: false });
     } catch (e) {
       ctx.patchState({
@@ -444,9 +420,7 @@ export class FlagStoreState implements NgxsOnInit {
   ): Promise<void> {
     ctx.patchState({ error: null });
     try {
-      const created = await firstValueFrom(
-        this.timeWindowsService.createTimeWindow(action.collectionId, action.timeWindow),
-      );
+      const created = await this.backend.createTimeWindow(action.collectionId, action.timeWindow);
       const state = ctx.getState();
       ctx.patchState({ timeWindows: [...state.timeWindows, created] });
     } catch (e) {
@@ -463,12 +437,10 @@ export class FlagStoreState implements NgxsOnInit {
   ): Promise<void> {
     ctx.patchState({ error: null });
     try {
-      const updated = await firstValueFrom(
-        this.timeWindowsService.updateTimeWindow(
-          action.collectionId,
-          action.timeWindowId,
-          action.timeWindow,
-        ),
+      const updated = await this.backend.updateTimeWindow(
+        action.collectionId,
+        action.timeWindowId,
+        action.timeWindow,
       );
       const state = ctx.getState();
       ctx.patchState({
@@ -488,9 +460,7 @@ export class FlagStoreState implements NgxsOnInit {
   ): Promise<void> {
     ctx.patchState({ error: null });
     try {
-      await firstValueFrom(
-        this.timeWindowsService.deleteTimeWindow(action.collectionId, action.timeWindowId),
-      );
+      await this.backend.deleteTimeWindow(action.collectionId, action.timeWindowId);
       const state = ctx.getState();
       ctx.patchState({
         timeWindows: state.timeWindows.filter((tw) => tw.id !== action.timeWindowId),
@@ -513,8 +483,7 @@ export class FlagStoreState implements NgxsOnInit {
   ): Promise<Record<string, unknown> | null> {
     ctx.patchState({ error: null });
     try {
-      const schema = await firstValueFrom(this.schemaService.exportSchema(action.collectionId));
-      return schema as Record<string, unknown>;
+      return await this.backend.exportSchema(action.collectionId);
     } catch (e) {
       ctx.patchState({
         error: e instanceof Error ? e.message : 'Failed to export schema',
@@ -527,7 +496,7 @@ export class FlagStoreState implements NgxsOnInit {
   async importSchema(ctx: StateContext<FlagStoreStateModel>, action: ImportSchema): Promise<void> {
     ctx.patchState({ error: null });
     try {
-      await firstValueFrom(this.schemaService.importSchema(action.collectionId));
+      await this.backend.importSchema(action.collectionId);
       // Reload all sub-resources after import
       ctx.dispatch([
         new LoadFlags(action.collectionId),
@@ -557,18 +526,22 @@ export class FlagStoreState implements NgxsOnInit {
       return;
     }
 
-    // Metadata is part of the collection - update by renaming with same name to trigger update
-    // The collection DTO carries metadata; a rename call preserves it
-    // For direct metadata updates, the collection itself would need to be patched
-    const updatedCollection: FlagsCollectionDto = {
-      ...collection,
-      metadata: action.metadata,
-    };
+    try {
+      await this.backend.updateCollectionMetadata(action.collectionId, action.metadata);
+      const updatedCollection: CollectionDto = {
+        ...collection,
+        metadata: action.metadata,
+      };
 
-    ctx.patchState({
-      collections: state.collections.map((c) =>
-        c.id === action.collectionId ? updatedCollection : c,
-      ),
-    });
+      ctx.patchState({
+        collections: state.collections.map((c) =>
+          c.id === action.collectionId ? updatedCollection : c,
+        ),
+      });
+    } catch (e) {
+      ctx.patchState({
+        error: e instanceof Error ? e.message : 'Failed to update collection metadata',
+      });
+    }
   }
 }

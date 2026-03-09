@@ -3,3 +3,4 @@
 export const GIT_TAG: string | null = null;
 export const GIT_COMMIT_HASH: string | null = "f678340df990629c4ebf68b03f8c5e04a2756904";
 export const DEFAULT_BACKEND_ROOT: string | null = null;
+export const BACKEND_TYPE: 'rest' | 'wasm' = 'rest';
