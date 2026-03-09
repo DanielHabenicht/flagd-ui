@@ -19,8 +19,7 @@ import type {
   GlobalTimeWindowDto as WasmGlobalTimeWindowDto,
 } from './wasm-backend.service';
 
-type WasmPerEnvDto =
-  import('bootsharp').OpenFeatureManager.Models.PerEnvironmentDefinitionDto;
+type WasmPerEnvDto = import('bootsharp').OpenFeatureManager.Models.PerEnvironmentDefinitionDto;
 
 /**
  * FlagBackend implementation that delegates to the in-browser .NET WASM runtime.
@@ -59,15 +58,11 @@ export class WasmFlagBackend implements FlagBackend {
   }
 
   async createFlag(collectionId: number, flag: FlagDto): Promise<FlagDto> {
-    return this.toFlagDto(
-      this.wasm.upsertFlag(BigInt(collectionId), this.toWasmFlag(flag)),
-    );
+    return this.toFlagDto(this.wasm.upsertFlag(BigInt(collectionId), this.toWasmFlag(flag)));
   }
 
   async updateFlag(collectionId: number, flag: FlagDto): Promise<FlagDto> {
-    return this.toFlagDto(
-      this.wasm.upsertFlag(BigInt(collectionId), this.toWasmFlag(flag)),
-    );
+    return this.toFlagDto(this.wasm.upsertFlag(BigInt(collectionId), this.toWasmFlag(flag)));
   }
 
   async deleteFlag(collectionId: number, flagKey: string): Promise<void> {
@@ -105,16 +100,11 @@ export class WasmFlagBackend implements FlagBackend {
   // ── Time Windows ───────────────────────────────────────────────────────
 
   async getTimeWindows(collectionId: number): Promise<TimeWindowDto[]> {
-    return this.wasm
-      .getTimeWindows(BigInt(collectionId))
-      .map((tw) => this.toTimeWindowDto(tw));
+    return this.wasm.getTimeWindows(BigInt(collectionId)).map((tw) => this.toTimeWindowDto(tw));
   }
 
   async createTimeWindow(collectionId: number, tw: TimeWindowDto): Promise<TimeWindowDto> {
-    const created = this.wasm.createTimeWindow(
-      BigInt(collectionId),
-      this.toWasmTimeWindow(tw),
-    );
+    const created = this.wasm.createTimeWindow(BigInt(collectionId), this.toWasmTimeWindow(tw));
     return this.toTimeWindowDto(created);
   }
 

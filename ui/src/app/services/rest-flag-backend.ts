@@ -47,9 +47,7 @@ export class RestFlagBackend implements FlagBackend {
   }
 
   async renameCollection(id: number, name: string): Promise<CollectionDto> {
-    const c = await firstValueFrom(
-      this.collections.renameCollection(this.toId(id), { name }),
-    );
+    const c = await firstValueFrom(this.collections.renameCollection(this.toId(id), { name }));
     return this.toCollectionDto(c);
   }
 
@@ -85,9 +83,7 @@ export class RestFlagBackend implements FlagBackend {
   // ── Environments ───────────────────────────────────────────────────────
 
   async getEnvironments(collectionId: number): Promise<EnvironmentDto[]> {
-    const list = await firstValueFrom(
-      this.environments.getEnvironments(this.toId(collectionId)),
-    );
+    const list = await firstValueFrom(this.environments.getEnvironments(this.toId(collectionId)));
     return list.map((e) => ({ name: e.name, aliases: e.aliases ?? [] }));
   }
 
@@ -167,9 +163,7 @@ export class RestFlagBackend implements FlagBackend {
     // The REST API doesn't have a direct metadata endpoint; metadata is part of the collection DTO.
     // A rename call with the same name can be used to trigger a PUT.
     const collections = await firstValueFrom(this.collections.listCollections());
-    const collection = collections.find(
-      (c) => this.fromId(c.id) === collectionId,
-    );
+    const collection = collections.find((c) => this.fromId(c.id) === collectionId);
     if (!collection) {
       throw new Error(`Collection ${collectionId} not found`);
     }
@@ -210,9 +204,7 @@ export class RestFlagBackend implements FlagBackend {
       perEnvironmentDefinitions: f.perEnvironmentDefinitions
         ? this.mapPerEnvDefs(f.perEnvironmentDefinitions)
         : undefined,
-      globalTimeWindow: f.globalTimeWindow
-        ? this.toGlobalTimeWindowDto(f.globalTimeWindow)
-        : null,
+      globalTimeWindow: f.globalTimeWindow ? this.toGlobalTimeWindowDto(f.globalTimeWindow) : null,
       previousKey: f.previousKey ?? null,
     };
   }
@@ -303,9 +295,7 @@ export class RestFlagBackend implements FlagBackend {
         stringValue: def.stringValue ?? null,
         numberValue: (def.numberValue as unknown as number) ?? null,
         objectValue: def.objectValue ?? null,
-        timeWindowId: def.timeWindowId
-          ? (def.timeWindowId as unknown as number)
-          : null,
+        timeWindowId: def.timeWindowId ? (def.timeWindowId as unknown as number) : null,
       };
     }
     return result;
