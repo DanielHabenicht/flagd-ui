@@ -9,12 +9,12 @@ import { MatInputModule } from '@angular/material/input';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
-import { RemoteApi } from '../../services/remote-api';
 import { FileSystemAccess } from '../../services/file-system-access';
 import { AddBackend, AddFile } from '../../state/flag-file-store.actions';
 import { LocalBackendUris } from '../../state/flag-file-store.state';
 import { FlagdSchemaAbstraction } from '../../models/abstraction';
 import { stringifyFlagdSchema } from '../../models/flagd-schema.parser';
+import { RestFlagBackend } from '../../services/rest-flag-backend';
 
 export interface NewFlagsFileFormResult {
   type: 'empty' | 'url' | 'disk' | 'backend';
@@ -41,7 +41,7 @@ export class NewFlagsFileFormComponent {
   private readonly store = inject(Store);
   private readonly http = inject(HttpClient);
   private readonly router = inject(Router);
-  private readonly remoteApi = inject(RemoteApi);
+  private readonly remoteApi = inject(RestFlagBackend);
   private readonly fileSystemAccess = inject(FileSystemAccess);
 
   // Empty flags-file tab
@@ -268,23 +268,23 @@ export class NewFlagsFileFormComponent {
     this.backendError = '';
     this.discoveredFiles = [];
 
-    this.remoteApi.listFlagsFiles(url).subscribe({
-      next: (files) => {
-        queueMicrotask(() => {
-          this.discoveredFiles = files;
-          this.backendLoading = false;
-          if (files.length === 0) {
-            this.backendError = 'No flag files found on this backend';
-          }
-        });
-      },
-      error: () => {
-        queueMicrotask(() => {
-          this.backendError = 'Failed to connect to backend. Ensure CORS is enabled.';
-          this.backendLoading = false;
-        });
-      },
-    });
+    // this.remoteApi.listCollections(url).subscribe({
+    //   next: (files) => {
+    //     queueMicrotask(() => {
+    //       this.discoveredFiles = files;
+    //       this.backendLoading = false;
+    //       if (files.length === 0) {
+    //         this.backendError = 'No flag files found on this backend';
+    //       }
+    //     });
+    //   },
+    //   error: () => {
+    //     queueMicrotask(() => {
+    //       this.backendError = 'Failed to connect to backend. Ensure CORS is enabled.';
+    //       this.backendLoading = false;
+    //     });
+    //   },
+    // });
   }
 
   addBackend(): void {
@@ -301,26 +301,26 @@ export class NewFlagsFileFormComponent {
       return;
     }
 
-    let remaining = discoveredFiles.length;
-    for (const fileName of discoveredFiles) {
-      this.remoteApi.getFlagsFile(url, fileName).subscribe({
-        next: (content) => {
-          this.store.dispatch(
-            new AddFile('remote', url, fileName, JSON.stringify(content, null, 2)),
-          );
-          remaining -= 1;
-          if (remaining === 0) {
-            this.formSubmitted.emit({ type: 'backend' });
-          }
-        },
-        error: () => {
-          remaining -= 1;
-          if (remaining === 0) {
-            this.formSubmitted.emit({ type: 'backend' });
-          }
-        },
-      });
-    }
+    // let remaining = discoveredFiles.length;
+    // for (const fileName of discoveredFiles) {
+    //   this.remoteApi.getFlagsFile(url, fileName).subscribe({
+    //     next: (content) => {
+    //       this.store.dispatch(
+    //         new AddFile('remote', url, fileName, JSON.stringify(content, null, 2)),
+    //       );
+    //       remaining -= 1;
+    //       if (remaining === 0) {
+    //         this.formSubmitted.emit({ type: 'backend' });
+    //       }
+    //     },
+    //     error: () => {
+    //       remaining -= 1;
+    //       if (remaining === 0) {
+    //         this.formSubmitted.emit({ type: 'backend' });
+    //       }
+    //     },
+    //   });
+    // }
   }
 
   private async navigateToFlagsFile(

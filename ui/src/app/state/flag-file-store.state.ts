@@ -13,6 +13,9 @@ import {
   BackendType,
   SyncBackends,
 } from './flag-file-store.actions';
+import { CollectionsService, FlagsService, SchemaService } from '../api-client';
+import { firstValueFrom } from 'rxjs';
+import { FlagEntryDto } from '../services/wasm-backend.service';
 
 /**
  * Represents a flag file in a backend.
@@ -355,36 +358,36 @@ export class FlagFileStore implements NgxsOnInit {
     ctx: StateContext<FlagFileStoreStateModel>,
     backend: Backend,
   ): Promise<void> {
-    // const api = new FlagsService(this.httpClient, backend.uri);
-    // try {
-    //   const listResponse = await firstValueFrom(api.listFlags());
-    //   const remoteFileNames = new Set(listResponse?.files ?? []);
-    //   const localFileNames = new Set(backend.files.map((file) => file.name));
-    //   for (const file of backend.files) {
-    //     const parsed = this.parseFlagFileContent(file.content);
-    //     if (!parsed) {
-    //       continue;
-    //     }
-    //     const updatePayload: UpdateFlagRequest = {
-    //       $evaluators: parsed.$evaluators ?? {},
-    //       flags: parsed.flags,
-    //       metadata: parsed.metadata ?? {},
-    //     };
-    //     if (remoteFileNames.has(file.name)) {
-    //       await firstValueFrom(api.updateFlag(file.name, updatePayload));
-    //     } else {
-    //       await firstValueFrom(api.createFlag(file.name, updatePayload));
-    //     }
-    //   }
-    //   for (const remoteFileName of remoteFileNames) {
-    //     if (!localFileNames.has(remoteFileName)) {
-    //       await firstValueFrom(api.deleteFlag(remoteFileName));
-    //     }
-    //   }
-    //   this.markBackendFilesSynced(ctx, 'remote', backend.uri);
-    // } catch {
-    //   return;
-    // }
+    const apiCollections = new CollectionsService(this.httpClient, backend.uri);
+    const apiFlags = new FlagsService(this.httpClient, backend.uri);
+    try {
+      const remoteFiles = await firstValueFrom(apiCollections.listCollections());
+      const localFileNames = new Set(backend.files.map((file) => file.name));
+      for (const file of backend.files) {
+        const parsed = this.parseFlagFileContent(file.content);
+        if (!parsed) {
+          continue;
+        }
+        // const updatePayload: FlagEntryDto = {
+        //   $evaluators: parsed.$evaluators ?? {},
+        //   flags: parsed.flags,
+        //   metadata: parsed.metadata ?? {},
+        // };
+        // if (remoteFiles.map((remoteFile) => remoteFile.name).includes(file.name)) {
+        //   await firstValueFrom(apiFlags.updateFlag(file.name, updatePayload));
+        // } else {
+        //   await firstValueFrom(apiFlags.createFlag(file.name, updatePayload));
+        // }
+      }
+      for (const remoteFile of remoteFiles) {
+        if (!localFileNames.has(remoteFile.name)) {
+          await firstValueFrom(apiCollections.deleteCollection(remoteFile.name));
+        }
+      }
+      this.markBackendFilesSynced(ctx, 'remote', backend.uri);
+    } catch {
+      return;
+    }
   }
 
   private async syncDiskBackend(ctx: StateContext<FlagFileStoreStateModel>): Promise<void> {
@@ -414,25 +417,25 @@ export class FlagFileStore implements NgxsOnInit {
     ctx: StateContext<FlagFileStoreStateModel>,
     backend: Backend,
   ): Promise<void> {
-    // const api = new FlagsService(this.httpClient, backend.uri);
-    // try {
-    //   const listResponse = await firstValueFrom(api.listFlags());
-    //   const files = listResponse?.files ?? [];
-    //   const imported = await Promise.all(
-    //     files.map(async (name) => {
-    //       const content = await firstValueFrom(api.getFlag(name));
-    //       return {
-    //         name,
-    //         content: this.toDeterministicContent(JSON.stringify(content, null, 2)),
-    //         isDirty: false,
-    //       };
-    //     }),
-    //   );
-    //   this.upsertBackendFiles(ctx, 'remote', backend.uri, imported);
-    //   this.markBackendHydrated(ctx, 'remote', backend.uri);
-    // } catch {
-    //   return;
-    // }
+    const apiCollection = new CollectionsService(this.httpClient, backend.uri);
+    const apiSchema = new SchemaService(this.httpClient, backend.uri);
+    try {
+      const collections = await firstValueFrom(apiCollection.listCollections());
+      const imported = await Promise.all(
+        collections.map(async (collection) => {
+          const content = await firstValueFrom(apiSchema.exportSchema(collection.id));
+          return {
+            name: collection.name,
+            content: this.toDeterministicContent(JSON.stringify(content, null, 2)),
+            isDirty: false,
+          };
+        }),
+      );
+      this.upsertBackendFiles(ctx, 'remote', backend.uri, imported);
+      this.markBackendHydrated(ctx, 'remote', backend.uri);
+    } catch {
+      return;
+    }
   }
 
   private async importDiskBackend(ctx: StateContext<FlagFileStoreStateModel>): Promise<void> {

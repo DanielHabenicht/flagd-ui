@@ -17,6 +17,7 @@ import { FlagStoreState } from './state/flag-store.state';
 import { CurrentFlagStoreState } from './state/current-flag-store.state';
 import { UiPreferencesState } from './state/ui-preferences.state';
 import { PlaygroundPreferencesState } from './state/playground-preferences.state';
+import { provideApi } from './api-client';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -24,7 +25,7 @@ export const appConfig: ApplicationConfig = {
     provideRouter(routes),
     provideHttpClient(withInterceptors([globalLoadingInterceptor])),
     provideNativeDateAdapter(),
-    // provideApi({ basePath: DEFAULT_BACKEND_ROOT ?? '' }),
+    provideApi({ basePath: DEFAULT_BACKEND_ROOT ?? '' }),
     {
       provide: FLAG_BACKEND,
       useExisting: BACKEND_TYPE === 'wasm' ? WasmFlagBackend : RestFlagBackend,
