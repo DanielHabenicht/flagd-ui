@@ -155,7 +155,7 @@ export class WasmFlagBackend implements FlagBackend {
       id: Number(c.id),
       name: c.name,
       createdAt: c.createdAt instanceof Date ? c.createdAt.toISOString() : String(c.createdAt),
-      metadata: c.metadata?.map((m) => this.toMetadataDto(m)) ?? null,
+      metadata: c.metadata?.map((m) => this.toMetadataDto(m)) ?? [],
     };
   }
 
@@ -168,13 +168,13 @@ export class WasmFlagBackend implements FlagBackend {
       stringValue: f.stringValue ?? null,
       numberValue: f.numberValue ?? null,
       objectValue: f.objectValue ?? null,
-      metadata: f.metadata?.map((m) => this.toMetadataDto(m)) ?? null,
+      metadata: f.metadata?.map((m) => this.toMetadataDto(m)),
       perEnvironmentDefinitions: f.perEnvironmentDefinitions
         ? this.mapPerEnvDefs(f.perEnvironmentDefinitions as Record<string, WasmPerEnvDto>)
         : undefined,
       globalTimeWindow: f.globalTimeWindow
         ? this.toGlobalTimeWindowDto(f.globalTimeWindow as WasmGlobalTimeWindowDto)
-        : null,
+        : undefined,
       previousKey: f.previousKey ?? null,
     };
   }

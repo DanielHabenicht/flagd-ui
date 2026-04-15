@@ -10,11 +10,13 @@ import { MatInputModule } from '@angular/material/input';
 import { MatChipInputEvent, MatChipsModule } from '@angular/material/chips';
 import { MatDialogRef } from '@angular/material/dialog';
 import { Environment } from '../../models/abstraction/flagd-abstraction-models';
-import { CurrentFlagStoreState } from '../../state/current-flag-store.state';
+import { FlagStoreState } from '../../state/flag-store.state';
+import { EnvironmentDto } from '../../services/flag-backend';
 import {
-  CreateOrUpdateEnvironment,
+  CreateEnvironment,
   DeleteEnvironment,
-} from '../../state/current-flag-store.actions';
+  UpdateEnvironment,
+} from '../../state/flag-store.actions';
 
 interface EnvironmentForm {
   name: string;
@@ -44,9 +46,10 @@ export class EnvironmentManagerComponent {
     optional: true,
   });
 
-  readonly currentEnvironments = this.ngxsStore.selectSignal(CurrentFlagStoreState.environments);
+  readonly currentEnvironments = this.ngxsStore.selectSignal(FlagStoreState.environments);
+  readonly currentCollectionId = this.ngxsStore.selectSignal(FlagStoreState.selectedCollectionId);
 
-  readonly environments = signal<Environment[]>([]);
+  readonly environments = signal<EnvironmentDto[]>([]);
   readonly environmentFilter = signal('');
   readonly editingIndex = signal<number | null>(null);
   readonly aliasesInputValue = signal('');
@@ -69,7 +72,7 @@ export class EnvironmentManagerComponent {
     }
 
     return entries.filter(({ env }) => {
-      if (env.displayName.toLowerCase().includes(query)) return true;
+      if (env.name.toLowerCase().includes(query)) return true;
       return env.aliases.some((alias) => alias.toLowerCase().includes(query));
     });
   });
@@ -95,17 +98,17 @@ export class EnvironmentManagerComponent {
     const name = formValue.name.trim();
     const aliases = formValue.aliases.map((a) => a.trim()).filter((a) => a.length > 0);
 
-    const newEnv: Environment = {
-      displayName: name.charAt(0).toUpperCase() + name.slice(1),
+    const newEnv: EnvironmentDto = {
+      name: name.charAt(0).toUpperCase() + name.slice(1),
       aliases,
     };
 
     const editIndex = this.editingIndex();
-    let previousDisplayName: string | null = null;
+    let previousName: string | null = null;
     if (editIndex !== null) {
       // Update existing
       const updated = [...this.environments()];
-      previousDisplayName = updated[editIndex]?.displayName ?? null;
+      previousName = updated[editIndex]?.name ?? null;
       updated[editIndex] = newEnv;
       this.environments.set(updated);
       this.editingIndex.set(null);
@@ -115,10 +118,10 @@ export class EnvironmentManagerComponent {
     }
 
     if (this.embedded()) {
-      if (previousDisplayName && previousDisplayName !== newEnv.displayName) {
-        this.ngxsStore.dispatch(new DeleteEnvironment(previousDisplayName));
+      if (previousName && previousName !== newEnv.name) {
+        this.ngxsStore.dispatch(new UpdateEnvironment(previousName, newEnv));
       }
-      this.ngxsStore.dispatch(new CreateOrUpdateEnvironment(newEnv));
+      this.ngxsStore.dispatch(new CreateEnvironment(newEnv));
     } else {
       this.hasLocalChanges.set(true);
     }
@@ -132,7 +135,7 @@ export class EnvironmentManagerComponent {
     if (!env) return;
 
     this.form.patchValue({
-      name: env.displayName,
+      name: env.name,
       aliases: [...env.aliases],
     });
     this.aliasesInputValue.set('');
@@ -146,7 +149,7 @@ export class EnvironmentManagerComponent {
 
     if (this.embedded()) {
       if (removed) {
-        this.ngxsStore.dispatch(new DeleteEnvironment(removed.displayName));
+        this.ngxsStore.dispatch(new DeleteEnvironment(removed.name));
       }
       return;
     }
@@ -221,9 +224,9 @@ export class EnvironmentManagerComponent {
 
   save(): void {
     // Dispatch actions for each environment
-    for (const env of this.environments()) {
-      this.ngxsStore.dispatch(new CreateOrUpdateEnvironment(env));
-    }
+    // for (const env of this.environments()) {
+    //   this.ngxsStore.dispatch(new CreateOrUpdateEnvironment(env));
+    // }
 
     this.hasLocalChanges.set(false);
     this.dialogRef?.close(true);

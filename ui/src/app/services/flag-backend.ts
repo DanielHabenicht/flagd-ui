@@ -8,7 +8,7 @@ export interface CollectionDto {
   id: number;
   name: string;
   createdAt: string;
-  metadata?: MetadataDto[] | null;
+  metadata: MetadataDto[];
 }
 
 export interface FlagDto {
@@ -19,9 +19,9 @@ export interface FlagDto {
   stringValue?: string | null;
   numberValue?: number | null;
   objectValue?: string | null;
-  metadata?: MetadataDto[] | null;
+  metadata?: MetadataDto[];
   perEnvironmentDefinitions?: Record<string, PerEnvironmentDefinitionDto>;
-  globalTimeWindow?: GlobalTimeWindowDto | null;
+  globalTimeWindow?: GlobalTimeWindowDto;
   previousKey?: string | null;
 }
 
@@ -80,7 +80,7 @@ export interface FlagBackend {
   // Flags
   getFlags(collectionId: number): Promise<FlagDto[]>;
   createFlag(collectionId: number, flag: FlagDto): Promise<FlagDto>;
-  updateFlag(collectionId: number, flag: FlagDto): Promise<FlagDto>;
+  updateFlag(collectionId: number, flag: FlagDto): Promise<FlagDto>; // TODO: Add originalKey parameter for key updates
   deleteFlag(collectionId: number, flagKey: string): Promise<void>;
 
   // Environments

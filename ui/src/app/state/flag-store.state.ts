@@ -6,6 +6,7 @@ import {
   FLAG_BACKEND,
   FlagBackend,
   FlagDto,
+  MetadataDto,
   TimeWindowDto,
 } from '../services/flag-backend';
 import {
@@ -98,6 +99,13 @@ export class FlagStoreState implements NgxsOnInit {
   static selectedCollection(state: FlagStoreStateModel): CollectionDto | undefined {
     if (!state.selectedCollectionId) return undefined;
     return state.collections.find((c) => c.id === state.selectedCollectionId);
+  }
+
+  @Selector()
+  static selectedCollectionMetadata(state: FlagStoreStateModel): MetadataDto[] {
+    if (!state.selectedCollectionId) return [];
+    const collection = state.collections.find((c) => c.id === state.selectedCollectionId);
+    return collection ? collection.metadata : [];
   }
 
   @Selector()
@@ -342,8 +350,12 @@ export class FlagStoreState implements NgxsOnInit {
   ): Promise<void> {
     ctx.patchState({ error: null });
     try {
-      const created = await this.backend.createEnvironment(action.collectionId, action.environment);
       const state = ctx.getState();
+      if (!state.selectedCollectionId) return;
+      const created = await this.backend.createEnvironment(
+        state.selectedCollectionId,
+        action.environment,
+      );
       ctx.patchState({ environments: [...state.environments, created] });
     } catch (e) {
       ctx.patchState({
@@ -359,8 +371,12 @@ export class FlagStoreState implements NgxsOnInit {
   ): Promise<void> {
     ctx.patchState({ error: null });
     try {
-      const updated = await this.backend.updateEnvironment(action.collectionId, action.environment);
       const state = ctx.getState();
+      if (!state.selectedCollectionId) return;
+      const updated = await this.backend.updateEnvironment(
+        state.selectedCollectionId,
+        action.environment,
+      );
       ctx.patchState({
         environments: state.environments.map((e) =>
           e.name === action.environment.name ? updated : e,
@@ -380,8 +396,9 @@ export class FlagStoreState implements NgxsOnInit {
   ): Promise<void> {
     ctx.patchState({ error: null });
     try {
-      await this.backend.deleteEnvironment(action.collectionId, action.name);
       const state = ctx.getState();
+      if (!state.selectedCollectionId) return;
+      await this.backend.deleteEnvironment(state.selectedCollectionId, action.name);
       ctx.patchState({
         environments: state.environments.filter((e) => e.name !== action.name),
       });

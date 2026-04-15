@@ -1,66 +1,55 @@
 <div class="project-list">
   <div class="project-content">
-    @if (hasFiles()) {
-      @for (group of fileGroups(); track group.backendType + group.backendUri) {
-        <div class="group-header">
-          <mat-icon class="group-icon">{{ group.icon }}</mat-icon>
-          <span class="group-label">{{ group.label }}</span>
-          @if (group.canSync) {
-            <button
-              mat-icon-button
-              class="btn-sync-backend"
-              (click)="syncBackend($event, group.backendType, group.backendUri)"
-              title="Sync backend"
-            >
-              <mat-icon>sync</mat-icon>
-            </button>
-          }
-          @if (group.canRemove) {
-            <button
-              mat-icon-button
-              class="btn-remove-backend"
-              (click)="removeBackend($event, group.backendType, group.backendUri, group.label)"
-              title="Remove backend"
-            >
-              <mat-icon>close</mat-icon>
-            </button>
-          }
-        </div>
-        <mat-nav-list class="group-list">
-          @for (entry of group.entries; track entry.name + entry.backendUri + entry.backendType) {
-            <a
-              mat-list-item
-              [routerLink]="getFlagsFileRoute(entry)"
-              queryParamsHandling="merge"
-              routerLinkActive="active-link"
-              [routerLinkActiveOptions]="{ exact: false }"
-            >
-              <span matListItemTitle class="project-title-row">
-                @if (entry.isDirty) {
-                  <mat-icon class="unsynced-indicator" title="Unsynced changes"
-                    >sync_problem</mat-icon
-                  >
-                }
-                <span class="project-name">{{ entry.name }}</span>
-              </span>
-              <button
-                mat-icon-button
-                matListItemMeta
-                (click)="deleteFlagsFile($event, entry)"
-                title="Delete"
-                class="btn-delete"
-              >
-                <mat-icon>delete</mat-icon>
-              </button>
-            </a>
-          }
-        </mat-nav-list>
+    <!-- @for (collection of collections(); track collection.id) { -->
+    <div class="group-header">
+      <!-- <mat-icon class="group-icon">{{ collection.icon }}</mat-icon> -->
+      <span class="group-label">Collections</span>
+      <!-- @if (collection.canSync) {
+          <button
+            mat-icon-button
+            class="btn-sync-backend"
+            (click)="syncBackend($event, collection.backendType, collection.backendUri)"
+            title="Sync backend"
+          >
+            <mat-icon>sync</mat-icon>
+          </button>
+        } -->
+      <!-- @if (collection.canRemove) {
+          <button
+            mat-icon-button
+            class="btn-remove-backend"
+            (click)="removeBackend($event, collection.backendType, collection.backendUri, collection.label)"
+            title="Remove backend"
+          >
+            <mat-icon>close</mat-icon>
+          </button>
+        } -->
+    </div>
+    <mat-nav-list class="group-list">
+      @for (entry of collections(); track entry.name) {
+        <a
+          mat-list-item
+          [routerLink]="getFlagsFileRoute(entry)"
+          queryParamsHandling="merge"
+          routerLinkActive="active-link"
+          [routerLinkActiveOptions]="{ exact: false }"
+        >
+          <span matListItemTitle class="project-title-row">
+            <span class="project-name">{{ entry.name }}</span>
+          </span>
+          <button
+            mat-icon-button
+            matListItemMeta
+            (click)="deleteCollection($event, entry)"
+            title="Delete"
+            class="btn-delete"
+          >
+            <mat-icon>delete</mat-icon>
+          </button>
+        </a>
       }
-    } @else {
-      <div class="empty-state">
-        <span>No flag files yet</span>
-      </div>
-    }
+    </mat-nav-list>
+    <!-- } -->
   </div>
 
   <div class="sidebar-footer">

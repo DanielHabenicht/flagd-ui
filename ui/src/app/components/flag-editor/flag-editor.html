@@ -203,15 +203,15 @@
                     <p class="hint-text">No environments match the current filter.</p>
                   } @else {
                     <div class="environment-values-list">
-                      @for (env of filteredEnvironments(); track env.displayName) {
+                      @for (env of filteredEnvironments(); track env.name) {
                         <div class="environment-value-item">
                           <div class="environment-header-row">
-                            <span class="environment-label">{{ env.displayName }}</span>
-                            @if (!hasEnvironmentTimeWindow(env.displayName.toLowerCase())) {
+                            <span class="environment-label">{{ env.name }}</span>
+                            @if (!hasEnvironmentTimeWindow(env.name.toLowerCase())) {
                               <button
                                 mat-stroked-button
                                 type="button"
-                                (click)="addEnvironmentTimeWindow(env.displayName.toLowerCase())"
+                                (click)="addEnvironmentTimeWindow(env.name.toLowerCase())"
                               >
                                 Add Time Window
                               </button>
@@ -219,14 +219,14 @@
                               <button
                                 mat-stroked-button
                                 type="button"
-                                (click)="removeEnvironmentTimeWindow(env.displayName.toLowerCase())"
+                                (click)="removeEnvironmentTimeWindow(env.name.toLowerCase())"
                               >
                                 Remove Time Window
                               </button>
                             }
                           </div>
 
-                          @if (hasEnvironmentTimeWindow(env.displayName.toLowerCase())) {
+                          @if (hasEnvironmentTimeWindow(env.name.toLowerCase())) {
                             <div class="interactive-time-window-section">
                               <span class="time-window-label">Activate after</span>
                               <div class="form-row">
@@ -236,13 +236,12 @@
                                     matInput
                                     [matDatepicker]="envStartDatePicker"
                                     [ngModel]="
-                                      getEnvironmentTimeWindow(env.displayName.toLowerCase())
-                                        .startDate
+                                      getEnvironmentTimeWindow(env.name.toLowerCase()).startDate
                                     "
                                     [ngModelOptions]="{ standalone: true }"
                                     (ngModelChange)="
                                       onEnvironmentTimeWindowChange(
-                                        env.displayName.toLowerCase(),
+                                        env.name.toLowerCase(),
                                         'startDate',
                                         $event
                                       )
@@ -261,13 +260,12 @@
                                     matInput
                                     [matTimepicker]="envStartTimePicker"
                                     [ngModel]="
-                                      getEnvironmentTimeWindow(env.displayName.toLowerCase())
-                                        .startTime
+                                      getEnvironmentTimeWindow(env.name.toLowerCase()).startTime
                                     "
                                     [ngModelOptions]="{ standalone: true }"
                                     (ngModelChange)="
                                       onEnvironmentTimeWindowChange(
-                                        env.displayName.toLowerCase(),
+                                        env.name.toLowerCase(),
                                         'startTime',
                                         $event
                                       )
@@ -289,13 +287,12 @@
                                     matInput
                                     [matDatepicker]="envEndDatePicker"
                                     [ngModel]="
-                                      getEnvironmentTimeWindow(env.displayName.toLowerCase())
-                                        .endDate
+                                      getEnvironmentTimeWindow(env.name.toLowerCase()).endDate
                                     "
                                     [ngModelOptions]="{ standalone: true }"
                                     (ngModelChange)="
                                       onEnvironmentTimeWindowChange(
-                                        env.displayName.toLowerCase(),
+                                        env.name.toLowerCase(),
                                         'endDate',
                                         $event
                                       )
@@ -314,13 +311,12 @@
                                     matInput
                                     [matTimepicker]="envEndTimePicker"
                                     [ngModel]="
-                                      getEnvironmentTimeWindow(env.displayName.toLowerCase())
-                                        .endTime
+                                      getEnvironmentTimeWindow(env.name.toLowerCase()).endTime
                                     "
                                     [ngModelOptions]="{ standalone: true }"
                                     (ngModelChange)="
                                       onEnvironmentTimeWindowChange(
-                                        env.displayName.toLowerCase(),
+                                        env.name.toLowerCase(),
                                         'endTime',
                                         $event
                                       )
@@ -336,7 +332,7 @@
                             </div>
                           }
 
-                          @if (form.get('flagType')!.value === 'boolean') {
+                          <!-- @if (form.get('flagType')!.value === 'boolean') {
                             <mat-slide-toggle
                               [checked]="
                                 perEnvironmentDefinitions()[env.displayName]?.value === true
@@ -396,9 +392,9 @@
                               <textarea
                                 matInput
                                 [value]="
-                                  perEnvironmentDefinitions()[env.displayName]?.value
+                                  perEnvironmentDefinitions()[env.name]?.booleanValue
                                     ? JSON.stringify(
-                                        perEnvironmentDefinitions()[env.displayName]?.value,
+                                        perEnvironmentDefinitions()[env.name]?.booleanValue,
                                         null,
                                         2
                                       )
@@ -406,7 +402,7 @@
                                 "
                                 (input)="
                                   onEnvironmentValueChange(
-                                    env.displayName,
+                                    env.name,
                                     JSON.parse($any($event.target).value || '{}')
                                   )
                                 "
@@ -414,7 +410,7 @@
                                 placeholder="{}"
                               ></textarea>
                             </mat-form-field>
-                          }
+                          } -->
                         </div>
                       }
                     </div>

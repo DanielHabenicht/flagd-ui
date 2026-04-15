@@ -35,14 +35,18 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import {
   FlagState,
   FlagType,
-  DisplayFlag,
-  ValueDefinition,
   TimeWindowValue,
 } from '../../models/abstraction/flagd-abstraction-models';
 import { MetadataEditorComponent } from '../metadata-editor/metadata-editor';
 import { Store } from '@ngxs/store';
-import { CurrentFlagStoreState } from '../../state/current-flag-store.state';
 import { Subscription } from 'rxjs';
+import {
+  FlagDto,
+  GlobalTimeWindowDto,
+  MetadataDto,
+  PerEnvironmentDefinitionDto,
+} from '../../services/flag-backend';
+import { FlagStoreState } from '../../state/flag-store.state';
 
 export type EditorMode = 'interactive' | 'json';
 
@@ -84,20 +88,20 @@ export class FlagEditorComponent implements OnInit, OnChanges, OnDestroy {
   readonly allowMaximize = input(false);
   readonly maximizeIcon = input('open_in_full');
   readonly maximizeTitle = input('Open editor as page');
-  readonly flag = input<DisplayFlag | null>(null);
+  readonly flag = input<FlagDto | null>(null);
   readonly existingKeys = input<string[]>([]);
   readonly showMetadata = input(false);
   readonly autoSave = input(true);
-  readonly save = output<{ key: string; flag: DisplayFlag; originalKey?: string }>();
+  readonly save = output<{ key: string; flag: FlagDto; originalKey?: string }>();
   readonly cancelled = output<void>();
   readonly maximize = output<void>();
 
   form!: FormGroup;
   flagValue = signal<unknown>(null);
-  perEnvironmentDefinitions = signal<Record<string, ValueDefinition<unknown>>>({});
-  globalTimeWindow = signal<TimeWindowValue<unknown> | undefined>(undefined);
-  flagType = signal<FlagType>('boolean');
-  metadata = signal<Record<string, string | number | boolean> | undefined>(undefined);
+  perEnvironmentDefinitions = signal<Record<string, PerEnvironmentDefinitionDto>>({});
+  globalTimeWindow = signal<GlobalTimeWindowDto | undefined>(undefined);
+  flagType = signal<string>('boolean');
+  metadata = signal<MetadataDto[] | undefined>(undefined);
   editorMode = signal<EditorMode>('interactive');
 
   // Environment mode state
@@ -108,7 +112,7 @@ export class FlagEditorComponent implements OnInit, OnChanges, OnDestroy {
   // Expose JSON to template for object editing
   readonly JSON = JSON;
 
-  readonly environments = this.ngxsStore.selectSignal(CurrentFlagStoreState.environments);
+  readonly environments = this.ngxsStore.selectSignal(FlagStoreState.environments);
   readonly filteredEnvironments = computed(() => {
     const filterValue = this.environmentFilter().trim().toLowerCase();
     const allEnvironments = this.environments();
@@ -116,7 +120,7 @@ export class FlagEditorComponent implements OnInit, OnChanges, OnDestroy {
 
     return allEnvironments.filter((environment) => {
       const aliases = Array.isArray(environment.aliases) ? environment.aliases : [];
-      const haystack = [environment.displayName, ...aliases]
+      const haystack = [environment.name, ...aliases]
         .filter((value): value is string => typeof value === 'string')
         .map((value) => value.toLowerCase());
       return haystack.some((value) => value.includes(filterValue));
@@ -133,15 +137,16 @@ export class FlagEditorComponent implements OnInit, OnChanges, OnDestroy {
 
   readonly canCollapseEnvironmentOverrides = computed(() => {
     const environments = this.environments();
-    if (environments.length === 0) return true;
+    return false;
+    // if (environments.length === 0) return true;
 
-    const perEnvDefs = this.perEnvironmentDefinitions();
-    const globalValue = this.flagValue();
+    // const perEnvDefs = this.perEnvironmentDefinitions();
+    // const globalValue = this.flagValue();
 
-    return environments.every((env) => {
-      const envDef = perEnvDefs[env.displayName];
-      return !envDef || JSON.stringify(envDef.value) === JSON.stringify(globalValue);
-    });
+    // return environments.every((env) => {
+    //   const envDef = perEnvDefs[env.displayName];
+    //   return !envDef || JSON.stringify(envDef.value) === JSON.stringify(globalValue);
+    // });
   });
 
   showEnvironmentOverrides = signal(false);
@@ -189,8 +194,8 @@ export class FlagEditorComponent implements OnInit, OnChanges, OnDestroy {
   ngOnInit(): void {
     const f = this.flag();
 
-    const initialType: FlagType = f?.type ?? 'boolean';
-    const initialValue = f?.value ?? this.getDefaultValueForType(initialType);
+    const initialType: string = f?.type ?? 'boolean';
+    const initialValue = f?.booleanValue ?? this.getDefaultValueForType(initialType);
 
     this.flagType.set(initialType);
     this.flagValue.set(initialValue);
@@ -204,8 +209,8 @@ export class FlagEditorComponent implements OnInit, OnChanges, OnDestroy {
         Validators.pattern(/^[a-zA-Z0-9._-]+$/),
         this.duplicateKeyValidator(),
       ]),
-      state: new FormControl<FlagState>(f?.state ?? 'ENABLED', { nonNullable: true }),
-      flagType: new FormControl<FlagType>(initialType, { nonNullable: true }),
+      state: new FormControl<string>(f?.state ?? 'ENABLED', { nonNullable: true }),
+      flagType: new FormControl<string>(initialType, { nonNullable: true }),
       // Value controls for different types
       booleanValue: new FormControl<boolean>(
         initialType === 'boolean' ? ((initialValue as boolean) ?? false) : false,
@@ -248,7 +253,7 @@ export class FlagEditorComponent implements OnInit, OnChanges, OnDestroy {
     this.applyFlagToForm(this.flag());
   }
 
-  private applyFlagToForm(f: DisplayFlag | null): void {
+  private applyFlagToForm(f: FlagDto | null): void {
     if (!f) {
       this.form.reset({ state: 'ENABLED', flagType: 'boolean' });
       this.flagType.set('boolean');
@@ -263,29 +268,29 @@ export class FlagEditorComponent implements OnInit, OnChanges, OnDestroy {
     const shouldShowEnvironments = this.hasEnvironments();
 
     this.flagType.set(flagType);
-    this.flagValue.set(f.value);
+    this.flagValue.set(f.booleanValue);
     this.perEnvironmentDefinitions.set(f.perEnvironmentDefinitions ?? {});
     this.globalTimeWindow.set(f.globalTimeWindow);
     this.metadata.set(f.metadata);
 
     // Update form value controls based on type
     const valueByType: Record<FlagType, unknown> = {
-      boolean: flagType === 'boolean' ? ((f.value as boolean) ?? false) : false,
-      string: flagType === 'string' ? String(f.value ?? '') : '',
-      number: flagType === 'number' ? ((f.value as number) ?? 0) : 0,
+      boolean: flagType === 'boolean' ? ((f.booleanValue as boolean) ?? false) : false,
+      string: flagType === 'string' ? String(f.stringValue ?? '') : '',
+      number: flagType === 'number' ? ((f.numberValue as number) ?? 0) : 0,
       object:
-        flagType === 'object' && f.value && typeof f.value === 'object'
-          ? JSON.stringify(f.value, null, 2)
+        flagType === 'object' && f.objectValue && typeof f.objectValue === 'object'
+          ? JSON.stringify(f.objectValue, null, 2)
           : '{}',
     };
 
     // Update global time window from globalTimeWindow
     let globalStartDate: Date | null = null;
     let globalEndDate: Date | null = null;
-    if (f.globalTimeWindow?.timeWindow) {
-      const tw = f.globalTimeWindow.timeWindow;
-      globalStartDate = tw.startTime ?? null;
-      globalEndDate = tw.endTime ?? null;
+    if (f.globalTimeWindow?.timeWindowId) {
+      const tw = f.globalTimeWindow.timeWindowId;
+      // globalStartDate = tw.startTime ?? null;
+      // globalEndDate = tw.endTime ?? null;
     }
 
     this.form.patchValue(
@@ -319,18 +324,15 @@ export class FlagEditorComponent implements OnInit, OnChanges, OnDestroy {
     // Load time windows from perEnvironmentDefinitions
     const envTimeWindows: Record<string, TimeWindowFormState> = {};
     for (const [envName, envDef] of Object.entries(this.perEnvironmentDefinitions())) {
-      if (envDef.timeWindow) {
-        envTimeWindows[envName.toLowerCase()] = {
-          startDate: envDef.timeWindow.startTime ?? null,
-          startTime: envDef.timeWindow.startTime ?? null,
-          endDate: envDef.timeWindow.endTime ?? null,
-          endTime: envDef.timeWindow.endTime ?? null,
-        };
+      if (envDef.timeWindowId) {
+        // envTimeWindows[envName.toLowerCase()] = {
+        //   timeWindowId: envDef.timeWindowId,
+        // };
       }
     }
     this.environmentTimeWindows.set(envTimeWindows);
-    this.globalEnvironmentTimeEnabled.set(!!f.globalTimeWindow?.timeWindow);
-    this.showGlobalTimeWindow.set(!!f.globalTimeWindow?.timeWindow);
+    this.globalEnvironmentTimeEnabled.set(!!f.globalTimeWindow?.timeWindowId);
+    this.showGlobalTimeWindow.set(!!f.globalTimeWindow?.timeWindowId);
 
     this.form.markAsPristine();
     this.form.markAsUntouched();
@@ -441,7 +443,7 @@ export class FlagEditorComponent implements OnInit, OnChanges, OnDestroy {
     this.scheduleAutoSave();
   }
 
-  onMetadataChange(metadata: Record<string, string | number | boolean> | undefined): void {
+  onMetadataChange(metadata: MetadataDto[]): void {
     this.metadata.set(metadata);
     this.scheduleAutoSave();
   }
@@ -523,8 +525,10 @@ export class FlagEditorComponent implements OnInit, OnChanges, OnDestroy {
     const perEnvDefs = { ...this.perEnvironmentDefinitions() };
     const existing = perEnvDefs[envDisplayName];
     perEnvDefs[envDisplayName] = {
-      value,
-      timeWindow: existing?.timeWindow,
+      booleanValue: value as boolean,
+      stringValue: value as string,
+      numberValue: value as number,
+      timeWindowId: existing?.timeWindowId,
     };
     this.perEnvironmentDefinitions.set(perEnvDefs);
     this.scheduleAutoSave();
@@ -532,7 +536,7 @@ export class FlagEditorComponent implements OnInit, OnChanges, OnDestroy {
 
   getEnvironmentValue(envDisplayName: string): unknown {
     const perEnvDef = this.perEnvironmentDefinitions()[envDisplayName];
-    return perEnvDef?.value ?? this.flagValue();
+    return perEnvDef?.booleanValue ?? this.flagValue();
   }
 
   onEnvironmentFilterInput(event: Event): void {
@@ -624,7 +628,7 @@ export class FlagEditorComponent implements OnInit, OnChanges, OnDestroy {
     }
 
     // Build environment definitions
-    const perEnvDefs: Record<string, ValueDefinition<unknown>> = {};
+    const perEnvDefs: Record<string, PerEnvironmentDefinitionDto> = {};
     for (const [envName, envDef] of Object.entries(this.perEnvironmentDefinitions())) {
       const timeWindowState = this.environmentTimeWindows()[envName.toLowerCase()];
       let timeWindow: Record<string, Date | undefined> | undefined;
@@ -648,23 +652,26 @@ export class FlagEditorComponent implements OnInit, OnChanges, OnDestroy {
       }
 
       perEnvDefs[envName] = {
-        value: envDef.value,
+        booleanValue: envDef.booleanValue,
+        stringValue: envDef.stringValue,
+        numberValue: envDef.numberValue,
+        objectValue: envDef.objectValue,
         ...(timeWindow && {
-          timeWindow: timeWindow as unknown as ValueDefinition<unknown>['timeWindow'],
+          timeWindow: timeWindow as unknown as PerEnvironmentDefinitionDto,
         }),
       };
     }
 
-    const displayFlag: DisplayFlag = {
+    const displayFlag: FlagDto = {
       key,
       type: flagType,
       state: this.form.get('state')!.value as FlagState,
-      value: currentValue,
+      // value: currentValue,
       ...(Object.keys(perEnvDefs).length > 0 && { perEnvironmentDefinitions: perEnvDefs }),
       ...(globalTimeWindow && { globalTimeWindow }),
       ...(this.metadata() &&
         Object.keys(this.metadata()!).length > 0 && { metadata: this.metadata() }),
-    } as DisplayFlag;
+    } as any;
 
     this.save.emit({
       key,
@@ -711,12 +718,12 @@ export class FlagEditorComponent implements OnInit, OnChanges, OnDestroy {
     }
 
     // For now, serialize as minimal JSON representation
-    const displayFlag = {
+    const displayFlag: FlagDto = {
       key: this.form.get('key')!.value,
       type: flagType,
       state: this.form.get('state')!.value,
-      value,
-    } as DisplayFlag;
+      booleanValue: value as boolean,
+    };
 
     if (
       this.perEnvironmentDefinitions() &&
@@ -807,18 +814,19 @@ export class FlagEditorComponent implements OnInit, OnChanges, OnDestroy {
         break;
     }
 
-    const displayFlag: DisplayFlag = {
+    const displayFlag: FlagDto = {
       key,
       type: flagType,
       state: this.form.get('state')!.value as FlagState,
-      value: currentValue,
+      metadata: [] as MetadataDto[],
+      // value: currentValue,
       ...(Object.keys(this.perEnvironmentDefinitions()).length > 0 && {
         perEnvironmentDefinitions: this.perEnvironmentDefinitions(),
       }),
       ...(this.globalTimeWindow() && { globalTimeWindow: this.globalTimeWindow() }),
       ...(this.metadata() &&
         Object.keys(this.metadata()!).length > 0 && { metadata: this.metadata() }),
-    } as DisplayFlag;
+    } as any;
 
     this.save.emit({
       key,
@@ -929,7 +937,7 @@ export class FlagEditorComponent implements OnInit, OnChanges, OnDestroy {
     }
   }
 
-  private getDefaultValueForType(flagType: FlagType): unknown {
+  private getDefaultValueForType(flagType: string): unknown {
     switch (flagType) {
       case 'boolean':
         return false;
@@ -940,6 +948,7 @@ export class FlagEditorComponent implements OnInit, OnChanges, OnDestroy {
       case 'object':
         return {};
     }
+    return null;
   }
 
   private parseTimestampDate(value: unknown): Date | null {

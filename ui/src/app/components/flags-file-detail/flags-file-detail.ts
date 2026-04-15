@@ -12,9 +12,9 @@ import { MatSortModule, Sort } from '@angular/material/sort';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { FlagEditorComponent } from '../flag-editor/flag-editor';
-import { DisplayFlag } from '../../models/abstraction/flagd-abstraction-models';
-import { CurrentFlagStoreState } from '../../state/current-flag-store.state';
-import { CreateOrUpdateFlag, DeleteFlag } from '../../state/current-flag-store.actions';
+import { FlagStoreState } from '../../state/flag-store.state';
+import { FlagDto } from '../../services/flag-backend';
+import { CreateFlag, DeleteFlag, UpdateFlag } from '../../state/flag-store.actions';
 
 @Component({
   selector: 'app-flags-file-detail',
@@ -42,20 +42,11 @@ export class FlagsFileDetailComponent implements OnInit {
     typeof window !== 'undefined' && window.innerWidth >= this.inlineEditorMinWidth;
   private readonly routeSelectedFlagKey = signal<string | null>(null);
 
-  readonly flagEntries = this.ngxsStore.selectSignal(CurrentFlagStoreState.flags);
-  readonly currentFlagsFileName = this.ngxsStore.selectSignal(CurrentFlagStoreState.fileName);
-  readonly currentMetadata = this.ngxsStore.selectSignal(CurrentFlagStoreState.metadata);
-  readonly currentSchema = this.ngxsStore.selectSignal(CurrentFlagStoreState.schema);
-  readonly currentEvaluators = computed(() => {
-    const schema = this.currentSchema();
-    if (!schema) return undefined;
-    const evaluators = (schema as { $evaluators?: Record<string, unknown> }).$evaluators;
-    if (!evaluators || Object.keys(evaluators).length === 0) return undefined;
-    return evaluators;
-  });
+  readonly flagEntries = this.ngxsStore.selectSignal(FlagStoreState.flags);
+  readonly currentCollectionId = this.ngxsStore.selectSignal(FlagStoreState.selectedCollectionId);
 
   showEditor = signal(false);
-  editingFlag = signal<DisplayFlag | null>(null);
+  editingFlag = signal<FlagDto | null>(null);
   readonly editingDisplayFlag = computed(() => this.editingFlag());
   isWideLayout = signal(this.initialWideLayout);
   readonly selectedFlagKey = computed(() => this.editingFlag()?.key ?? null);
@@ -104,20 +95,21 @@ export class FlagsFileDetailComponent implements OnInit {
     this.showEditor.set(true);
   });
 
-  getFlagType(flag: DisplayFlag): string {
+  getFlagType(flag: FlagDto): string {
     return flag.type;
   }
 
-  getDefaultValue(flag: DisplayFlag): unknown {
-    return flag.value ?? null;
+  getDefaultValue(flag: FlagDto): unknown {
+    // TODO: Return any of the values
+    return flag.booleanValue ?? null;
   }
 
-  getDefaultValueDisplay(flag: DisplayFlag): string {
+  getDefaultValueDisplay(flag: FlagDto): string {
     return this.stringifyValue(this.getDefaultValue(flag));
   }
 
   getOverrideValueCounts(
-    flag: DisplayFlag,
+    flag: FlagDto,
   ): { value: string; count: number; environmentNames: string[] }[] {
     const perEnvDefs = flag.perEnvironmentDefinitions ?? {};
     const entries = Object.entries(perEnvDefs);
@@ -126,7 +118,7 @@ export class FlagsFileDetailComponent implements OnInit {
     const counts = new Map<string, { count: number; environmentNames: string[] }>();
 
     for (const [envName, envDef] of entries) {
-      const value = this.stringifyValue(envDef?.value);
+      const value = this.stringifyValue(envDef?.booleanValue);
       const existing = counts.get(value);
 
       if (existing) {
@@ -149,13 +141,13 @@ export class FlagsFileDetailComponent implements OnInit {
       .sort((left, right) => left.value.localeCompare(right.value));
   }
 
-  hasTargeting(flag: DisplayFlag): boolean {
+  hasTargeting(flag: FlagDto): boolean {
     const perEnvDefs = flag.perEnvironmentDefinitions ?? {};
-    return Object.keys(perEnvDefs).length > 0 || !!flag.globalTimeWindow?.timeWindow;
+    return Object.keys(perEnvDefs).length > 0 || !!flag.globalTimeWindow?.timeWindowId;
   }
 
-  hasGlobalTimeWindow(flag: DisplayFlag): boolean {
-    return !!flag.globalTimeWindow?.timeWindow;
+  hasGlobalTimeWindow(flag: FlagDto): boolean {
+    return !!flag.globalTimeWindow?.timeWindowId;
   }
 
   onSearchInput(event: Event): void {
@@ -173,20 +165,20 @@ export class FlagsFileDetailComponent implements OnInit {
     this.sortDirection.set(sort.direction);
   }
 
-  onFlagStateToggle(flag: DisplayFlag, checked: boolean): void {
-    const updatedFlag: DisplayFlag = {
+  onFlagStateToggle(flag: FlagDto, checked: boolean): void {
+    const updatedFlag: FlagDto = {
       ...flag,
       state: checked ? 'ENABLED' : 'DISABLED',
     };
 
-    this.ngxsStore.dispatch(new CreateOrUpdateFlag(updatedFlag));
+    this.ngxsStore.dispatch(new CreateFlag(this.currentCollectionId() as any, updatedFlag));
 
     if (this.editingFlag()?.key === flag.key) {
       this.editingFlag.set(updatedFlag);
     }
   }
 
-  confirmDelete(flag: DisplayFlag): void {
+  confirmDelete(flag: FlagDto): void {
     if (confirm(`Delete flag "${flag.key}"?`)) {
       this.onDeleteFlag(flag.key);
     }
@@ -219,7 +211,7 @@ export class FlagsFileDetailComponent implements OnInit {
     this.showEditor.set(true);
   }
 
-  openEditFlagEditor(flag: DisplayFlag): void {
+  openEditFlagEditor(flag: FlagDto): void {
     if (!this.isWideLayout()) {
       this.navigateToEditRoute(flag.key);
       return;
@@ -238,13 +230,20 @@ export class FlagsFileDetailComponent implements OnInit {
     this.editingFlag.set(null);
   }
 
-  onSaveFlag(event: { key: string; flag: DisplayFlag; originalKey?: string }): void {
-    const updatedFlag: DisplayFlag = {
+  onSaveFlag(event: { key: string; flag: FlagDto; originalKey?: string }): void {
+    const updatedFlag: FlagDto = {
       ...event.flag,
-      key: event.key,
+      // key: event.key,
     };
 
-    this.ngxsStore.dispatch(new CreateOrUpdateFlag(updatedFlag, event.originalKey));
+    if (event.originalKey) {
+      this.ngxsStore.dispatch(
+        new UpdateFlag(this.currentCollectionId() as any, updatedFlag, event.originalKey),
+      );
+    } else {
+      this.ngxsStore.dispatch(new CreateFlag(this.currentCollectionId() as any, updatedFlag));
+    }
+
     this.editingFlag.set(updatedFlag);
     this.showEditor.set(true);
   }
@@ -253,24 +252,23 @@ export class FlagsFileDetailComponent implements OnInit {
     if (this.editingFlag()?.key === key) {
       this.closeEditor();
     }
-    this.ngxsStore.dispatch(new DeleteFlag(key));
+    this.ngxsStore.dispatch(new DeleteFlag(this.currentCollectionId() as any, key));
   }
 
   downloadFlagsFile(): void {
-    const fileName = this.currentFlagsFileName();
-    const schema = this.currentSchema();
-    if (!fileName || !schema) return;
-
-    const downloadName = fileName.endsWith('.flagd.json') ? fileName : `${fileName}.flagd.json`;
-    const blob = new Blob([JSON.stringify(schema, null, 2)], {
-      type: 'application/json',
-    });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = downloadName;
-    a.click();
-    URL.revokeObjectURL(url);
+    // const fileName = this.currentFlagsFileName();
+    // const schema = this.currentSchema();
+    // if (!fileName || !schema) return;
+    // const downloadName = fileName.endsWith('.flagd.json') ? fileName : `${fileName}.flagd.json`;
+    // const blob = new Blob([JSON.stringify(schema, null, 2)], {
+    //   type: 'application/json',
+    // });
+    // const url = URL.createObjectURL(blob);
+    // const a = document.createElement('a');
+    // a.href = url;
+    // a.download = downloadName;
+    // a.click();
+    // URL.revokeObjectURL(url);
   }
 
   openSettingsPage(): void {
@@ -296,7 +294,7 @@ export class FlagsFileDetailComponent implements OnInit {
     );
   }
 
-  private getSearchText(flag: DisplayFlag): string {
+  private getSearchText(flag: FlagDto): string {
     const perEnvDefs = flag.perEnvironmentDefinitions ?? {};
     return [
       flag.key,
@@ -305,7 +303,7 @@ export class FlagsFileDetailComponent implements OnInit {
       this.getDefaultValueDisplay(flag),
       Object.keys(perEnvDefs).join(' '),
       Object.values(perEnvDefs)
-        .map((definition) => this.stringifyValue(definition?.value))
+        .map((definition) => this.stringifyValue(definition?.booleanValue))
         .join(' '),
       flag.metadata ? JSON.stringify(flag.metadata) : '',
       this.hasTargeting(flag) ? 'yes' : 'no',
@@ -315,7 +313,7 @@ export class FlagsFileDetailComponent implements OnInit {
   }
 
   private getSortValue(
-    flag: DisplayFlag,
+    flag: FlagDto,
     column: 'key' | 'type' | 'state' | 'default' | 'targeting',
   ): string {
     switch (column) {

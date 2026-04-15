@@ -64,11 +64,11 @@
                     [routerLink]="flagsFileDetailRoute()"
                     queryParamsHandling="preserve"
                   >
-                    {{ displayedFlagsFileName() }}
+                    {{ displayedCollectionName() }}
                   </a>
                 </h2>
               } @else {
-                <h2>{{ displayedFlagsFileName() }}</h2>
+                <h2>{{ displayedCollectionName() }}</h2>
               }
               @if (detailBreadcrumb()) {
                 <span class="source-separator" aria-hidden="true">›</span>

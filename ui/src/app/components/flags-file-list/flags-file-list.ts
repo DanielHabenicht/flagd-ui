@@ -1,4 +1,4 @@
-import { Component, computed, inject } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { Store } from '@ngxs/store';
 import { MatListModule } from '@angular/material/list';
@@ -7,30 +7,9 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatDialog } from '@angular/material/dialog';
 import { NewFlagsFileDialogComponent } from '../new-flags-file-dialog/new-flags-file-dialog';
-import { FlagFileStore, Backend } from '../../state/flag-file-store.state';
-import {
-  BackendType,
-  RemoveBackend,
-  RemoveFile,
-  SyncBackends,
-} from '../../state/flag-file-store.actions';
-
-interface FlagsFileListEntry {
-  name: string;
-  backendType: BackendType;
-  backendUri: string;
-  isDirty: boolean;
-}
-
-interface FlagsFileGroup {
-  label: string;
-  icon: string;
-  entries: FlagsFileListEntry[];
-  backendType: BackendType;
-  backendUri: string;
-  canRemove: boolean;
-  canSync: boolean;
-}
+import { FlagStoreState } from '../../state/flag-store.state';
+import { DeleteCollection } from '../../state/flag-store.actions';
+import { CollectionDto } from '../../services/flag-backend';
 
 @Component({
   selector: 'app-flags-file-list',
@@ -50,50 +29,7 @@ export class FlagsFileListComponent {
   private readonly ngxsStore = inject(Store);
   private readonly dialog = inject(MatDialog);
 
-  readonly localBackends = this.ngxsStore.selectSignal(FlagFileStore.backendsByType('local'));
-  readonly remoteBackends = this.ngxsStore.selectSignal(FlagFileStore.backendsByType('remote'));
-  readonly fileGroups = computed(() => {
-    const groups: FlagsFileGroup[] = [];
-
-    const toEntries = (backend: Backend, backendType: BackendType): FlagsFileListEntry[] =>
-      backend.files.map((file) => ({
-        name: file.name,
-        backendType,
-        backendUri: backend.uri,
-        isDirty: file.isDirty ?? false,
-      }));
-
-    for (const backend of this.localBackends()) {
-      const entries = toEntries(backend, 'local');
-      if (!entries.length) continue;
-      groups.push({
-        label: backend.label,
-        icon: 'folder',
-        entries,
-        backendType: 'local',
-        backendUri: backend.uri,
-        canRemove: false,
-        canSync: backend.uri === 'disk',
-      });
-    }
-
-    for (const backend of this.remoteBackends()) {
-      const entries = toEntries(backend, 'remote');
-      if (!entries.length) continue;
-      groups.push({
-        label: backend.label,
-        icon: 'cloud',
-        entries,
-        backendType: 'remote',
-        backendUri: backend.uri,
-        canRemove: true,
-        canSync: true,
-      });
-    }
-
-    return groups;
-  });
-  readonly hasFiles = computed(() => this.fileGroups().some((group) => group.entries.length > 0));
+  readonly collections = this.ngxsStore.selectSignal(FlagStoreState.collections);
 
   openNewFlagsFileDialog(): void {
     this.dialog.open(NewFlagsFileDialogComponent, {
@@ -102,39 +38,17 @@ export class FlagsFileListComponent {
     });
   }
 
-  getFlagsFileRoute(flagsFile: FlagsFileListEntry): string[] {
-    return ['/', flagsFile.backendType, flagsFile.backendUri, flagsFile.name];
+  getFlagsFileRoute(collection: CollectionDto): string[] {
+    return ['/', collection.name];
   }
 
-  deleteFlagsFile(event: Event, flagsFile: FlagsFileListEntry): void {
+  deleteCollection(event: Event, collection: CollectionDto): void {
     event.preventDefault();
     event.stopPropagation();
     if (
-      confirm(`Delete flags-file "${flagsFile.name}"? This will remove all flags in this file.`)
+      confirm(`Delete flags-file "${collection.name}"? This will remove all flags in this file.`)
     ) {
-      this.ngxsStore.dispatch(
-        new RemoveFile(flagsFile.backendType, flagsFile.backendUri, flagsFile.name),
-      );
+      this.ngxsStore.dispatch(new DeleteCollection(collection.id));
     }
-  }
-
-  removeBackend(
-    event: Event,
-    backendType: BackendType,
-    backendUri: string,
-    backendLabel: string,
-  ): void {
-    event.preventDefault();
-    event.stopPropagation();
-
-    if (confirm(`Remove backend "${backendLabel}" from navigation?`)) {
-      this.ngxsStore.dispatch(new RemoveBackend(backendType, backendUri));
-    }
-  }
-
-  syncBackend(event: Event, backendType: BackendType, backendUri: string): void {
-    event.preventDefault();
-    event.stopPropagation();
-    this.ngxsStore.dispatch(new SyncBackends(backendType, backendUri));
   }
 }

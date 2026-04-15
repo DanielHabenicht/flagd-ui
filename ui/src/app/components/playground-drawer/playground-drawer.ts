@@ -27,7 +27,6 @@ import {
   TogglePlaygroundDrawer,
 } from '../../state/playground-preferences.actions';
 import { PlaygroundPreferencesState } from '../../state/playground-preferences.state';
-import { CurrentFlagStoreState } from '../../state/current-flag-store.state';
 import { Subscription } from 'rxjs';
 
 const LOCAL_EVALUATOR_ID = '__local__';
@@ -62,7 +61,7 @@ export class PlaygroundDrawerComponent implements OnInit, OnDestroy {
   private readonly dialog = inject(MatDialog);
   private readonly ngxsStore = inject(Store);
   private readonly evaluator = inject(PlaygroundEvaluatorService);
-  private readonly schemaState = this.ngxsStore.selectSignal(CurrentFlagStoreState.schema);
+  // private readonly schemaState = this.ngxsStore.selectSignal(CurrentFlagStoreState.schema);
 
   readonly open = this.ngxsStore.selectSignal(PlaygroundPreferencesState.drawerOpen);
   readonly animate = signal(false);
@@ -357,7 +356,9 @@ export class PlaygroundDrawerComponent implements OnInit, OnDestroy {
   }
 
   private getSchema(): FlagdSchema | null {
-    const schema = this.schemaState();
+    // TODO:
+    // const schema = this.schemaState();
+    const schema = undefined;
     if (!schema || typeof schema !== 'object') return null;
     return schema as FlagdSchema;
   }

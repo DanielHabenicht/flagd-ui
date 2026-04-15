@@ -187,7 +187,7 @@ export class RestFlagBackend implements FlagBackend {
       id: this.fromId(c.id),
       name: c.name,
       createdAt: c.createdAt,
-      metadata: c.metadata?.map((m) => this.toMetadataDto(m)) ?? null,
+      metadata: c.metadata?.map((m) => this.toMetadataDto(m)) ?? [],
     };
   }
 
@@ -200,11 +200,13 @@ export class RestFlagBackend implements FlagBackend {
       stringValue: f.stringValue ?? null,
       numberValue: (f.numberValue as unknown as number) ?? null,
       objectValue: f.objectValue ?? null,
-      metadata: f.metadata?.map((m) => this.toMetadataDto(m)) ?? null,
+      metadata: f.metadata?.map((m) => this.toMetadataDto(m)),
       perEnvironmentDefinitions: f.perEnvironmentDefinitions
         ? this.mapPerEnvDefs(f.perEnvironmentDefinitions)
         : undefined,
-      globalTimeWindow: f.globalTimeWindow ? this.toGlobalTimeWindowDto(f.globalTimeWindow) : null,
+      globalTimeWindow: f.globalTimeWindow
+        ? this.toGlobalTimeWindowDto(f.globalTimeWindow)
+        : undefined,
       previousKey: f.previousKey ?? null,
     };
   }

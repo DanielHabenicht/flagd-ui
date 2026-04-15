@@ -10,11 +10,9 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { FileSystemAccess } from '../../services/file-system-access';
-import { AddBackend, AddFile } from '../../state/flag-file-store.actions';
-import { LocalBackendUris } from '../../state/flag-file-store.state';
-import { FlagdSchemaAbstraction } from '../../models/abstraction';
 import { stringifyFlagdSchema } from '../../models/flagd-schema.parser';
 import { RestFlagBackend } from '../../services/rest-flag-backend';
+import { CreateCollection } from '../../state/flag-store.actions';
 
 export interface NewFlagsFileFormResult {
   type: 'empty' | 'url' | 'disk' | 'backend';
@@ -175,15 +173,8 @@ export class NewFlagsFileFormComponent {
   createEmptyFlagsFile(): void {
     const name = this.flagsFileName.trim();
     if (!name) return;
-    this.store.dispatch(
-      new AddFile(
-        'local',
-        LocalBackendUris.Browser,
-        name,
-        stringifyFlagdSchema(FlagdSchemaAbstraction.empty().exportSchema()),
-      ),
-    );
-    void this.navigateToFlagsFile('local', LocalBackendUris.Browser, name);
+    this.store.dispatch(new CreateCollection(name));
+    // void this.navigateToFlagsFile('local', .Browser, name);
     this.formSubmitted.emit({ type: 'empty' });
   }
 
@@ -194,28 +185,28 @@ export class NewFlagsFileFormComponent {
     this.urlLoading = true;
     this.urlError = '';
 
-    this.http.get(url, { responseType: 'text' }).subscribe({
-      next: (text) => {
-        try {
-          // Derive name from URL filename
-          const urlPath = new URL(url).pathname;
-          let name = urlPath.split('/').pop() ?? 'imported';
-          name = name.replace(/\.flagd\.json$/, '').replace(/\.json$/, '');
-          if (!name) name = 'imported';
+    // this.http.get(url, { responseType: 'text' }).subscribe({
+    //   next: (text) => {
+    //     try {
+    //       // Derive name from URL filename
+    //       const urlPath = new URL(url).pathname;
+    //       let name = urlPath.split('/').pop() ?? 'imported';
+    //       name = name.replace(/\.flagd\.json$/, '').replace(/\.json$/, '');
+    //       if (!name) name = 'imported';
 
-          this.store.dispatch(new AddFile('local', LocalBackendUris.Browser, name, text));
-          void this.navigateToFlagsFile('local', LocalBackendUris.Browser, name);
-          this.formSubmitted.emit({ type: 'url' });
-        } catch {
-          this.urlError = 'Failed to parse JSON file';
-          this.urlLoading = false;
-        }
-      },
-      error: () => {
-        this.urlError = 'Failed to fetch file from URL';
-        this.urlLoading = false;
-      },
-    });
+    //       this.store.dispatch(new AddFile('local', LocalBackendUris.Browser, name, text));
+    //       void this.navigateToFlagsFile('local', LocalBackendUris.Browser, name);
+    //       this.formSubmitted.emit({ type: 'url' });
+    //     } catch {
+    //       this.urlError = 'Failed to parse JSON file';
+    //       this.urlLoading = false;
+    //     }
+    //   },
+    //   error: () => {
+    //     this.urlError = 'Failed to fetch file from URL';
+    //     this.urlLoading = false;
+    //   },
+    // });
   }
 
   async importFromDisk(): Promise<void> {
@@ -227,33 +218,33 @@ export class NewFlagsFileFormComponent {
     this.diskLoading = true;
     this.diskError = '';
 
-    try {
-      const result = await this.fileSystemAccess.pickAndBindFlagsFile();
-      if (!result) {
-        this.diskLoading = false;
-        return;
-      }
+    // try {
+    //   const result = await this.fileSystemAccess.pickAndBindFlagsFile();
+    //   if (!result) {
+    //     this.diskLoading = false;
+    //     return;
+    //   }
 
-      this.store.dispatch(
-        new AddFile(
-          'local',
-          LocalBackendUris.Disk,
-          result.name,
-          JSON.stringify(result.content, null, 2),
-        ),
-      );
-      void this.navigateToFlagsFile('local', LocalBackendUris.Disk, result.name);
-      this.formSubmitted.emit({ type: 'disk' });
-    } catch (error) {
-      this.diskLoading = false;
+    //   this.store.dispatch(
+    //     new AddFile(
+    //       'local',
+    //       LocalBackendUris.Disk,
+    //       result.name,
+    //       JSON.stringify(result.content, null, 2),
+    //     ),
+    //   );
+    //   void this.navigateToFlagsFile('local', LocalBackendUris.Disk, result.name);
+    //   this.formSubmitted.emit({ type: 'disk' });
+    // } catch (error) {
+    //   this.diskLoading = false;
 
-      const message = error instanceof Error ? error.message : 'Failed to open local file';
-      if (message.includes('aborted') || message.includes('The user aborted a request')) {
-        return;
-      }
+    //   const message = error instanceof Error ? error.message : 'Failed to open local file';
+    //   if (message.includes('aborted') || message.includes('The user aborted a request')) {
+    //     return;
+    //   }
 
-      this.diskError = message;
-    }
+    //   this.diskError = message;
+    // }
   }
 
   discoverBackend(): void {
@@ -292,14 +283,14 @@ export class NewFlagsFileFormComponent {
     if (!url.startsWith('http')) {
       url = 'https://' + url;
     }
-    const label = this.backendLabel.trim() || url;
-    this.store.dispatch(new AddBackend(label, url));
+    // const label = this.backendLabel.trim() || url;
+    // this.store.dispatch(new AddBackend(label, url));
 
-    const discoveredFiles = [...this.discoveredFiles];
-    if (!discoveredFiles.length) {
-      this.formSubmitted.emit({ type: 'backend' });
-      return;
-    }
+    // const discoveredFiles = [...this.discoveredFiles];
+    // if (!discoveredFiles.length) {
+    //   this.formSubmitted.emit({ type: 'backend' });
+    //   return;
+    // }
 
     // let remaining = discoveredFiles.length;
     // for (const fileName of discoveredFiles) {

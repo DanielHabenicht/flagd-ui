@@ -22,7 +22,8 @@
         "vitest.explorer",
         "dbaeumer.vscode-eslint",
         "tamasfe.even-better-toml",
-        "ms-dotnettools.csdevkit"
+        "ms-dotnettools.csdevkit",
+        "Angular.ng-template"
       ],
       "settings": {}
     }

@@ -12,9 +12,7 @@ import { globalLoadingInterceptor } from './interceptors/global-loading.intercep
 import { FLAG_BACKEND } from './services/flag-backend';
 import { RestFlagBackend } from './services/rest-flag-backend';
 import { WasmFlagBackend } from './services/wasm-flag-backend';
-import { FlagFileStore } from './state/flag-file-store.state';
 import { FlagStoreState } from './state/flag-store.state';
-import { CurrentFlagStoreState } from './state/current-flag-store.state';
 import { UiPreferencesState } from './state/ui-preferences.state';
 import { PlaygroundPreferencesState } from './state/playground-preferences.state';
 import { provideApi } from './api-client';
@@ -31,15 +29,9 @@ export const appConfig: ApplicationConfig = {
       useExisting: BACKEND_TYPE === 'wasm' ? WasmFlagBackend : RestFlagBackend,
     },
     provideStore(
-      [
-        FlagFileStore,
-        FlagStoreState,
-        CurrentFlagStoreState,
-        UiPreferencesState,
-        PlaygroundPreferencesState,
-      ],
+      [FlagStoreState, UiPreferencesState, PlaygroundPreferencesState],
       withNgxsStoragePlugin({
-        keys: [UiPreferencesState, PlaygroundPreferencesState, FlagFileStore],
+        keys: [UiPreferencesState, PlaygroundPreferencesState],
       }),
       withNgxsRouterPlugin(),
     ),

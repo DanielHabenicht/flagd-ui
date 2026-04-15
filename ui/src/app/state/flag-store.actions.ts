@@ -1,5 +1,5 @@
 import {
-  CollectionDto,
+  // CollectionDto,
   EnvironmentDto,
   FlagDto,
   MetadataDto,
@@ -59,6 +59,7 @@ export class UpdateFlag {
   constructor(
     readonly collectionId: number,
     readonly flag: FlagDto,
+    readonly originalKey?: string,
   ) {}
 }
 
@@ -81,26 +82,20 @@ export class LoadEnvironments {
 
 export class CreateEnvironment {
   static readonly type = '[FlagStore] Create Environment';
-  constructor(
-    readonly collectionId: number,
-    readonly environment: EnvironmentDto,
-  ) {}
+  constructor(readonly environment: EnvironmentDto) {}
 }
 
 export class UpdateEnvironment {
   static readonly type = '[FlagStore] Update Environment';
   constructor(
-    readonly collectionId: number,
+    readonly previousName: string,
     readonly environment: EnvironmentDto,
   ) {}
 }
 
 export class DeleteEnvironment {
   static readonly type = '[FlagStore] Delete Environment';
-  constructor(
-    readonly collectionId: number,
-    readonly name: string,
-  ) {}
+  constructor(readonly name: string) {}
 }
 
 // ============================================================================

@@ -6,6 +6,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MetadataMap } from '../../models/flag.models';
+import { MetadataDto } from '../../services/flag-backend';
 
 export type MetadataValue = string | number | boolean;
 type MetadataValueType = 'string' | 'number' | 'boolean';
@@ -31,26 +32,12 @@ interface MetadataRow {
   styleUrl: './metadata-editor.scss',
 })
 export class MetadataEditorComponent implements OnChanges {
-  readonly metadata = input<MetadataMap | undefined>(undefined);
-  readonly metadataChange = output<MetadataMap | undefined>();
-
-  rows: MetadataRow[] = [];
+  readonly metadata = input<MetadataDto[] | undefined>(undefined);
+  readonly metadataChange = output<MetadataDto[]>();
+  metadataCurrent: MetadataDto[] = [];
 
   ngOnChanges(): void {
-    const current = this.metadata();
-    if (!current || Object.keys(current).length === 0) {
-      this.rows = [];
-      return;
-    }
-
-    this.rows = Object.entries(current).map(([key, value]) => {
-      const inferredType = this.inferType(value);
-      return {
-        key,
-        type: inferredType,
-        value: this.normalizeValue(value, inferredType),
-      };
-    });
+    this.metadataCurrent = this.metadata ? JSON.parse(JSON.stringify(this.metadata)) : undefined;
   }
 
   addRow(): void {
@@ -58,16 +45,19 @@ export class MetadataEditorComponent implements OnChanges {
       return;
     }
 
-    this.rows = [...this.rows, { key: '', type: 'string', value: '' }];
+    this.metadataCurrent = [
+      ...this.metadataCurrent,
+      { key: '', booleanValue: true } as MetadataDto,
+    ];
   }
 
   removeRow(index: number): void {
-    this.rows = this.rows.filter((_, rowIndex) => rowIndex !== index);
+    this.metadataCurrent = this.metadataCurrent.filter((_, rowIndex) => rowIndex !== index);
     this.emitChange();
   }
 
   onKeyChange(index: number, key: string): void {
-    this.rows = this.rows.map((row, rowIndex) => {
+    this.metadataCurrent = this.metadataCurrent.map((row, rowIndex) => {
       if (rowIndex !== index) return row;
       return { ...row, key };
     });
@@ -75,7 +65,7 @@ export class MetadataEditorComponent implements OnChanges {
   }
 
   onTypeChange(index: number, type: MetadataValueType): void {
-    this.rows = this.rows.map((row, rowIndex) => {
+    this.metadataCurrent = this.metadataCurrent.map((row, rowIndex) => {
       if (rowIndex !== index) return row;
       return {
         ...row,
@@ -87,7 +77,7 @@ export class MetadataEditorComponent implements OnChanges {
   }
 
   onStringChange(index: number, value: string): void {
-    this.rows = this.rows.map((row, rowIndex) => {
+    this.metadataCurrent = this.metadataCurrent.map((row, rowIndex) => {
       if (rowIndex !== index) return row;
       return { ...row, value };
     });
@@ -96,7 +86,7 @@ export class MetadataEditorComponent implements OnChanges {
 
   onNumberChange(index: number, value: string): void {
     const parsed = Number(value);
-    this.rows = this.rows.map((row, rowIndex) => {
+    this.metadataCurrent = this.metadataCurrent.map((row, rowIndex) => {
       if (rowIndex !== index) return row;
       return {
         ...row,
@@ -107,7 +97,7 @@ export class MetadataEditorComponent implements OnChanges {
   }
 
   onBooleanChange(index: number, value: string): void {
-    this.rows = this.rows.map((row, rowIndex) => {
+    this.metadataCurrent = this.metadataCurrent.map((row, rowIndex) => {
       if (rowIndex !== index) return row;
       return {
         ...row,
@@ -118,15 +108,7 @@ export class MetadataEditorComponent implements OnChanges {
   }
 
   private emitChange(): void {
-    const next: MetadataMap = {};
-
-    for (const row of this.rows) {
-      const key = row.key.trim();
-      if (!key) continue;
-      next[key] = this.normalizeValue(row.value, row.type);
-    }
-
-    this.metadataChange.emit(Object.keys(next).length > 0 ? next : undefined);
+    this.metadataChange.emit(this.metadataCurrent);
   }
 
   private inferType(value: unknown): MetadataValueType {
@@ -155,12 +137,12 @@ export class MetadataEditorComponent implements OnChanges {
   }
 
   private hasUntouchedDraftRow(): boolean {
-    return this.rows.some((row) => {
+    return this.metadataCurrent.some((row) => {
       if (row.key.trim().length > 0) {
         return false;
       }
 
-      return row.value === this.defaultValueForType(row.type);
+      return true;
     });
   }
 }

@@ -7,4 +7,4 @@
 
 export * from './flagd-abstraction-models';
 export * from './flagd-constants';
-export * from './flagd-schema-abstraction';
+// export * from './flagd-schema-abstraction';
