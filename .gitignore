@@ -20,7 +20,7 @@ public/*
 flags/*
 !flags/demo.flagd.json
 
-ui/openapi.json
+ui/OpenFeatureManager.Api.json
 
 # Zensical build output
 site/

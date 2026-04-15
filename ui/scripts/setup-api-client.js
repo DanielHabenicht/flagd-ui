@@ -24,11 +24,11 @@ if (fs.existsSync(sourceFile)) {
   console.warn(`⚠ Warning: ${sourceFile} not found.`);
 }
 
-// Check if openapi.json exists
-const openapiPath = path.join(uiRoot, 'openapi.json');
+// Check if OpenFeatureManager.Api.json exists
+const openapiPath = path.join(uiRoot, 'OpenFeatureManager.Api.json');
 if (!fs.existsSync(openapiPath)) {
   console.warn(
-    `⚠ Warning: openapi.json not found. This is expected if the API project hasn't been built yet.`,
+    `⚠ Warning: OpenFeatureManager.Api.json not found. This is expected if the API project hasn't been built yet.`,
   );
   console.warn(
     `⚠ Run 'dotnet build' in the src directory to generate the OpenAPI spec, then run 'npm install' again in the ui directory.`,

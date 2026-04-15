@@ -22,11 +22,14 @@ This project provides a user-friendly web interface for the OpenFeature flagd se
 
 ## Development
 
-```
+```bash
 cd src
 dotnet publish
+dotnet run --project OpenFeatureManager.Api
+# http://localhost:5000/scalar/
 
 cd ui
 np install
 npm start
+# http://localhost:4200
 ```

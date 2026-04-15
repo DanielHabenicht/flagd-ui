@@ -11,6 +11,7 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.3" />
     <PackageReference Include="Microsoft.Extensions.ApiDescription.Server" Version="10.0.3" />
+    <PackageReference Include="Scalar.AspNetCore" Version="2.13.22" />
   </ItemGroup>
 
   <ItemGroup>
@@ -18,9 +19,7 @@
   </ItemGroup>
 
   <Target Name="RenameOpenApiDocument" AfterTargets="Build" Condition="Exists('$(OpenApiDocumentsDirectory)$(AssemblyName)_openapi.json')">
-    <Copy SourceFiles="$(OpenApiDocumentsDirectory)$(AssemblyName)_openapi.json"
-          DestinationFiles="$(OpenApiDocumentsDirectory)openapi.json"
-          OverwriteReadOnlyFiles="true" />
+    <Copy SourceFiles="$(OpenApiDocumentsDirectory)$(AssemblyName)_openapi.json" DestinationFiles="$(OpenApiDocumentsDirectory)openapi.json" OverwriteReadOnlyFiles="true" />
     <Delete Files="$(OpenApiDocumentsDirectory)$(AssemblyName)_openapi.json" />
   </Target>
 

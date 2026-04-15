@@ -2,6 +2,8 @@ using Microsoft.EntityFrameworkCore;
 using OpenFeatureManager.Data;
 using OpenFeatureManager.Models;
 using OpenFeatureManager.Services;
+using Scalar.AspNetCore;
+
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -24,7 +26,7 @@ builder.Services.AddScoped<FlagdService>(sp =>
 builder.Services.AddScoped<FlagdSchemaService>(sp =>
     new FlagdSchemaService(sp.GetRequiredService<FlagdService>(), validator));
 
-builder.Services.AddOpenApi("openapi");
+builder.Services.AddOpenApi();
 
 var app = builder.Build();
 
@@ -36,6 +38,7 @@ using (var scope = app.Services.CreateScope())
 }
 
 app.MapOpenApi();
+app.MapScalarApiReference();
 
 // ─── Collection endpoints ─────────────────────────────────────────────
 
