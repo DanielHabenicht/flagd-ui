@@ -1,12 +1,16 @@
 {
   "folders": [
     {
-      "name": "Api",
-      "path": "src/OpenFeatureManager.Api",
+      "name": "Backend",
+      "path": "src",
     },
     {
       "name": "Frontend",
       "path": "ui",
+    },
+    {
+      "name": "Docs",
+      "path": "docs",
     },
     {
       "name": "E2E Tests",
