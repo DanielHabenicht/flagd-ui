@@ -39,7 +39,7 @@ export class FlagsFileListComponent {
   }
 
   getFlagsFileRoute(collection: CollectionDto): string[] {
-    return ['/', 'uri', collection.name];
+    return ['/', 'uri', collection.id.toString()];
   }
 
   deleteCollection(event: Event, collection: CollectionDto): void {

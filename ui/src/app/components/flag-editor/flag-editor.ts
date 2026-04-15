@@ -45,6 +45,7 @@ import {
   GlobalTimeWindowDto,
   MetadataDto,
   PerEnvironmentDefinitionDto,
+  TimeWindowDto,
 } from '../../services/flag-backend';
 import { FlagStoreState } from '../../state/flag-store.state';
 
@@ -602,7 +603,7 @@ export class FlagEditorComponent implements OnInit, OnChanges, OnDestroy {
     }
 
     // Build global time window if enabled
-    let globalTimeWindow: TimeWindowValue<unknown> | undefined;
+    let globalTimeWindow: TimeWindowDto | undefined;
     if (this.globalEnvironmentTimeEnabled()) {
       const globalStartDate = this.form.get('globalStartDate')?.value;
       const globalStartTime = this.form.get('globalStartTime')?.value;
@@ -613,16 +614,11 @@ export class FlagEditorComponent implements OnInit, OnChanges, OnDestroy {
       const endDate = this.combineDateAndTime(globalEndDate, globalEndTime);
 
       if (startDate || endDate) {
-        const timeWindow: Record<string, Date | undefined> = {};
-        if (startDate) {
-          timeWindow['startTime'] = startDate;
-        }
-        if (endDate) {
-          timeWindow['endTime'] = endDate;
-        }
         globalTimeWindow = {
-          value: currentValue,
-          timeWindow: timeWindow as unknown as TimeWindowValue<unknown>['timeWindow'],
+          id: 0, // Placeholder, backend should assign real ID
+          name: `${key}-global-time-window`,
+          startTime: startDate as any,
+          endTime: endDate as any,
         };
       }
     }

@@ -32,6 +32,7 @@ import {
   SetCollectionMetadata,
   SaveDatabase,
 } from './flag-store.actions';
+import { RouterNavigation } from '@ngxs/router-plugin';
 
 export interface FlagStoreStateModel {
   collections: CollectionDto[];
@@ -77,6 +78,30 @@ export class FlagStoreState implements NgxsOnInit {
     ctx.dispatch(new LoadCollections());
   }
 
+  @Action(RouterNavigation)
+  onNavigation(ctx: StateContext<FlagStoreStateModel>, action: RouterNavigation<unknown>): void {
+    // this.flushPendingPersist();
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const routerState = action.routerState as any;
+    const params = this.collectRouteParams(routerState?.root);
+    // const backendUri = params['uri'] as string | undefined;
+    const collectionId = params['collectionId'] as string | undefined;
+
+    if (collectionId) {
+      ctx.dispatch(new SelectCollection(parseInt(collectionId, 10)));
+    }
+  }
+
+  private collectRouteParams(route: RouteSnapshotLike | null): Record<string, string> {
+    if (!route) return {};
+    const merged = { ...(route.params ?? {}) };
+    const children = route.children ?? [];
+    for (const child of children) {
+      Object.assign(merged, this.collectRouteParams(child));
+    }
+    return merged;
+  }
   // ============================================================================
   // SELECTORS
   // ============================================================================
@@ -573,4 +598,9 @@ export class FlagStoreState implements NgxsOnInit {
       });
     }
   }
+}
+
+interface RouteSnapshotLike {
+  params?: Record<string, string>;
+  children?: RouteSnapshotLike[];
 }

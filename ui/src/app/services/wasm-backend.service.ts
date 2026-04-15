@@ -1,3 +1,4 @@
+import { C } from '@angular/cdk/keycodes';
 import { Injectable, signal } from '@angular/core';
 
 // Re-export generated DTO types from bootsharp for consumers
@@ -152,11 +153,15 @@ export class WasmBackendService {
   // ─── Flags ────────────────────────────────────────────────────────────
 
   getFlags(collectionId: bigint): FlagEntryDto[] {
-    return this.flagd().getFlags(collectionId);
+    const flags = this.flagd().getFlags(collectionId);
+    console.log(`Fetched flags for collection ${collectionId} from WASM backend:`, flags);
+    return flags;
   }
 
   upsertFlag(collectionId: bigint, dto: FlagEntryDto): FlagEntryDto {
-    return this.flagd().upsertFlag(collectionId, dto);
+    const flag = this.flagd().upsertFlag(collectionId, dto);
+    console.log(`Upserted flag for collection ${collectionId} in WASM backend:`, flag);
+    return flag;
   }
 
   deleteFlag(collectionId: bigint, flagKey: string): void {

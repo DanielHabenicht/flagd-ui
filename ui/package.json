@@ -5,7 +5,7 @@
     "ng": "ng",
     "postinstall": "npm run generate:api-client && npm run generate:schema-types",
     "prestart": "node scripts/generate-environments.js",
-    "start": "ng serve",
+    "start": "ng serve --host 0.0.0.0",
     "prebuild": "node scripts/generate-environments.js",
     "build": "ng build",
     "build-demo": "npm run build -- --configuration docs",

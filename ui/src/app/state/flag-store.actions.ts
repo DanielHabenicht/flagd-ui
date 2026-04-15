@@ -34,7 +34,7 @@ export class DeleteCollection {
 
 export class SelectCollection {
   static readonly type = '[FlagStore] Select Collection';
-  constructor(readonly id: number | null) {}
+  constructor(readonly id: number | undefined) {}
 }
 
 // ============================================================================
