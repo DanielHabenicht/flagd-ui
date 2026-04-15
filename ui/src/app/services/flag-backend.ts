@@ -71,6 +71,11 @@ export interface FlagBackend {
    */
   init?(): Promise<void>;
 
+  /**
+   * Optional saveState (e.g. persisting the current state).
+   */
+  saveState?(): Promise<void>;
+
   // Collections
   listCollections(): Promise<CollectionDto[]>;
   createCollection(name: string): Promise<CollectionDto>;

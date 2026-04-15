@@ -146,6 +146,10 @@ export class ImportSchema {
   constructor(readonly collectionId: number) {}
 }
 
+export class SaveDatabase {
+  static readonly type = '[FlagStore] Save Database';
+}
+
 // ============================================================================
 // Collection metadata actions
 // ============================================================================

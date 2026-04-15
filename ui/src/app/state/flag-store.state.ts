@@ -1,4 +1,4 @@
-import { inject, Injectable } from '@angular/core';
+import { HostListener, inject, Injectable } from '@angular/core';
 import { Action, createSelector, NgxsOnInit, Selector, State, StateContext } from '@ngxs/store';
 import {
   CollectionDto,
@@ -30,6 +30,7 @@ import {
   ExportSchema,
   ImportSchema,
   SetCollectionMetadata,
+  SaveDatabase,
 } from './flag-store.actions';
 
 export interface FlagStoreStateModel {
@@ -164,6 +165,17 @@ export class FlagStoreState implements NgxsOnInit {
         collectionsLoading: false,
         error: e instanceof Error ? e.message : 'Failed to load collections',
       });
+    }
+  }
+
+  @Action(SaveDatabase)
+  async saveDatabase(ctx: StateContext<FlagStoreStateModel>, action: SaveDatabase): Promise<void> {
+    if (this.backend.saveState) {
+      try {
+        await this.backend.saveState();
+      } catch (e) {
+        ctx.patchState({ error: e instanceof Error ? e.message : 'Failed to save database' });
+      }
     }
   }
 

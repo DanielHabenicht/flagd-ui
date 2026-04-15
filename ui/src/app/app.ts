@@ -24,6 +24,9 @@ import { GlobalLoadingService } from './services/global-loading.service';
 import { SetThemeMode, ThemeMode } from './state/ui-preferences.actions';
 import { UiPreferencesState } from './state/ui-preferences.state';
 import { FlagStoreState } from './state/flag-store.state';
+import { T } from '@angular/cdk/keycodes';
+import { SaveDatabase } from './state/flag-store.actions';
+import { FLAG_BACKEND } from './services/flag-backend';
 
 type AppTheme = 'light' | 'dark';
 
@@ -47,6 +50,7 @@ type AppTheme = 'light' | 'dark';
 export class App implements OnDestroy {
   private readonly ngxsStore = inject(Store);
   private readonly router = inject(Router);
+  private readonly backend = inject(FLAG_BACKEND);
   private readonly navigationCollapseWidth = 1280;
   readonly globalLoading = inject(GlobalLoadingService);
   readonly themeMode = this.ngxsStore.selectSignal(UiPreferencesState.themeMode);
@@ -207,6 +211,18 @@ export class App implements OnDestroy {
     this.isCompactLayout.set(compact);
     this.navOpen.set(!compact);
   }
+
+  @HostListener('window:beforeunload', ['$event'])
+  async beforeUnloadHandler(event: any) {
+    await this.backend.saveState?.();
+    // debugger;
+  }
+
+  // @HostListener('mouseout')
+  // async onMouseLeave() {
+  //   await this.backend.saveState?.();
+  //   // debugger;
+  // }
 
   toggleNavigation(): void {
     if (!this.isCompactLayout()) return;

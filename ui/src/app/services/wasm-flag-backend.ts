@@ -18,6 +18,7 @@ import type {
   TimeWindowDto as WasmTimeWindowDto,
   GlobalTimeWindowDto as WasmGlobalTimeWindowDto,
 } from './wasm-backend.service';
+import { GlobalLoadingService } from './global-loading.service';
 
 type WasmPerEnvDto = import('bootsharp').OpenFeatureManager.Models.PerEnvironmentDefinitionDto;
 
@@ -27,10 +28,17 @@ type WasmPerEnvDto = import('bootsharp').OpenFeatureManager.Models.PerEnvironmen
 @Injectable({ providedIn: 'root' })
 export class WasmFlagBackend implements FlagBackend {
   private readonly wasm = inject(WasmBackendService);
+  readonly globalLoading = inject(GlobalLoadingService);
 
   async init(): Promise<void> {
+    this.globalLoading.start();
     await this.wasm.boot();
-    this.wasm.initDatabase();
+    await this.wasm.initDatabase();
+    this.globalLoading.stop();
+  }
+
+  async saveState(): Promise<void> {
+    await this.wasm.saveDatabase();
   }
 
   // ── Collections ────────────────────────────────────────────────────────

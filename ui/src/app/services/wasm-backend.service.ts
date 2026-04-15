@@ -11,6 +11,9 @@ export type EnvironmentEntryDto = import('bootsharp').OpenFeatureManager.Models.
 export type TimeWindowDto = import('bootsharp').OpenFeatureManager.Models.TimeWindowDto;
 
 export type WasmBackendStatus = 'not-initialized' | 'booting' | 'ready' | 'error';
+const IDB_NAME = 'flagd-schema-manager';
+const IDB_STORE = 'database';
+const IDB_KEY = 'sqlite-bytes';
 
 /**
  * Angular service wrapping the Bootsharp-compiled .NET WASM backend.
@@ -57,23 +60,68 @@ export class WasmBackendService {
   }
 
   // ─── Database lifecycle ───────────────────────────────────────────────
-
-  initDatabase(): string {
-    return this.db().initDatabase();
+  openIdb = (): Promise<IDBDatabase> =>
+    new Promise((res, rej) => {
+      const r = indexedDB.open(IDB_NAME, 1);
+      r.onupgradeneeded = () => r.result.createObjectStore(IDB_STORE);
+      r.onsuccess = () => res(r.result);
+      r.onerror = () => rej(r.error);
+    });
+  async initDatabase(): Promise<void> {
+    this.db().initDatabase();
+    console.log('Initialized in-memory database in WASM backend.');
+    try {
+      await this.loadDatabase();
+      console.log('Loaded database state from IndexedDB into WASM backend.');
+    } catch (err) {
+      console.warn(
+        'No existing database found in IndexedDB, starting with a fresh database.',
+        err instanceof Error ? err.message : String(err),
+      );
+    }
   }
 
-  importDatabase(data: Uint8Array): string {
-    return this.db().importDatabase(data);
+  async loadDatabase(): Promise<void> {
+    const db = await this.openIdb();
+    const data = await new Promise<Uint8Array>((res, rej) => {
+      const tx = db.transaction(IDB_STORE, 'readonly');
+      const req = tx.objectStore(IDB_STORE).get(IDB_KEY);
+      req.onsuccess = () => {
+        db.close();
+        res(req.result ?? null);
+      };
+      req.onerror = () => {
+        db.close();
+        rej(req.error);
+      };
+    });
+    this.db().importDatabase(data);
+    return;
   }
 
-  exportDatabase(): Uint8Array {
-    return this.db().exportDatabase();
+  async saveDatabase(): Promise<void> {
+    const bytes = this.db().exportDatabase();
+    const db = await this.openIdb();
+    await new Promise<void>((res, rej) => {
+      const tx = db.transaction(IDB_STORE, 'readwrite');
+      tx.objectStore(IDB_STORE).put(bytes, IDB_KEY);
+      tx.oncomplete = () => {
+        db.close();
+        res();
+      };
+      tx.onerror = () => {
+        db.close();
+        rej(tx.error);
+      };
+    });
   }
 
   // ─── Collections ──────────────────────────────────────────────────────
 
   getCollections(): FlagsCollectionDto[] {
-    return this.flagd().getCollections();
+    const collections = this.flagd().getCollections();
+    console.log('Fetched collections from WASM backend:', collections);
+    return collections;
   }
 
   getCollection(id: bigint): FlagsCollectionDto {
@@ -81,6 +129,7 @@ export class WasmBackendService {
   }
 
   createCollection(name: string): FlagsCollectionDto {
+    console.log('Creating collection in WASM backend:', name);
     return this.flagd().createCollection(name);
   }
 
