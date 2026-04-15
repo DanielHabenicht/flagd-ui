@@ -19,3 +19,14 @@ This project provides a user-friendly web interface for the OpenFeature flagd se
 ## UI
 
 ![flagd-ui editing a flag](https://raw.githubusercontent.com/DanielHabenicht/flagd-ui/main/docs/assets/images/ui-editing-flag.png)
+
+## Development
+
+```
+cd src
+dotnet publish
+
+cd ui
+np install
+npm start
+```

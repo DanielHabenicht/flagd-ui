@@ -134,6 +134,12 @@ app.MapPost("/api/collections/{id}/schema", async (long id, HttpRequest request,
     return TypedResults.Ok("Schema imported successfully.");
 }).WithName("importSchema").WithTags("schema");
 
+// Dummy
+app.MapPost("/dummy", async (long id, HttpRequest request) =>
+{
+    return TypedResults.Ok(new PerEnvironmentDefinitionDto(BooleanValue: true));
+}).WithName("dummy").WithTags("schema");
+
 app.Run();
 
 // ─── Local helpers ────────────────────────────────────────────────────

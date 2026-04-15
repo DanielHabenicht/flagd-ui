@@ -77,4 +77,6 @@ public class FlagdWasmService : IFlagdWasmService
 
     public void ImportSchema(long collectionId, string schemaJson) =>
         _runtime.RequireSchemaService().ImportSchema(collectionId, schemaJson);
+
+    public PerEnvironmentDefinitionDto Dummy() => new PerEnvironmentDefinitionDto(BooleanValue: true);
 }

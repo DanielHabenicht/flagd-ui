@@ -41,7 +41,10 @@ const cwd = uiRoot;
 console.log(`✓ Working directory: ${cwd}`);
 
 // Run Docker command with absolute path
-const dockerCmd = `docker run --rm -v "${cwd}:/local" openapitools/openapi-generator-cli:v7.19.0 generate -i /local/openapi.json -g typescript-angular -o /local/src/app/api-client`;
+// Use --user to avoid file permission issues on Linux/macOS
+const userFlag =
+  process.platform === 'win32' ? '' : ` --user ${process.getuid()}:${process.getgid()}`;
+const dockerCmd = `docker run --rm${userFlag} -v "${cwd}:/local" openapitools/openapi-generator-cli:v7.21.0 generate -i /local/openapi.json -g typescript-angular -o /local/src/app/api-client`;
 
 const result = spawnSync(dockerCmd, {
   shell: true,

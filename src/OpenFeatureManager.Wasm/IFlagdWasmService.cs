@@ -41,4 +41,6 @@ public interface IFlagdWasmService
 
     string ExportSchema(long collectionId);
     void ImportSchema(long collectionId, string schemaJson);
+
+    PerEnvironmentDefinitionDto Dummy();
 }

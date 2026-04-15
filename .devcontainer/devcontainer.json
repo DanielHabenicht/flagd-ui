@@ -21,7 +21,8 @@
         "ms-playwright.playwright",
         "vitest.explorer",
         "dbaeumer.vscode-eslint",
-        "tamasfe.even-better-toml"
+        "tamasfe.even-better-toml",
+        "ms-dotnettools.csdevkit"
       ],
       "settings": {}
     }
