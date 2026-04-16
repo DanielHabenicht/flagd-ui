@@ -21,9 +21,9 @@
         "ms-playwright.playwright",
         "vitest.explorer",
         "dbaeumer.vscode-eslint",
-        "tamasfe.even-better-toml",
         "ms-dotnettools.csdevkit",
-        "Angular.ng-template"
+        "Angular.ng-template",
+        "ms-vscode-remote.remote-containers"
       ],
       "settings": {}
     }
