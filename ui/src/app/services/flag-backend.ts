@@ -76,6 +76,11 @@ export interface FlagBackend {
    */
   saveState?(): Promise<void>;
 
+  /**
+   * Optional: export the raw SQLite database as bytes (WASM only).
+   */
+  exportDatabase?(): Promise<Uint8Array | null>;
+
   // Collections
   listCollections(): Promise<CollectionDto[]>;
   createCollection(name: string): Promise<CollectionDto>;

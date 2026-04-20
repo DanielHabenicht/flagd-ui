@@ -47,6 +47,8 @@ export const GIT_TAG: string | null = ${tagValue};
 export const GIT_COMMIT_HASH: string | null = ${commitValue};
 export const DEFAULT_BACKEND_ROOT: string | null = ${backendValue};
 export const BACKEND_TYPE: 'rest' | 'wasm' = ${backendTypeValue} as 'rest' | 'wasm';
+export type Environment = 'production' | 'development' | 'preview';
+export const ENVIRONMENT: Environment = 'production';
 `;
 
 fs.mkdirSync(path.dirname(targetFile), { recursive: true });

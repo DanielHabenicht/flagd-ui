@@ -41,6 +41,10 @@ export class WasmFlagBackend implements FlagBackend {
     await this.wasm.saveDatabase();
   }
 
+  async exportDatabase(): Promise<Uint8Array | null> {
+    return this.wasm.exportDatabaseBytes();
+  }
+
   // ── Collections ────────────────────────────────────────────────────────
 
   async listCollections(): Promise<CollectionDto[]> {

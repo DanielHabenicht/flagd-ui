@@ -100,6 +100,10 @@ export class WasmBackendService {
     return;
   }
 
+  exportDatabaseBytes(): Uint8Array {
+    return this.db().exportDatabase();
+  }
+
   async saveDatabase(): Promise<void> {
     const bytes = this.db().exportDatabase();
     const db = await this.openIdb();

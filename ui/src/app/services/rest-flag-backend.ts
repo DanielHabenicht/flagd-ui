@@ -62,16 +62,12 @@ export class RestFlagBackend implements FlagBackend {
   }
 
   async createFlag(collectionId: string, flag: FlagDto): Promise<FlagDto> {
-    const f = await firstValueFrom(
-      this.flags.createFlag(collectionId, this.toApiFlagEntry(flag)),
-    );
+    const f = await firstValueFrom(this.flags.createFlag(collectionId, this.toApiFlagEntry(flag)));
     return this.toFlagDto(f);
   }
 
   async updateFlag(collectionId: string, flag: FlagDto): Promise<FlagDto> {
-    const f = await firstValueFrom(
-      this.flags.updateFlag(collectionId, this.toApiFlagEntry(flag)),
-    );
+    const f = await firstValueFrom(this.flags.updateFlag(collectionId, this.toApiFlagEntry(flag)));
     return this.toFlagDto(f);
   }
 
@@ -130,19 +126,13 @@ export class RestFlagBackend implements FlagBackend {
     tw: TimeWindowDto,
   ): Promise<TimeWindowDto> {
     const updated = await firstValueFrom(
-      this.timeWindows.updateTimeWindow(
-        collectionId,
-        timeWindowId,
-        this.toApiTimeWindow(tw),
-      ),
+      this.timeWindows.updateTimeWindow(collectionId, timeWindowId, this.toApiTimeWindow(tw)),
     );
     return this.toTimeWindowDto(updated);
   }
 
   async deleteTimeWindow(collectionId: string, timeWindowId: string): Promise<void> {
-    await firstValueFrom(
-      this.timeWindows.deleteTimeWindow(collectionId, timeWindowId),
-    );
+    await firstValueFrom(this.timeWindows.deleteTimeWindow(collectionId, timeWindowId));
   }
 
   // ── Schema ─────────────────────────────────────────────────────────────
