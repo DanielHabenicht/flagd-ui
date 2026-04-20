@@ -7,15 +7,14 @@ namespace OpenFeatureManager.Entities;
 public class PerEnvironmentDefinition
 {
     [Key]
-    [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
     [Column("id")]
-    public long Id { get; set; }
+    public Guid Id { get; set; } = Guid.NewGuid();
 
     [Column("flag_entry_id")]
-    public long FlagEntryId { get; set; }
+    public Guid FlagEntryId { get; set; }
 
     [Column("environment_entry_id")]
-    public long EnvironmentEntryId { get; set; }
+    public Guid EnvironmentEntryId { get; set; }
 
     public EnvironmentEntry Environment { get; set; } = null!;
 
@@ -32,7 +31,7 @@ public class PerEnvironmentDefinition
     public string? ObjectValue { get; set; }
 
     [Column("time_window_id")]
-    public long? TimeWindowId { get; set; }
+    public Guid? TimeWindowId { get; set; }
 
     public TimeWindow? TimeWindow { get; set; }
 }

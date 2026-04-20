@@ -7,12 +7,11 @@ namespace OpenFeatureManager.Entities;
 public class FlagMetadataEntry
 {
     [Key]
-    [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
     [Column("id")]
-    public long Id { get; set; }
+    public Guid Id { get; set; } = Guid.NewGuid();
 
     [Column("flag_entry_id")]
-    public long FlagEntryId { get; set; }
+    public Guid FlagEntryId { get; set; }
 
     [Required]
     [Column("key")]

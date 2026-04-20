@@ -51,11 +51,11 @@ app.MapPost("/api/collections", (CreateCollectionRequest req, FlagdService svc) 
     return TypedResults.Created($"/api/collections/{collection.Id}", collection);
 }).WithName("createCollection").WithTags("collections");
 
-app.MapPut("/api/collections/{id}", (long id, RenameCollectionRequest req, FlagdService svc) =>
+app.MapPut("/api/collections/{id}", (Guid id, RenameCollectionRequest req, FlagdService svc) =>
     TypedResults.Ok(svc.RenameCollection(id, req.Name)))
     .WithName("renameCollection").WithTags("collections");
 
-app.MapDelete("/api/collections/{id}", (long id, FlagdService svc) =>
+app.MapDelete("/api/collections/{id}", (Guid id, FlagdService svc) =>
 {
     svc.DeleteCollection(id);
     return TypedResults.NoContent();
@@ -63,19 +63,19 @@ app.MapDelete("/api/collections/{id}", (long id, FlagdService svc) =>
 
 // ─── Flag endpoints ───────────────────────────────────────────────────
 
-app.MapGet("/api/collections/{id}/flags", (long id, FlagdService svc) =>
+app.MapGet("/api/collections/{id}/flags", (Guid id, FlagdService svc) =>
     TypedResults.Ok(svc.GetFlags(id)))
     .WithName("getFlags").WithTags("flags");
 
-app.MapPost("/api/collections/{id}/flags", (long id, FlagEntryDto dto, FlagdService svc) =>
+app.MapPost("/api/collections/{id}/flags", (Guid id, FlagEntryDto dto, FlagdService svc) =>
     TypedResults.Ok(svc.UpsertFlag(id, dto)))
     .WithName("createFlag").WithTags("flags");
 
-app.MapPut("/api/collections/{id}/flags", (long id, FlagEntryDto dto, FlagdService svc) =>
+app.MapPut("/api/collections/{id}/flags", (Guid id, FlagEntryDto dto, FlagdService svc) =>
     TypedResults.Ok(svc.UpsertFlag(id, dto)))
     .WithName("updateFlag").WithTags("flags");
 
-app.MapDelete("/api/collections/{id}/flags/{key}", (long id, string key, FlagdService svc) =>
+app.MapDelete("/api/collections/{id}/flags/{key}", (Guid id, string key, FlagdService svc) =>
 {
     svc.DeleteFlag(id, Uri.UnescapeDataString(key));
     return TypedResults.NoContent();
@@ -83,19 +83,19 @@ app.MapDelete("/api/collections/{id}/flags/{key}", (long id, string key, FlagdSe
 
 // ─── Environment endpoints ────────────────────────────────────────────
 
-app.MapGet("/api/collections/{id}/environments", (long id, FlagdService svc) =>
+app.MapGet("/api/collections/{id}/environments", (Guid id, FlagdService svc) =>
     TypedResults.Ok(svc.GetEnvironments(id)))
     .WithName("getEnvironments").WithTags("environments");
 
-app.MapPost("/api/collections/{id}/environments", (long id, EnvironmentEntryDto dto, FlagdService svc) =>
+app.MapPost("/api/collections/{id}/environments", (Guid id, EnvironmentEntryDto dto, FlagdService svc) =>
     TypedResults.Ok(svc.UpsertEnvironment(id, dto)))
     .WithName("createEnvironment").WithTags("environments");
 
-app.MapPut("/api/collections/{id}/environments", (long id, EnvironmentEntryDto dto, FlagdService svc) =>
+app.MapPut("/api/collections/{id}/environments", (Guid id, EnvironmentEntryDto dto, FlagdService svc) =>
     TypedResults.Ok(svc.UpsertEnvironment(id, dto)))
     .WithName("updateEnvironment").WithTags("environments");
 
-app.MapDelete("/api/collections/{id}/environments/{name}", (long id, string name, FlagdService svc) =>
+app.MapDelete("/api/collections/{id}/environments/{name}", (Guid id, string name, FlagdService svc) =>
 {
     svc.DeleteEnvironment(id, Uri.UnescapeDataString(name));
     return TypedResults.NoContent();
@@ -103,21 +103,21 @@ app.MapDelete("/api/collections/{id}/environments/{name}", (long id, string name
 
 // ─── Time window endpoints ────────────────────────────────────────────
 
-app.MapGet("/api/collections/{id}/timewindows", (long id, FlagdService svc) =>
+app.MapGet("/api/collections/{id}/timewindows", (Guid id, FlagdService svc) =>
     TypedResults.Ok(svc.GetTimeWindows(id)))
     .WithName("getTimeWindows").WithTags("timewindows");
 
-app.MapPost("/api/collections/{id}/timewindows", (long id, TimeWindowDto dto, FlagdService svc) =>
+app.MapPost("/api/collections/{id}/timewindows", (Guid id, TimeWindowDto dto, FlagdService svc) =>
 {
     var tw = svc.CreateTimeWindow(id, dto);
     return TypedResults.Created($"/api/collections/{id}/timewindows/{tw.Id}", tw);
 }).WithName("createTimeWindow").WithTags("timewindows");
 
-app.MapPut("/api/collections/{id}/timewindows/{twId}", (long id, long twId, TimeWindowDto dto, FlagdService svc) =>
+app.MapPut("/api/collections/{id}/timewindows/{twId}", (Guid id, Guid twId, TimeWindowDto dto, FlagdService svc) =>
     TypedResults.Ok(svc.UpdateTimeWindow(id, twId, dto)))
     .WithName("updateTimeWindow").WithTags("timewindows");
 
-app.MapDelete("/api/collections/{id}/timewindows/{twId}", (long id, long twId, FlagdService svc) =>
+app.MapDelete("/api/collections/{id}/timewindows/{twId}", (Guid id, Guid twId, FlagdService svc) =>
 {
     svc.DeleteTimeWindow(id, twId);
     return TypedResults.NoContent();
@@ -125,11 +125,11 @@ app.MapDelete("/api/collections/{id}/timewindows/{twId}", (long id, long twId, F
 
 // ─── Schema endpoints ─────────────────────────────────────────────────
 
-app.MapGet("/api/collections/{id}/schema", (long id, FlagdSchemaService svc) =>
+app.MapGet("/api/collections/{id}/schema", (Guid id, FlagdSchemaService svc) =>
     TypedResults.Text(svc.ExportSchema(id), "application/json"))
     .WithName("exportSchema").WithTags("schema");
 
-app.MapPost("/api/collections/{id}/schema", async (long id, HttpRequest request, FlagdSchemaService svc) =>
+app.MapPost("/api/collections/{id}/schema", async (Guid id, HttpRequest request, FlagdSchemaService svc) =>
 {
     using var reader = new StreamReader(request.Body);
     var body = await reader.ReadToEndAsync();
@@ -139,7 +139,7 @@ app.MapPost("/api/collections/{id}/schema", async (long id, HttpRequest request,
   .Accepts<string>("application/json");
 
 // Dummy
-app.MapPost("/dummy", async (long id, HttpRequest request) =>
+app.MapPost("/dummy", async (Guid id, HttpRequest request) =>
 {
     return TypedResults.Ok(new PerEnvironmentDefinitionDto(BooleanValue: true));
 }).WithName("dummy").WithTags("schema");

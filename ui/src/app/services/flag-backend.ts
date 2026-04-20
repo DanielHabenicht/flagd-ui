@@ -5,7 +5,7 @@ import { InjectionToken } from '@angular/core';
 // ============================================================================
 
 export interface CollectionDto {
-  id: number;
+  id: string;
   name: string;
   createdAt: string;
   metadata: MetadataDto[];
@@ -38,14 +38,14 @@ export interface EnvironmentDto {
 }
 
 export interface TimeWindowDto {
-  id: number;
+  id: string;
   name: string;
   startTime?: string | null;
   endTime?: string | null;
 }
 
 export interface GlobalTimeWindowDto {
-  timeWindowId: number;
+  timeWindowId: string;
   booleanValue?: boolean | null;
   stringValue?: string | null;
   numberValue?: number | null;
@@ -57,7 +57,7 @@ export interface PerEnvironmentDefinitionDto {
   stringValue?: string | null;
   numberValue?: number | null;
   objectValue?: string | null;
-  timeWindowId?: number | null;
+  timeWindowId?: string | null;
 }
 
 // ============================================================================
@@ -79,37 +79,37 @@ export interface FlagBackend {
   // Collections
   listCollections(): Promise<CollectionDto[]>;
   createCollection(name: string): Promise<CollectionDto>;
-  renameCollection(id: number, name: string): Promise<CollectionDto>;
-  deleteCollection(id: number): Promise<void>;
+  renameCollection(id: string, name: string): Promise<CollectionDto>;
+  deleteCollection(id: string): Promise<void>;
 
   // Flags
-  getFlags(collectionId: number): Promise<FlagDto[]>;
-  createFlag(collectionId: number, flag: FlagDto): Promise<FlagDto>;
-  updateFlag(collectionId: number, flag: FlagDto): Promise<FlagDto>; // TODO: Add originalKey parameter for key updates
-  deleteFlag(collectionId: number, flagKey: string): Promise<void>;
+  getFlags(collectionId: string): Promise<FlagDto[]>;
+  createFlag(collectionId: string, flag: FlagDto): Promise<FlagDto>;
+  updateFlag(collectionId: string, flag: FlagDto): Promise<FlagDto>; // TODO: Add originalKey parameter for key updates
+  deleteFlag(collectionId: string, flagKey: string): Promise<void>;
 
   // Environments
-  getEnvironments(collectionId: number): Promise<EnvironmentDto[]>;
-  createEnvironment(collectionId: number, env: EnvironmentDto): Promise<EnvironmentDto>;
-  updateEnvironment(collectionId: number, env: EnvironmentDto): Promise<EnvironmentDto>;
-  deleteEnvironment(collectionId: number, name: string): Promise<void>;
+  getEnvironments(collectionId: string): Promise<EnvironmentDto[]>;
+  createEnvironment(collectionId: string, env: EnvironmentDto): Promise<EnvironmentDto>;
+  updateEnvironment(collectionId: string, env: EnvironmentDto): Promise<EnvironmentDto>;
+  deleteEnvironment(collectionId: string, name: string): Promise<void>;
 
   // Time windows
-  getTimeWindows(collectionId: number): Promise<TimeWindowDto[]>;
-  createTimeWindow(collectionId: number, tw: TimeWindowDto): Promise<TimeWindowDto>;
+  getTimeWindows(collectionId: string): Promise<TimeWindowDto[]>;
+  createTimeWindow(collectionId: string, tw: TimeWindowDto): Promise<TimeWindowDto>;
   updateTimeWindow(
-    collectionId: number,
-    timeWindowId: number,
+    collectionId: string,
+    timeWindowId: string,
     tw: TimeWindowDto,
   ): Promise<TimeWindowDto>;
-  deleteTimeWindow(collectionId: number, timeWindowId: number): Promise<void>;
+  deleteTimeWindow(collectionId: string, timeWindowId: string): Promise<void>;
 
   // Schema
-  exportSchema(collectionId: number): Promise<Record<string, unknown>>;
-  importSchema(collectionId: number, schema: string): Promise<void>;
+  exportSchema(collectionId: string): Promise<Record<string, unknown>>;
+  importSchema(collectionId: string, schema: string): Promise<void>;
 
   // Collection metadata
-  updateCollectionMetadata(collectionId: number, metadata: MetadataDto[]): Promise<void>;
+  updateCollectionMetadata(collectionId: string, metadata: MetadataDto[]): Promise<void>;
 }
 
 export const FLAG_BACKEND = new InjectionToken<FlagBackend>('FlagBackend');

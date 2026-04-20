@@ -51,105 +51,105 @@ export class WasmFlagBackend implements FlagBackend {
     return this.toCollectionDto(this.wasm.createCollection(name));
   }
 
-  async renameCollection(id: number, name: string): Promise<CollectionDto> {
-    return this.toCollectionDto(this.wasm.renameCollection(BigInt(id), name));
+  async renameCollection(id: string, name: string): Promise<CollectionDto> {
+    return this.toCollectionDto(this.wasm.renameCollection(id, name));
   }
 
-  async deleteCollection(id: number): Promise<void> {
-    this.wasm.deleteCollection(BigInt(id));
+  async deleteCollection(id: string): Promise<void> {
+    this.wasm.deleteCollection(id);
   }
 
   // ── Flags ──────────────────────────────────────────────────────────────
 
-  async getFlags(collectionId: number): Promise<FlagDto[]> {
-    return this.wasm.getFlags(BigInt(collectionId)).map((f) => this.toFlagDto(f));
+  async getFlags(collectionId: string): Promise<FlagDto[]> {
+    return this.wasm.getFlags(collectionId).map((f) => this.toFlagDto(f));
   }
 
-  async createFlag(collectionId: number, flag: FlagDto): Promise<FlagDto> {
-    return this.toFlagDto(this.wasm.upsertFlag(BigInt(collectionId), this.toWasmFlag(flag)));
+  async createFlag(collectionId: string, flag: FlagDto): Promise<FlagDto> {
+    return this.toFlagDto(this.wasm.upsertFlag(collectionId, this.toWasmFlag(flag)));
   }
 
-  async updateFlag(collectionId: number, flag: FlagDto): Promise<FlagDto> {
-    return this.toFlagDto(this.wasm.upsertFlag(BigInt(collectionId), this.toWasmFlag(flag)));
+  async updateFlag(collectionId: string, flag: FlagDto): Promise<FlagDto> {
+    return this.toFlagDto(this.wasm.upsertFlag(collectionId, this.toWasmFlag(flag)));
   }
 
-  async deleteFlag(collectionId: number, flagKey: string): Promise<void> {
-    this.wasm.deleteFlag(BigInt(collectionId), flagKey);
+  async deleteFlag(collectionId: string, flagKey: string): Promise<void> {
+    this.wasm.deleteFlag(collectionId, flagKey);
   }
 
   // ── Environments ───────────────────────────────────────────────────────
 
-  async getEnvironments(collectionId: number): Promise<EnvironmentDto[]> {
+  async getEnvironments(collectionId: string): Promise<EnvironmentDto[]> {
     return this.wasm
-      .getEnvironments(BigInt(collectionId))
+      .getEnvironments(collectionId)
       .map((e) => ({ name: e.name, aliases: [...e.aliases] }));
   }
 
-  async createEnvironment(collectionId: number, env: EnvironmentDto): Promise<EnvironmentDto> {
-    const e = this.wasm.upsertEnvironment(BigInt(collectionId), {
+  async createEnvironment(collectionId: string, env: EnvironmentDto): Promise<EnvironmentDto> {
+    const e = this.wasm.upsertEnvironment(collectionId, {
       name: env.name,
       aliases: env.aliases,
     } as WasmEnvironmentDto);
     return { name: e.name, aliases: [...e.aliases] };
   }
 
-  async updateEnvironment(collectionId: number, env: EnvironmentDto): Promise<EnvironmentDto> {
-    const e = this.wasm.upsertEnvironment(BigInt(collectionId), {
+  async updateEnvironment(collectionId: string, env: EnvironmentDto): Promise<EnvironmentDto> {
+    const e = this.wasm.upsertEnvironment(collectionId, {
       name: env.name,
       aliases: env.aliases,
     } as WasmEnvironmentDto);
     return { name: e.name, aliases: [...e.aliases] };
   }
 
-  async deleteEnvironment(collectionId: number, name: string): Promise<void> {
-    this.wasm.deleteEnvironment(BigInt(collectionId), name);
+  async deleteEnvironment(collectionId: string, name: string): Promise<void> {
+    this.wasm.deleteEnvironment(collectionId, name);
   }
 
   // ── Time Windows ───────────────────────────────────────────────────────
 
-  async getTimeWindows(collectionId: number): Promise<TimeWindowDto[]> {
-    return this.wasm.getTimeWindows(BigInt(collectionId)).map((tw) => this.toTimeWindowDto(tw));
+  async getTimeWindows(collectionId: string): Promise<TimeWindowDto[]> {
+    return this.wasm.getTimeWindows(collectionId).map((tw) => this.toTimeWindowDto(tw));
   }
 
-  async createTimeWindow(collectionId: number, tw: TimeWindowDto): Promise<TimeWindowDto> {
-    const created = this.wasm.createTimeWindow(BigInt(collectionId), this.toWasmTimeWindow(tw));
+  async createTimeWindow(collectionId: string, tw: TimeWindowDto): Promise<TimeWindowDto> {
+    const created = this.wasm.createTimeWindow(collectionId, this.toWasmTimeWindow(tw));
     return this.toTimeWindowDto(created);
   }
 
   async updateTimeWindow(
-    collectionId: number,
-    timeWindowId: number,
+    collectionId: string,
+    timeWindowId: string,
     tw: TimeWindowDto,
   ): Promise<TimeWindowDto> {
     const updated = this.wasm.updateTimeWindow(
-      BigInt(collectionId),
-      BigInt(timeWindowId),
+      collectionId,
+      timeWindowId,
       this.toWasmTimeWindow(tw),
     );
     return this.toTimeWindowDto(updated);
   }
 
-  async deleteTimeWindow(collectionId: number, timeWindowId: number): Promise<void> {
-    this.wasm.deleteTimeWindow(BigInt(collectionId), BigInt(timeWindowId));
+  async deleteTimeWindow(collectionId: string, timeWindowId: string): Promise<void> {
+    this.wasm.deleteTimeWindow(collectionId, timeWindowId);
   }
 
   // ── Schema ─────────────────────────────────────────────────────────────
 
-  async exportSchema(collectionId: number): Promise<Record<string, unknown>> {
-    const json = this.wasm.exportSchema(BigInt(collectionId));
+  async exportSchema(collectionId: string): Promise<Record<string, unknown>> {
+    const json = this.wasm.exportSchema(collectionId);
     return JSON.parse(json) as Record<string, unknown>;
   }
 
-  async importSchema(collectionId: number, schema: string): Promise<void> {
+  async importSchema(collectionId: string, schema: string): Promise<void> {
     console.log('Importing schema into WASM backend:', schema);
-    this.wasm.importSchema(BigInt(collectionId), schema);
+    this.wasm.importSchema(collectionId, schema);
   }
 
   // ── Collection Metadata ────────────────────────────────────────────────
 
-  async updateCollectionMetadata(collectionId: number, metadata: MetadataDto[]): Promise<void> {
+  async updateCollectionMetadata(collectionId: string, metadata: MetadataDto[]): Promise<void> {
     this.wasm.updateCollectionMetadata(
-      BigInt(collectionId),
+      collectionId,
       metadata.map((m) => this.toWasmMetadata(m)),
     );
   }
@@ -158,10 +158,10 @@ export class WasmFlagBackend implements FlagBackend {
 
   private toCollectionDto(c: WasmCollectionDto): CollectionDto {
     return {
-      id: Number(c.id),
+      id: String(c.id),
       name: c.name,
       createdAt: c.createdAt instanceof Date ? c.createdAt.toISOString() : String(c.createdAt),
-      metadata: c.metadata?.map((m) => this.toMetadataDto(m)) ?? [],
+      metadata: c.metadata?.map((m: WasmMetadataDto) => this.toMetadataDto(m)) ?? [],
     };
   }
 
@@ -174,7 +174,7 @@ export class WasmFlagBackend implements FlagBackend {
       stringValue: f.stringValue ?? null,
       numberValue: f.numberValue ?? null,
       objectValue: f.objectValue ?? null,
-      metadata: f.metadata?.map((m) => this.toMetadataDto(m)),
+      metadata: f.metadata?.map((m: WasmMetadataDto) => this.toMetadataDto(m)),
       perEnvironmentDefinitions: f.perEnvironmentDefinitions
         ? this.mapPerEnvDefs(f.perEnvironmentDefinitions as Record<string, WasmPerEnvDto>)
         : undefined,
@@ -225,7 +225,7 @@ export class WasmFlagBackend implements FlagBackend {
 
   private toTimeWindowDto(tw: WasmTimeWindowDto): TimeWindowDto {
     return {
-      id: Number(tw.id),
+      id: String(tw.id),
       name: tw.name,
       startTime: tw.startTime instanceof Date ? tw.startTime.toISOString() : (tw.startTime ?? null),
       endTime: tw.endTime instanceof Date ? tw.endTime.toISOString() : (tw.endTime ?? null),
@@ -234,7 +234,7 @@ export class WasmFlagBackend implements FlagBackend {
 
   private toWasmTimeWindow(tw: TimeWindowDto): WasmTimeWindowDto {
     return {
-      id: BigInt(tw.id),
+      id: tw.id,
       name: tw.name,
       startTime: tw.startTime ? new Date(tw.startTime) : undefined,
       endTime: tw.endTime ? new Date(tw.endTime) : undefined,
@@ -243,7 +243,7 @@ export class WasmFlagBackend implements FlagBackend {
 
   private toGlobalTimeWindowDto(g: WasmGlobalTimeWindowDto): GlobalTimeWindowDto {
     return {
-      timeWindowId: Number(g.timeWindowId),
+      timeWindowId: String(g.timeWindowId),
       booleanValue: g.booleanValue ?? null,
       stringValue: g.stringValue ?? null,
       numberValue: g.numberValue ?? null,
@@ -253,7 +253,7 @@ export class WasmFlagBackend implements FlagBackend {
 
   private toWasmGlobalTimeWindow(g: GlobalTimeWindowDto): WasmGlobalTimeWindowDto {
     return {
-      timeWindowId: BigInt(g.timeWindowId),
+      timeWindowId: g.timeWindowId,
       booleanValue: g.booleanValue ?? undefined,
       stringValue: g.stringValue ?? undefined,
       numberValue: g.numberValue ?? undefined,
@@ -271,7 +271,7 @@ export class WasmFlagBackend implements FlagBackend {
         stringValue: def.stringValue ?? null,
         numberValue: def.numberValue ?? null,
         objectValue: def.objectValue ?? null,
-        timeWindowId: def.timeWindowId != null ? Number(def.timeWindowId) : null,
+        timeWindowId: def.timeWindowId != null ? String(def.timeWindowId) : null,
       };
     }
     return result;
@@ -287,7 +287,7 @@ export class WasmFlagBackend implements FlagBackend {
         stringValue: def.stringValue ?? undefined,
         numberValue: def.numberValue ?? undefined,
         objectValue: def.objectValue ?? undefined,
-        timeWindowId: def.timeWindowId != null ? BigInt(def.timeWindowId) : undefined,
+        timeWindowId: def.timeWindowId != null ? def.timeWindowId : undefined,
       } as WasmPerEnvDto;
     }
     return result;

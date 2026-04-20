@@ -7,12 +7,11 @@ namespace OpenFeatureManager.Entities;
 public class EnvironmentAlias
 {
     [Key]
-    [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
     [Column("id")]
-    public long Id { get; set; }
+    public Guid Id { get; set; } = Guid.NewGuid();
 
     [Column("environment_entry_id")]
-    public long EnvironmentEntryId { get; set; }
+    public Guid EnvironmentEntryId { get; set; }
 
     [Required]
     [Column("alias")]

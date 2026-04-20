@@ -7,12 +7,11 @@ namespace OpenFeatureManager.Entities;
 public abstract class FlagEntry
 {
     [Key]
-    [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
     [Column("id")]
-    public long Id { get; set; }
+    public Guid Id { get; set; } = Guid.NewGuid();
 
     [Column("collection_id")]
-    public long CollectionId { get; set; }
+    public Guid CollectionId { get; set; }
 
     [Required]
     [Column("flag_key")]
@@ -22,7 +21,7 @@ public abstract class FlagEntry
     public FlagState State { get; set; } = FlagState.ENABLED;
 
     [Column("global_time_window_id")]
-    public long? GlobalTimeWindowId { get; set; }
+    public Guid? GlobalTimeWindowId { get; set; }
 
     public TimeWindow? GlobalTimeWindow { get; set; }
 

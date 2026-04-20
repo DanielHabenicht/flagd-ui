@@ -22,7 +22,7 @@ public class FlagdService
 
     // ─── Collection management ──────────────────────────────────────────
 
-    public FlagsCollectionDto GetCollection(long id)
+    public FlagsCollectionDto GetCollection(Guid id)
     {
         using var db = _contextFactory();
         var collection = db.FlagsCollections.Include(f => f.Metadata).FirstOrDefault(f => f.Id == id)
@@ -45,7 +45,7 @@ public class FlagdService
         return db.FlagsCollections.Include(f => f.Metadata).OrderBy(f => f.Id).ToList().Select(ToDto).ToList();
     }
 
-    public FlagsCollectionDto RenameCollection(long id, string name)
+    public FlagsCollectionDto RenameCollection(Guid id, string name)
     {
         using var db = _contextFactory();
         var collection = db.FlagsCollections.Include(f => f.Metadata).FirstOrDefault(f => f.Id == id)
@@ -55,7 +55,7 @@ public class FlagdService
         return ToDto(collection);
     }
 
-    public void DeleteCollection(long id)
+    public void DeleteCollection(Guid id)
     {
         using var db = _contextFactory();
         var collection = db.FlagsCollections.Find(id) ?? throw new KeyNotFoundException($"Collection {id} not found");
@@ -67,7 +67,7 @@ public class FlagdService
         db.SaveChanges();
     }
 
-    public void ClearCollectionData(long collectionId)
+    public void ClearCollectionData(Guid collectionId)
     {
         using var db = _contextFactory();
         if (!db.FlagsCollections.Any(f => f.Id == collectionId))
@@ -79,7 +79,7 @@ public class FlagdService
         db.SaveChanges();
     }
 
-    public void UpdateCollectionMetadata(long collectionId, List<MetadataEntryDto> metadata)
+    public void UpdateCollectionMetadata(Guid collectionId, List<MetadataEntryDto> metadata)
     {
         using var db = _contextFactory();
         var collection = db.FlagsCollections.Find(collectionId) ?? throw new KeyNotFoundException($"Collection {collectionId} not found");
@@ -101,7 +101,7 @@ public class FlagdService
 
     // ─── Flag management ──────────────────────────────────────────────────
 
-    public List<FlagEntryDto> GetFlags(long collectionId)
+    public List<FlagEntryDto> GetFlags(Guid collectionId)
     {
         using var db = _contextFactory();
         var envLookup = db.EnvironmentEntries
@@ -125,7 +125,7 @@ public class FlagdService
     /// Per-environment definitions are keyed by environment name; the service
     /// resolves names to EnvironmentEntry IDs.
     /// </summary>
-    public FlagEntryDto UpsertFlag(long collectionId, FlagEntryDto dto)
+    public FlagEntryDto UpsertFlag(Guid collectionId, FlagEntryDto dto)
     {
         using var db = _contextFactory();
 
@@ -215,7 +215,7 @@ public class FlagdService
         return ToDto(existing, envLookup);
     }
 
-    public void DeleteFlag(long collectionId, string flagKey)
+    public void DeleteFlag(Guid collectionId, string flagKey)
     {
         using var db = _contextFactory();
         var entry = db.FlagEntries.FirstOrDefault(f => f.CollectionId == collectionId && f.FlagKey == flagKey)
@@ -226,7 +226,7 @@ public class FlagdService
 
     // ─── Environment management ───────────────────────────────────────────
 
-    public List<EnvironmentEntryDto> GetEnvironments(long collectionId)
+    public List<EnvironmentEntryDto> GetEnvironments(Guid collectionId)
     {
         using var db = _contextFactory();
         return db.EnvironmentEntries
@@ -238,7 +238,7 @@ public class FlagdService
             .ToList();
     }
 
-    public EnvironmentEntryDto UpsertEnvironment(long collectionId, EnvironmentEntryDto dto)
+    public EnvironmentEntryDto UpsertEnvironment(Guid collectionId, EnvironmentEntryDto dto)
     {
         if (string.IsNullOrWhiteSpace(dto.Name))
             throw new ArgumentException("Environment name is required");
@@ -271,7 +271,7 @@ public class FlagdService
         return ToDto(existing);
     }
 
-    public void DeleteEnvironment(long collectionId, string name)
+    public void DeleteEnvironment(Guid collectionId, string name)
     {
         using var db = _contextFactory();
         var entry = db.EnvironmentEntries.FirstOrDefault(e => e.CollectionId == collectionId && e.Name == name)
@@ -282,7 +282,7 @@ public class FlagdService
 
     // ─── Time window management ───────────────────────────────────────────
 
-    public List<TimeWindowDto> GetTimeWindows(long collectionId)
+    public List<TimeWindowDto> GetTimeWindows(Guid collectionId)
     {
         using var db = _contextFactory();
         return db.TimeWindows
@@ -293,7 +293,7 @@ public class FlagdService
             .ToList();
     }
 
-    public TimeWindowDto CreateTimeWindow(long collectionId, TimeWindowDto dto)
+    public TimeWindowDto CreateTimeWindow(Guid collectionId, TimeWindowDto dto)
     {
         if (string.IsNullOrWhiteSpace(dto.Name))
             throw new ArgumentException("Time window name is required");
@@ -314,7 +314,7 @@ public class FlagdService
         return ToDto(tw);
     }
 
-    public TimeWindowDto UpdateTimeWindow(long collectionId, long timeWindowId, TimeWindowDto dto)
+    public TimeWindowDto UpdateTimeWindow(Guid collectionId, Guid timeWindowId, TimeWindowDto dto)
     {
         using var db = _contextFactory();
         var tw = db.TimeWindows.FirstOrDefault(t => t.Id == timeWindowId && t.CollectionId == collectionId)
@@ -327,7 +327,7 @@ public class FlagdService
         return ToDto(tw);
     }
 
-    public void DeleteTimeWindow(long collectionId, long timeWindowId)
+    public void DeleteTimeWindow(Guid collectionId, Guid timeWindowId)
     {
         using var db = _contextFactory();
         var tw = db.TimeWindows.FirstOrDefault(t => t.Id == timeWindowId && t.CollectionId == collectionId)
@@ -347,7 +347,7 @@ public class FlagdService
         _ => throw new InvalidOperationException($"Unknown flag entry type: {entry.GetType()}")
     };
 
-    private static FlagEntry CreateFlagEntry(string type, long collectionId, string flagKey) => type switch
+    private static FlagEntry CreateFlagEntry(string type, Guid collectionId, string flagKey) => type switch
     {
         "boolean" => new BooleanFlagEntry { CollectionId = collectionId, FlagKey = flagKey },
         "string" => new StringFlagEntry { CollectionId = collectionId, FlagKey = flagKey },
@@ -384,7 +384,7 @@ public class FlagdService
                 ? f.Metadata.Select(m => new MetadataEntryDto(m.Key, m.StringValue, m.NumberValue, m.BooleanValue)).ToList()
                 : null);
 
-    private static FlagEntryDto ToDto(FlagEntry e, Dictionary<long, string> envIdToName)
+    private static FlagEntryDto ToDto(FlagEntry e, Dictionary<Guid, string> envIdToName)
     {
         var (type, boolVal, strVal, numVal, objVal) = e switch
         {

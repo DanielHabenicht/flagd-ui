@@ -22,19 +22,19 @@ export class CreateCollection {
 export class RenameCollection {
   static readonly type = '[FlagStore] Rename Collection';
   constructor(
-    readonly id: number,
+    readonly id: string,
     readonly name: string,
   ) {}
 }
 
 export class DeleteCollection {
   static readonly type = '[FlagStore] Delete Collection';
-  constructor(readonly id: number) {}
+  constructor(readonly id: string) {}
 }
 
 export class SelectCollection {
   static readonly type = '[FlagStore] Select Collection';
-  constructor(readonly id: number | undefined) {}
+  constructor(readonly id: string | undefined) {}
 }
 
 // ============================================================================
@@ -43,13 +43,13 @@ export class SelectCollection {
 
 export class LoadFlags {
   static readonly type = '[FlagStore] Load Flags';
-  constructor(readonly collectionId: number) {}
+  constructor(readonly collectionId: string) {}
 }
 
 export class CreateFlag {
   static readonly type = '[FlagStore] Create Flag';
   constructor(
-    readonly collectionId: number,
+    readonly collectionId: string,
     readonly flag: FlagDto,
   ) {}
 }
@@ -57,7 +57,7 @@ export class CreateFlag {
 export class UpdateFlag {
   static readonly type = '[FlagStore] Update Flag';
   constructor(
-    readonly collectionId: number,
+    readonly collectionId: string,
     readonly flag: FlagDto,
     readonly originalKey?: string,
   ) {}
@@ -66,7 +66,7 @@ export class UpdateFlag {
 export class DeleteFlag {
   static readonly type = '[FlagStore] Delete Flag';
   constructor(
-    readonly collectionId: number,
+    readonly collectionId: string,
     readonly flagKey: string,
   ) {}
 }
@@ -77,7 +77,7 @@ export class DeleteFlag {
 
 export class LoadEnvironments {
   static readonly type = '[FlagStore] Load Environments';
-  constructor(readonly collectionId: number) {}
+  constructor(readonly collectionId: string) {}
 }
 
 export class CreateEnvironment {
@@ -104,13 +104,13 @@ export class DeleteEnvironment {
 
 export class LoadTimeWindows {
   static readonly type = '[FlagStore] Load Time Windows';
-  constructor(readonly collectionId: number) {}
+  constructor(readonly collectionId: string) {}
 }
 
 export class CreateTimeWindow {
   static readonly type = '[FlagStore] Create Time Window';
   constructor(
-    readonly collectionId: number,
+    readonly collectionId: string,
     readonly timeWindow: TimeWindowDto,
   ) {}
 }
@@ -118,8 +118,8 @@ export class CreateTimeWindow {
 export class UpdateTimeWindow {
   static readonly type = '[FlagStore] Update Time Window';
   constructor(
-    readonly collectionId: number,
-    readonly timeWindowId: number,
+    readonly collectionId: string,
+    readonly timeWindowId: string,
     readonly timeWindow: TimeWindowDto,
   ) {}
 }
@@ -127,8 +127,8 @@ export class UpdateTimeWindow {
 export class DeleteTimeWindow {
   static readonly type = '[FlagStore] Delete Time Window';
   constructor(
-    readonly collectionId: number,
-    readonly timeWindowId: number,
+    readonly collectionId: string,
+    readonly timeWindowId: string,
   ) {}
 }
 
@@ -138,7 +138,7 @@ export class DeleteTimeWindow {
 
 export class ExportSchema {
   static readonly type = '[FlagStore] Export Schema';
-  constructor(readonly collectionId: number) {}
+  constructor(readonly collectionId: string) {}
 }
 
 export class ImportSchema {
@@ -160,7 +160,7 @@ export class SaveDatabase {
 export class SetCollectionMetadata {
   static readonly type = '[FlagStore] Set Collection Metadata';
   constructor(
-    readonly collectionId: number,
+    readonly collectionId: string,
     readonly metadata: MetadataDto[],
   ) {}
 }

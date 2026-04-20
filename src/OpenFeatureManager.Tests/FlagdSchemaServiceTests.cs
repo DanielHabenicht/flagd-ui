@@ -211,7 +211,7 @@ public class FlagdSchemaServiceTests : IDisposable
         Assert.Equal(2, envs.Count);
 
         var prod = envs.First(e => e.Name == "Production");
-        Assert.Equal(["prod", "production"], prod.Aliases);
+        Assert.Equal(["prod", "production"], prod.Aliases.Order().ToArray());
 
         var staging = envs.First(e => e.Name == "Staging");
         Assert.Equal(["staging"], staging.Aliases);
@@ -337,7 +337,7 @@ public class FlagdSchemaServiceTests : IDisposable
         }
         """;
 
-        Assert.Throws<KeyNotFoundException>(() => _schemaService.ImportSchema(999, json));
+        Assert.Throws<KeyNotFoundException>(() => _schemaService.ImportSchema(Guid.NewGuid(), json));
     }
 
     // ─── Export tests ─────────────────────────────────────────────────────
@@ -403,8 +403,9 @@ public class FlagdSchemaServiceTests : IDisposable
         var prod = evaluators.GetProperty("isProduction");
         var inArray = prod.GetProperty("in");
         Assert.Equal("environment", inArray[0].GetProperty("var").GetString());
-        Assert.Equal("prod", inArray[1][0].GetString());
-        Assert.Equal("production", inArray[1][1].GetString());
+        var aliasValues = inArray[1].EnumerateArray().Select(a => a.GetString()).Order().ToArray();
+        Assert.Equal("prod", aliasValues[0]);
+        Assert.Equal("production", aliasValues[1]);
     }
 
     [Fact]
@@ -437,7 +438,7 @@ public class FlagdSchemaServiceTests : IDisposable
     [Fact]
     public void ExportSchema_NonexistentCollection_ThrowsKeyNotFoundException()
     {
-        Assert.Throws<KeyNotFoundException>(() => _schemaService.ExportSchema(999));
+        Assert.Throws<KeyNotFoundException>(() => _schemaService.ExportSchema(Guid.NewGuid()));
     }
 
     // ─── Round-trip tests ─────────────────────────────────────────────────
@@ -509,8 +510,9 @@ public class FlagdSchemaServiceTests : IDisposable
         var evaluators = doc.RootElement.GetProperty("$evaluators");
         var staging = evaluators.GetProperty("isStaging");
         var aliases = staging.GetProperty("in")[1];
-        Assert.Equal("stg", aliases[0].GetString());
-        Assert.Equal("staging", aliases[1].GetString());
+        var aliasValues = aliases.EnumerateArray().Select(a => a.GetString()).Order().ToArray();
+        Assert.Equal("staging", aliasValues[0]);
+        Assert.Equal("stg", aliasValues[1]);
     }
 
     // ─── Typed flag CRUD tests ────────────────────────────────────────────
@@ -626,7 +628,7 @@ public class FlagdSchemaServiceTests : IDisposable
         var collection = _flagdService.CreateCollection("test");
         var start = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
         var end = new DateTime(2026, 12, 31, 23, 59, 59, DateTimeKind.Utc);
-        var tw = _flagdService.CreateTimeWindow(collection.Id, new TimeWindowDto(0, "Test Window", start, end));
+        var tw = _flagdService.CreateTimeWindow(collection.Id, new TimeWindowDto(Guid.Empty, "Test Window", start, end));
         var globalTw = new GlobalTimeWindowDto(tw.Id, BooleanValue: false);
         _flagdService.UpsertFlag(collection.Id, new FlagEntryDto("flag", "boolean", "ENABLED", BooleanValue: true, GlobalTimeWindow: globalTw));
 
@@ -727,9 +729,9 @@ public class FlagdSchemaServiceTests : IDisposable
         var collection = _flagdService.CreateCollection("test");
         var start = new DateTime(2026, 12, 24, 0, 0, 0, DateTimeKind.Utc);
         var end = new DateTime(2026, 12, 26, 23, 59, 59, DateTimeKind.Utc);
-        var tw = _flagdService.CreateTimeWindow(collection.Id, new TimeWindowDto(0, "Christmas Time", start, end));
+        var tw = _flagdService.CreateTimeWindow(collection.Id, new TimeWindowDto(Guid.Empty, "Christmas Time", start, end));
 
-        Assert.True(tw.Id > 0);
+        Assert.NotEqual(Guid.Empty, tw.Id);
         Assert.Equal("Christmas Time", tw.Name);
         Assert.Equal(start, tw.StartTime);
         Assert.Equal(end, tw.EndTime);
@@ -739,8 +741,8 @@ public class FlagdSchemaServiceTests : IDisposable
     public void GetTimeWindows_ReturnsAll()
     {
         var collection = _flagdService.CreateCollection("test");
-        _flagdService.CreateTimeWindow(collection.Id, new TimeWindowDto(0, "Window A"));
-        _flagdService.CreateTimeWindow(collection.Id, new TimeWindowDto(0, "Window B"));
+        _flagdService.CreateTimeWindow(collection.Id, new TimeWindowDto(Guid.Empty, "Window A"));
+        _flagdService.CreateTimeWindow(collection.Id, new TimeWindowDto(Guid.Empty, "Window B"));
 
         var windows = _flagdService.GetTimeWindows(collection.Id);
         Assert.Equal(2, windows.Count);
@@ -750,7 +752,7 @@ public class FlagdSchemaServiceTests : IDisposable
     public void UpdateTimeWindow_ChangesFields()
     {
         var collection = _flagdService.CreateCollection("test");
-        var tw = _flagdService.CreateTimeWindow(collection.Id, new TimeWindowDto(0, "Old Name"));
+        var tw = _flagdService.CreateTimeWindow(collection.Id, new TimeWindowDto(Guid.Empty, "Old Name"));
         var newStart = new DateTime(2027, 1, 1, 0, 0, 0, DateTimeKind.Utc);
         var updated = _flagdService.UpdateTimeWindow(collection.Id, tw.Id, new TimeWindowDto(tw.Id, "New Name", newStart));
 
@@ -762,7 +764,7 @@ public class FlagdSchemaServiceTests : IDisposable
     public void DeleteTimeWindow_RemovesEntry()
     {
         var collection = _flagdService.CreateCollection("test");
-        var tw = _flagdService.CreateTimeWindow(collection.Id, new TimeWindowDto(0, "Temporary"));
+        var tw = _flagdService.CreateTimeWindow(collection.Id, new TimeWindowDto(Guid.Empty, "Temporary"));
 
         _flagdService.DeleteTimeWindow(collection.Id, tw.Id);
 
@@ -774,7 +776,7 @@ public class FlagdSchemaServiceTests : IDisposable
     {
         var collection = _flagdService.CreateCollection("test");
         _flagdService.UpsertEnvironment(collection.Id, new EnvironmentEntryDto("Production", ["prod"]));
-        var tw = _flagdService.CreateTimeWindow(collection.Id, new TimeWindowDto(0, "Holiday Window"));
+        var tw = _flagdService.CreateTimeWindow(collection.Id, new TimeWindowDto(Guid.Empty, "Holiday Window"));
         var perEnv = new Dictionary<string, PerEnvironmentDefinitionDto>
         {
             ["Production"] = new(BooleanValue: false, TimeWindowId: tw.Id)

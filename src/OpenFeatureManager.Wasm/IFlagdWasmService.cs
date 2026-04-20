@@ -11,36 +11,36 @@ public interface IFlagdWasmService
     // ─── Collections ──────────────────────────────────────────────────
 
     FlagsCollectionDto[] GetCollections();
-    FlagsCollectionDto GetCollection(long id);
+    FlagsCollectionDto GetCollection(string id);
     FlagsCollectionDto CreateCollection(string name);
-    FlagsCollectionDto RenameCollection(long id, string name);
-    void DeleteCollection(long id);
-    void ClearCollectionData(long collectionId);
-    void UpdateCollectionMetadata(long collectionId, MetadataEntryDto[] metadata);
+    FlagsCollectionDto RenameCollection(string id, string name);
+    void DeleteCollection(string id);
+    void ClearCollectionData(string collectionId);
+    void UpdateCollectionMetadata(string collectionId, MetadataEntryDto[] metadata);
 
     // ─── Flags ────────────────────────────────────────────────────────
 
-    FlagEntryDto[] GetFlags(long collectionId);
-    FlagEntryDto UpsertFlag(long collectionId, FlagEntryDto dto);
-    void DeleteFlag(long collectionId, string flagKey);
+    FlagEntryDto[] GetFlags(string collectionId);
+    FlagEntryDto UpsertFlag(string collectionId, FlagEntryDto dto);
+    void DeleteFlag(string collectionId, string flagKey);
 
     // ─── Environments ─────────────────────────────────────────────────
 
-    EnvironmentEntryDto[] GetEnvironments(long collectionId);
-    EnvironmentEntryDto UpsertEnvironment(long collectionId, EnvironmentEntryDto dto);
-    void DeleteEnvironment(long collectionId, string name);
+    EnvironmentEntryDto[] GetEnvironments(string collectionId);
+    EnvironmentEntryDto UpsertEnvironment(string collectionId, EnvironmentEntryDto dto);
+    void DeleteEnvironment(string collectionId, string name);
 
     // ─── Time Windows ─────────────────────────────────────────────────
 
-    TimeWindowDto[] GetTimeWindows(long collectionId);
-    TimeWindowDto CreateTimeWindow(long collectionId, TimeWindowDto dto);
-    TimeWindowDto UpdateTimeWindow(long collectionId, long timeWindowId, TimeWindowDto dto);
-    void DeleteTimeWindow(long collectionId, long timeWindowId);
+    TimeWindowDto[] GetTimeWindows(string collectionId);
+    TimeWindowDto CreateTimeWindow(string collectionId, TimeWindowDto dto);
+    TimeWindowDto UpdateTimeWindow(string collectionId, string timeWindowId, TimeWindowDto dto);
+    void DeleteTimeWindow(string collectionId, string timeWindowId);
 
     // ─── Schema ───────────────────────────────────────────────────────
 
-    string ExportSchema(long collectionId);
-    void ImportSchema(long collectionId, string schemaJson);
+    string ExportSchema(string collectionId);
+    void ImportSchema(string collectionId, string schemaJson);
 
     PerEnvironmentDefinitionDto Dummy();
 }

@@ -615,7 +615,7 @@ export class FlagEditorComponent implements OnInit, OnChanges, OnDestroy {
 
       if (startDate || endDate) {
         globalTimeWindow = {
-          id: 0, // Placeholder, backend should assign real ID
+          id: '', // Placeholder, backend should assign real ID
           name: `${key}-global-time-window`,
           startTime: startDate as any,
           endTime: endDate as any,

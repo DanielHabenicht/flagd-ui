@@ -125,7 +125,7 @@ export class WasmBackendService {
     return collections;
   }
 
-  getCollection(id: bigint): FlagsCollectionDto {
+  getCollection(id: string): FlagsCollectionDto {
     return this.flagd().getCollection(id);
   }
 
@@ -134,79 +134,79 @@ export class WasmBackendService {
     return this.flagd().createCollection(name);
   }
 
-  renameCollection(id: bigint, name: string): FlagsCollectionDto {
+  renameCollection(id: string, name: string): FlagsCollectionDto {
     return this.flagd().renameCollection(id, name);
   }
 
-  deleteCollection(id: bigint): void {
+  deleteCollection(id: string): void {
     this.flagd().deleteCollection(id);
   }
 
-  clearCollectionData(collectionId: bigint): void {
+  clearCollectionData(collectionId: string): void {
     this.flagd().clearCollectionData(collectionId);
   }
 
-  updateCollectionMetadata(collectionId: bigint, metadata: MetadataEntryDto[]): void {
+  updateCollectionMetadata(collectionId: string, metadata: MetadataEntryDto[]): void {
     this.flagd().updateCollectionMetadata(collectionId, metadata);
   }
 
   // ─── Flags ────────────────────────────────────────────────────────────
 
-  getFlags(collectionId: bigint): FlagEntryDto[] {
+  getFlags(collectionId: string): FlagEntryDto[] {
     const flags = this.flagd().getFlags(collectionId);
     console.log(`Fetched flags for collection ${collectionId} from WASM backend:`, flags);
     return flags;
   }
 
-  upsertFlag(collectionId: bigint, dto: FlagEntryDto): FlagEntryDto {
+  upsertFlag(collectionId: string, dto: FlagEntryDto): FlagEntryDto {
     const flag = this.flagd().upsertFlag(collectionId, dto);
     console.log(`Upserted flag for collection ${collectionId} in WASM backend:`, flag);
     return flag;
   }
 
-  deleteFlag(collectionId: bigint, flagKey: string): void {
+  deleteFlag(collectionId: string, flagKey: string): void {
     this.flagd().deleteFlag(collectionId, flagKey);
   }
 
   // ─── Environments ─────────────────────────────────────────────────────
 
-  getEnvironments(collectionId: bigint): EnvironmentEntryDto[] {
+  getEnvironments(collectionId: string): EnvironmentEntryDto[] {
     return this.flagd().getEnvironments(collectionId);
   }
 
-  upsertEnvironment(collectionId: bigint, dto: EnvironmentEntryDto): EnvironmentEntryDto {
+  upsertEnvironment(collectionId: string, dto: EnvironmentEntryDto): EnvironmentEntryDto {
     return this.flagd().upsertEnvironment(collectionId, dto);
   }
 
-  deleteEnvironment(collectionId: bigint, name: string): void {
+  deleteEnvironment(collectionId: string, name: string): void {
     this.flagd().deleteEnvironment(collectionId, name);
   }
 
   // ─── Time Windows ─────────────────────────────────────────────────────
 
-  getTimeWindows(collectionId: bigint): TimeWindowDto[] {
+  getTimeWindows(collectionId: string): TimeWindowDto[] {
     return this.flagd().getTimeWindows(collectionId);
   }
 
-  createTimeWindow(collectionId: bigint, dto: TimeWindowDto): TimeWindowDto {
+  createTimeWindow(collectionId: string, dto: TimeWindowDto): TimeWindowDto {
     return this.flagd().createTimeWindow(collectionId, dto);
   }
 
-  updateTimeWindow(collectionId: bigint, timeWindowId: bigint, dto: TimeWindowDto): TimeWindowDto {
+  updateTimeWindow(collectionId: string, timeWindowId: string, dto: TimeWindowDto): TimeWindowDto {
     return this.flagd().updateTimeWindow(collectionId, timeWindowId, dto);
   }
 
-  deleteTimeWindow(collectionId: bigint, timeWindowId: bigint): void {
+  deleteTimeWindow(collectionId: string, timeWindowId: string): void {
     this.flagd().deleteTimeWindow(collectionId, timeWindowId);
   }
 
   // ─── Schema ───────────────────────────────────────────────────────────
 
-  exportSchema(collectionId: bigint): string {
+  exportSchema(collectionId: string): string {
     return this.flagd().exportSchema(collectionId);
   }
 
-  importSchema(collectionId: bigint, schemaJson: string): void {
+  importSchema(collectionId: string, schemaJson: string): void {
     this.flagd().importSchema(collectionId, schemaJson);
   }
 

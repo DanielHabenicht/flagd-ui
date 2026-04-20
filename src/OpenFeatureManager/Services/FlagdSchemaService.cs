@@ -33,7 +33,7 @@ public class FlagdSchemaService
     /// then parses the JSON document directly.
     /// Existing flags and environments for the file are replaced.
     /// </summary>
-    public void ImportSchema(long collectionId, string schemaJson)
+    public void ImportSchema(Guid collectionId, string schemaJson)
     {
         _validator?.ValidateOrThrow(schemaJson);
 
@@ -160,7 +160,7 @@ public class FlagdSchemaService
     /// Reconstruct and return a FlagdSchema JSON string from the stored data.
     /// Validates the output against the flagd schema (if a validator is configured).
     /// </summary>
-    public string ExportSchema(long collectionId)
+    public string ExportSchema(Guid collectionId)
     {
         var collection = _flagdService.GetCollection(collectionId);
         var flags = _flagdService.GetFlags(collectionId);

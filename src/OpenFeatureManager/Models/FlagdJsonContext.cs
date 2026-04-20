@@ -4,7 +4,7 @@ namespace OpenFeatureManager.Models;
 
 /// <summary>DTO for a flags collection (schema document).</summary>
 public record FlagsCollectionDto(
-    long Id,
+    Guid Id,
     string Name,
     DateTime CreatedAt,
     List<MetadataEntryDto>? Metadata = null);
@@ -39,11 +39,11 @@ public record PerEnvironmentDefinitionDto(
     string? StringValue = null,
     double? NumberValue = null,
     string? ObjectValue = null,
-    long? TimeWindowId = null);
+    Guid? TimeWindowId = null);
 
 /// <summary>DTO for a global time-windowed value override referencing a TimeWindow entity.</summary>
 public record GlobalTimeWindowDto(
-    long TimeWindowId,
+    Guid TimeWindowId,
     bool? BooleanValue = null,
     string? StringValue = null,
     double? NumberValue = null,
@@ -53,7 +53,7 @@ public record GlobalTimeWindowDto(
 public record EnvironmentEntryDto(string Name, string[] Aliases);
 
 /// <summary>DTO for a reusable time window.</summary>
-public record TimeWindowDto(long Id, string Name, DateTime? StartTime = null, DateTime? EndTime = null);
+public record TimeWindowDto(Guid Id, string Name, DateTime? StartTime = null, DateTime? EndTime = null);
 
 [JsonSerializable(typeof(string[]))]
 [JsonSerializable(typeof(FlagsCollectionDto))]

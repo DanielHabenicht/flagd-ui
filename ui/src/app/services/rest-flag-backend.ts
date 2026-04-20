@@ -11,7 +11,6 @@ import { MetadataEntryDto } from '../api-client/model/metadataEntryDto';
 import { GlobalTimeWindowDto as ApiGlobalTimeWindowDto } from '../api-client/model/globalTimeWindowDto';
 import { PerEnvironmentDefinitionDto as ApiPerEnvDto } from '../api-client/model/perEnvironmentDefinitionDto';
 import { TimeWindowDto as ApiTimeWindowDto } from '../api-client/model/timeWindowDto';
-import { RenameCollectionIdParameter } from '../api-client/model/renameCollectionIdParameter';
 import {
   CollectionDto,
   EnvironmentDto,
@@ -46,50 +45,50 @@ export class RestFlagBackend implements FlagBackend {
     return this.toCollectionDto(c);
   }
 
-  async renameCollection(id: number, name: string): Promise<CollectionDto> {
-    const c = await firstValueFrom(this.collections.renameCollection(this.toId(id), { name }));
+  async renameCollection(id: string, name: string): Promise<CollectionDto> {
+    const c = await firstValueFrom(this.collections.renameCollection(id, { name }));
     return this.toCollectionDto(c);
   }
 
-  async deleteCollection(id: number): Promise<void> {
-    await firstValueFrom(this.collections.deleteCollection(this.toId(id)));
+  async deleteCollection(id: string): Promise<void> {
+    await firstValueFrom(this.collections.deleteCollection(id));
   }
 
   // ── Flags ──────────────────────────────────────────────────────────────
 
-  async getFlags(collectionId: number): Promise<FlagDto[]> {
-    const list = await firstValueFrom(this.flags.getFlags(this.toId(collectionId)));
+  async getFlags(collectionId: string): Promise<FlagDto[]> {
+    const list = await firstValueFrom(this.flags.getFlags(collectionId));
     return list.map((f) => this.toFlagDto(f));
   }
 
-  async createFlag(collectionId: number, flag: FlagDto): Promise<FlagDto> {
+  async createFlag(collectionId: string, flag: FlagDto): Promise<FlagDto> {
     const f = await firstValueFrom(
-      this.flags.createFlag(this.toId(collectionId), this.toApiFlagEntry(flag)),
+      this.flags.createFlag(collectionId, this.toApiFlagEntry(flag)),
     );
     return this.toFlagDto(f);
   }
 
-  async updateFlag(collectionId: number, flag: FlagDto): Promise<FlagDto> {
+  async updateFlag(collectionId: string, flag: FlagDto): Promise<FlagDto> {
     const f = await firstValueFrom(
-      this.flags.updateFlag(this.toId(collectionId), this.toApiFlagEntry(flag)),
+      this.flags.updateFlag(collectionId, this.toApiFlagEntry(flag)),
     );
     return this.toFlagDto(f);
   }
 
-  async deleteFlag(collectionId: number, flagKey: string): Promise<void> {
-    await firstValueFrom(this.flags.deleteFlag(this.toId(collectionId), flagKey));
+  async deleteFlag(collectionId: string, flagKey: string): Promise<void> {
+    await firstValueFrom(this.flags.deleteFlag(collectionId, flagKey));
   }
 
   // ── Environments ───────────────────────────────────────────────────────
 
-  async getEnvironments(collectionId: number): Promise<EnvironmentDto[]> {
-    const list = await firstValueFrom(this.environments.getEnvironments(this.toId(collectionId)));
+  async getEnvironments(collectionId: string): Promise<EnvironmentDto[]> {
+    const list = await firstValueFrom(this.environments.getEnvironments(collectionId));
     return list.map((e) => ({ name: e.name, aliases: e.aliases ?? [] }));
   }
 
-  async createEnvironment(collectionId: number, env: EnvironmentDto): Promise<EnvironmentDto> {
+  async createEnvironment(collectionId: string, env: EnvironmentDto): Promise<EnvironmentDto> {
     const e = await firstValueFrom(
-      this.environments.createEnvironment(this.toId(collectionId), {
+      this.environments.createEnvironment(collectionId, {
         name: env.name,
         aliases: env.aliases,
       }),
@@ -97,9 +96,9 @@ export class RestFlagBackend implements FlagBackend {
     return { name: e.name, aliases: e.aliases ?? [] };
   }
 
-  async updateEnvironment(collectionId: number, env: EnvironmentDto): Promise<EnvironmentDto> {
+  async updateEnvironment(collectionId: string, env: EnvironmentDto): Promise<EnvironmentDto> {
     const e = await firstValueFrom(
-      this.environments.updateEnvironment(this.toId(collectionId), {
+      this.environments.updateEnvironment(collectionId, {
         name: env.name,
         aliases: env.aliases,
       }),
@@ -107,63 +106,61 @@ export class RestFlagBackend implements FlagBackend {
     return { name: e.name, aliases: e.aliases ?? [] };
   }
 
-  async deleteEnvironment(collectionId: number, name: string): Promise<void> {
-    await firstValueFrom(this.environments.deleteEnvironment(this.toId(collectionId), name));
+  async deleteEnvironment(collectionId: string, name: string): Promise<void> {
+    await firstValueFrom(this.environments.deleteEnvironment(collectionId, name));
   }
 
   // ── Time Windows ───────────────────────────────────────────────────────
 
-  async getTimeWindows(collectionId: number): Promise<TimeWindowDto[]> {
-    const list = await firstValueFrom(this.timeWindows.getTimeWindows(this.toId(collectionId)));
+  async getTimeWindows(collectionId: string): Promise<TimeWindowDto[]> {
+    const list = await firstValueFrom(this.timeWindows.getTimeWindows(collectionId));
     return list.map((tw) => this.toTimeWindowDto(tw));
   }
 
-  async createTimeWindow(collectionId: number, tw: TimeWindowDto): Promise<TimeWindowDto> {
+  async createTimeWindow(collectionId: string, tw: TimeWindowDto): Promise<TimeWindowDto> {
     const created = await firstValueFrom(
-      this.timeWindows.createTimeWindow(this.toId(collectionId), this.toApiTimeWindow(tw)),
+      this.timeWindows.createTimeWindow(collectionId, this.toApiTimeWindow(tw)),
     );
     return this.toTimeWindowDto(created);
   }
 
   async updateTimeWindow(
-    collectionId: number,
-    timeWindowId: number,
+    collectionId: string,
+    timeWindowId: string,
     tw: TimeWindowDto,
   ): Promise<TimeWindowDto> {
     const updated = await firstValueFrom(
       this.timeWindows.updateTimeWindow(
-        this.toId(collectionId),
-        this.toId(timeWindowId),
+        collectionId,
+        timeWindowId,
         this.toApiTimeWindow(tw),
       ),
     );
     return this.toTimeWindowDto(updated);
   }
 
-  async deleteTimeWindow(collectionId: number, timeWindowId: number): Promise<void> {
+  async deleteTimeWindow(collectionId: string, timeWindowId: string): Promise<void> {
     await firstValueFrom(
-      this.timeWindows.deleteTimeWindow(this.toId(collectionId), this.toId(timeWindowId)),
+      this.timeWindows.deleteTimeWindow(collectionId, timeWindowId),
     );
   }
 
   // ── Schema ─────────────────────────────────────────────────────────────
 
-  async exportSchema(collectionId: number): Promise<Record<string, unknown>> {
-    const result = await firstValueFrom(this.schema.exportSchema(this.toId(collectionId)));
+  async exportSchema(collectionId: string): Promise<Record<string, unknown>> {
+    const result = await firstValueFrom(this.schema.exportSchema(collectionId));
     return result as Record<string, unknown>;
   }
 
-  async importSchema(collectionId: number, schema: string): Promise<void> {
-    await firstValueFrom(this.schema.importSchema(this.toId(collectionId), schema));
+  async importSchema(collectionId: string, schema: string): Promise<void> {
+    await firstValueFrom(this.schema.importSchema(collectionId, schema));
   }
 
   // ── Collection Metadata ────────────────────────────────────────────────
 
-  async updateCollectionMetadata(collectionId: number, metadata: MetadataDto[]): Promise<void> {
-    // The REST API doesn't have a direct metadata endpoint; metadata is part of the collection DTO.
-    // A rename call with the same name can be used to trigger a PUT.
+  async updateCollectionMetadata(collectionId: string, metadata: MetadataDto[]): Promise<void> {
     const collections = await firstValueFrom(this.collections.listCollections());
-    const collection = collections.find((c) => this.fromId(c.id) === collectionId);
+    const collection = collections.find((c) => c.id === collectionId);
     if (!collection) {
       throw new Error(`Collection ${collectionId} not found`);
     }
@@ -174,17 +171,9 @@ export class RestFlagBackend implements FlagBackend {
 
   // ── Type Mapping Helpers ───────────────────────────────────────────────
 
-  private toId(n: number): RenameCollectionIdParameter {
-    return n as unknown as RenameCollectionIdParameter;
-  }
-
-  private fromId(id: RenameCollectionIdParameter): number {
-    return id as unknown as number;
-  }
-
   private toCollectionDto(c: FlagsCollectionDto): CollectionDto {
     return {
-      id: this.fromId(c.id),
+      id: c.id,
       name: c.name,
       createdAt: c.createdAt,
       metadata: c.metadata?.map((m) => this.toMetadataDto(m)) ?? [],
@@ -251,7 +240,7 @@ export class RestFlagBackend implements FlagBackend {
 
   private toTimeWindowDto(tw: ApiTimeWindowDto): TimeWindowDto {
     return {
-      id: this.fromId(tw.id),
+      id: tw.id,
       name: tw.name,
       startTime: tw.startTime ?? null,
       endTime: tw.endTime ?? null,
@@ -260,7 +249,7 @@ export class RestFlagBackend implements FlagBackend {
 
   private toApiTimeWindow(tw: TimeWindowDto): ApiTimeWindowDto {
     return {
-      id: this.toId(tw.id),
+      id: tw.id,
       name: tw.name,
       startTime: tw.startTime,
       endTime: tw.endTime,
@@ -269,7 +258,7 @@ export class RestFlagBackend implements FlagBackend {
 
   private toGlobalTimeWindowDto(g: ApiGlobalTimeWindowDto): GlobalTimeWindowDto {
     return {
-      timeWindowId: this.fromId(g.timeWindowId),
+      timeWindowId: g.timeWindowId,
       booleanValue: g.booleanValue ?? null,
       stringValue: g.stringValue ?? null,
       numberValue: (g.numberValue as unknown as number) ?? null,
@@ -279,7 +268,7 @@ export class RestFlagBackend implements FlagBackend {
 
   private toApiGlobalTimeWindow(g: GlobalTimeWindowDto): ApiGlobalTimeWindowDto {
     return {
-      timeWindowId: this.toId(g.timeWindowId),
+      timeWindowId: g.timeWindowId,
       booleanValue: g.booleanValue,
       stringValue: g.stringValue,
       numberValue: g.numberValue as unknown as ApiGlobalTimeWindowDto['numberValue'],
@@ -297,7 +286,7 @@ export class RestFlagBackend implements FlagBackend {
         stringValue: def.stringValue ?? null,
         numberValue: (def.numberValue as unknown as number) ?? null,
         objectValue: def.objectValue ?? null,
-        timeWindowId: def.timeWindowId ? (def.timeWindowId as unknown as number) : null,
+        timeWindowId: def.timeWindowId ?? null,
       };
     }
     return result;

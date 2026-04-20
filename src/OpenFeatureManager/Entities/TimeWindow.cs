@@ -7,12 +7,11 @@ namespace OpenFeatureManager.Entities;
 public class TimeWindow
 {
     [Key]
-    [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
     [Column("id")]
-    public long Id { get; set; }
+    public Guid Id { get; set; } = Guid.NewGuid();
 
     [Column("collection_id")]
-    public long CollectionId { get; set; }
+    public Guid CollectionId { get; set; }
 
     /// <summary>Human-readable name, e.g. "Christmas Time", "Black Friday"</summary>
     [Required]

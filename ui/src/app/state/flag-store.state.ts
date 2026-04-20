@@ -38,7 +38,7 @@ export interface FlagStoreStateModel {
   collections: CollectionDto[];
   collectionsLoading: boolean;
 
-  selectedCollectionId: number | null;
+  selectedCollectionId: string | null;
 
   flags: FlagDto[];
   flagsLoading: boolean;
@@ -89,7 +89,7 @@ export class FlagStoreState implements NgxsOnInit {
     const collectionId = params['collectionId'] as string | undefined;
 
     if (collectionId) {
-      ctx.dispatch(new SelectCollection(parseInt(collectionId, 10)));
+      ctx.dispatch(new SelectCollection(collectionId));
     }
   }
 
@@ -117,7 +117,7 @@ export class FlagStoreState implements NgxsOnInit {
   }
 
   @Selector()
-  static selectedCollectionId(state: FlagStoreStateModel): number | null {
+  static selectedCollectionId(state: FlagStoreStateModel): string | null {
     return state.selectedCollectionId;
   }
 

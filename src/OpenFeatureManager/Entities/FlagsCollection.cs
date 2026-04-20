@@ -7,9 +7,8 @@ namespace OpenFeatureManager.Entities;
 public class FlagsCollection
 {
     [Key]
-    [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
     [Column("id")]
-    public long Id { get; set; }
+    public Guid Id { get; set; } = Guid.NewGuid();
 
     [Required]
     [Column("name")]
