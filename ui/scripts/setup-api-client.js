@@ -25,10 +25,11 @@ if (fs.existsSync(sourceFile)) {
 }
 
 // Check if OpenFeatureManager.Api.json exists
-const openapiPath = path.join(uiRoot, 'OpenFeatureManager.Api.json');
+const openapiFile = 'OpenFeatureManager.Api.json';
+const openapiPath = path.join(uiRoot, openapiFile);
 if (!fs.existsSync(openapiPath)) {
   console.warn(
-    `⚠ Warning: OpenFeatureManager.Api.json not found. This is expected if the API project hasn't been built yet.`,
+    `⚠ Warning: ${openapiFile} not found. This is expected if the API project hasn't been built yet.`,
   );
   console.warn(
     `⚠ Run 'dotnet build' in the src directory to generate the OpenAPI spec, then run 'npm install' again in the ui directory.`,
@@ -44,11 +45,35 @@ console.log(`✓ Working directory: ${cwd}`);
 // Use --user to avoid file permission issues on Linux/macOS
 const userFlag =
   process.platform === 'win32' ? '' : ` --user ${process.getuid()}:${process.getgid()}`;
-const dockerCmd = `docker run --rm${userFlag} -v "${cwd}:/local" openapitools/openapi-generator-cli:v7.21.0 generate -i /local/openapi.json -g typescript-angular -o /local/src/app/api-client`;
+const dockerCmd = `docker run --rm${userFlag} -v "${cwd}/${openapiFile}:/local/openapi.json" -v "${cwd}/src/app/api-client:/local/src/app/api-client" openapitools/openapi-generator-cli:v7.21.0 generate -i /local/openapi.json -g typescript-angular -o /local/src/app/api-client`;
 
 const result = spawnSync(dockerCmd, {
   shell: true,
   stdio: 'inherit',
 });
 
-process.exit(result.status);
+if (result.status !== 0) {
+  process.exit(result.status);
+}
+
+// Post-generation patches for known openapi-generator bugs
+const patches = [
+  {
+    file: path.join(targetDir, 'model', 'flagEntryDto.ts'),
+    find: "import { Null } from './null';",
+    replace: "import { PerEnvironmentDefinitionDto } from './perEnvironmentDefinitionDto';",
+    description: 'Fix incorrect Null import for PerEnvironmentDefinitionDto',
+  },
+];
+
+for (const patch of patches) {
+  if (!fs.existsSync(patch.file)) continue;
+  let content = fs.readFileSync(patch.file, 'utf8');
+  if (content.includes(patch.find)) {
+    content = content.replace(patch.find, patch.replace);
+    fs.writeFileSync(patch.file, content, 'utf8');
+    console.log(`✓ Patched ${path.relative(uiRoot, patch.file)}: ${patch.description}`);
+  }
+}
+
+process.exit(0);

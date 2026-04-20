@@ -106,7 +106,7 @@ export interface FlagBackend {
 
   // Schema
   exportSchema(collectionId: number): Promise<Record<string, unknown>>;
-  importSchema(collectionId: number): Promise<void>;
+  importSchema(collectionId: number, schema: string): Promise<void>;
 
   // Collection metadata
   updateCollectionMetadata(collectionId: number, metadata: MetadataDto[]): Promise<void>;

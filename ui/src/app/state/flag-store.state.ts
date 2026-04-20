@@ -550,7 +550,7 @@ export class FlagStoreState implements NgxsOnInit {
   async importSchema(ctx: StateContext<FlagStoreStateModel>, action: ImportSchema): Promise<void> {
     ctx.patchState({ error: null });
     try {
-      await this.backend.importSchema(action.collectionId);
+      await this.backend.importSchema(action.collectionId, action.schema);
       // Reload all sub-resources after import
       ctx.dispatch([
         new LoadFlags(action.collectionId),

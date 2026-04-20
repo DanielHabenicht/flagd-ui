@@ -153,8 +153,8 @@ export class RestFlagBackend implements FlagBackend {
     return result as Record<string, unknown>;
   }
 
-  async importSchema(collectionId: number): Promise<void> {
-    await firstValueFrom(this.schema.importSchema(this.toId(collectionId)));
+  async importSchema(collectionId: number, schema: string): Promise<void> {
+    await firstValueFrom(this.schema.importSchema(this.toId(collectionId), schema));
   }
 
   // ── Collection Metadata ────────────────────────────────────────────────

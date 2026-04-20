@@ -135,7 +135,8 @@ app.MapPost("/api/collections/{id}/schema", async (long id, HttpRequest request,
     var body = await reader.ReadToEndAsync();
     svc.ImportSchema(id, body);
     return TypedResults.Ok("Schema imported successfully.");
-}).WithName("importSchema").WithTags("schema");
+}).WithName("importSchema").WithTags("schema")
+  .Accepts<string>("application/json");
 
 // Dummy
 app.MapPost("/dummy", async (long id, HttpRequest request) =>
