@@ -144,7 +144,7 @@ export class ExportSchema {
 export class ImportSchema {
   static readonly type = '[FlagStore] Import Schema';
   constructor(
-    readonly collectionId: number,
+    readonly newCollectionName: string,
     readonly schema: string,
   ) {}
 }

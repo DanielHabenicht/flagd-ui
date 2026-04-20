@@ -27,7 +27,7 @@ export class FileSystemAccess {
     return typeof (window as WindowWithFilePicker).showOpenFilePicker === 'function';
   }
 
-  async pickAndBindFlagsFile(): Promise<{ name: string; content: FlagFileContent } | null> {
+  async pickAndBindFlagsFile(): Promise<{ name: string; content: string } | null> {
     const picker = (window as WindowWithFilePicker).showOpenFilePicker;
     if (!picker) {
       throw new Error('File picker API is not supported in this browser.');
@@ -65,7 +65,7 @@ export class FileSystemAccess {
 
     this.fileHandles.set(name, handle);
 
-    return { name, content };
+    return { name, content: text };
   }
 
   async persistBoundFlagsFile(name: string, content: FlagFileContent): Promise<void> {

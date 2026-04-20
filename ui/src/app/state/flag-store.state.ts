@@ -550,12 +550,16 @@ export class FlagStoreState implements NgxsOnInit {
   async importSchema(ctx: StateContext<FlagStoreStateModel>, action: ImportSchema): Promise<void> {
     ctx.patchState({ error: null });
     try {
-      await this.backend.importSchema(action.collectionId, action.schema);
+      const collection = await this.backend.createCollection(action.newCollectionName);
+      const state = ctx.getState();
+      ctx.patchState({ collections: [...state.collections, collection] });
+
+      await this.backend.importSchema(collection.id, action.schema);
       // Reload all sub-resources after import
       ctx.dispatch([
-        new LoadFlags(action.collectionId),
-        new LoadEnvironments(action.collectionId),
-        new LoadTimeWindows(action.collectionId),
+        new LoadFlags(collection.id),
+        new LoadEnvironments(collection.id),
+        new LoadTimeWindows(collection.id),
       ]);
     } catch (e) {
       ctx.patchState({

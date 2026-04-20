@@ -12,7 +12,7 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { FileSystemAccess } from '../../services/file-system-access';
 import { stringifyFlagdSchema } from '../../models/flagd-schema.parser';
 import { RestFlagBackend } from '../../services/rest-flag-backend';
-import { CreateCollection } from '../../state/flag-store.actions';
+import { CreateCollection, ImportSchema } from '../../state/flag-store.actions';
 
 export interface NewFlagsFileFormResult {
   type: 'empty' | 'url' | 'disk' | 'backend';
@@ -185,28 +185,31 @@ export class NewFlagsFileFormComponent {
     this.urlLoading = true;
     this.urlError = '';
 
-    // this.http.get(url, { responseType: 'text' }).subscribe({
-    //   next: (text) => {
-    //     try {
-    //       // Derive name from URL filename
-    //       const urlPath = new URL(url).pathname;
-    //       let name = urlPath.split('/').pop() ?? 'imported';
-    //       name = name.replace(/\.flagd\.json$/, '').replace(/\.json$/, '');
-    //       if (!name) name = 'imported';
+    this.http.get(url, { responseType: 'text' }).subscribe({
+      next: (text) => {
+        try {
+          // Derive name from URL filename
+          const urlPath = new URL(url).pathname;
+          let name = urlPath.split('/').pop() ?? 'imported';
+          name = name.replace(/\.flagd\.json$/, '').replace(/\.json$/, '');
+          if (!name) name = 'imported';
 
-    //       this.store.dispatch(new AddFile('local', LocalBackendUris.Browser, name, text));
-    //       void this.navigateToFlagsFile('local', LocalBackendUris.Browser, name);
-    //       this.formSubmitted.emit({ type: 'url' });
-    //     } catch {
-    //       this.urlError = 'Failed to parse JSON file';
-    //       this.urlLoading = false;
-    //     }
-    //   },
-    //   error: () => {
-    //     this.urlError = 'Failed to fetch file from URL';
-    //     this.urlLoading = false;
-    //   },
-    // });
+          this.store.dispatch(new ImportSchema(name, text));
+          // this.router.navigate(['/', "uri", backendUri, fileName]);
+
+          // void this.navigateToFlagsFile('local', LocalBackendUris.Browser, name);
+          this.formSubmitted.emit({ type: 'url' });
+          this.urlLoading = false;
+        } catch {
+          this.urlError = 'Failed to parse JSON file';
+          this.urlLoading = false;
+        }
+      },
+      error: () => {
+        this.urlError = 'Failed to fetch file from URL';
+        this.urlLoading = false;
+      },
+    });
   }
 
   async importFromDisk(): Promise<void> {
@@ -218,33 +221,26 @@ export class NewFlagsFileFormComponent {
     this.diskLoading = true;
     this.diskError = '';
 
-    // try {
-    //   const result = await this.fileSystemAccess.pickAndBindFlagsFile();
-    //   if (!result) {
-    //     this.diskLoading = false;
-    //     return;
-    //   }
+    try {
+      const result = await this.fileSystemAccess.pickAndBindFlagsFile();
+      if (!result) {
+        this.diskLoading = false;
+        return;
+      }
 
-    //   this.store.dispatch(
-    //     new AddFile(
-    //       'local',
-    //       LocalBackendUris.Disk,
-    //       result.name,
-    //       JSON.stringify(result.content, null, 2),
-    //     ),
-    //   );
-    //   void this.navigateToFlagsFile('local', LocalBackendUris.Disk, result.name);
-    //   this.formSubmitted.emit({ type: 'disk' });
-    // } catch (error) {
-    //   this.diskLoading = false;
+      this.store.dispatch(new ImportSchema(result.name, result.content));
+      // void this.navigateToFlagsFile('local', LocalBackendUris.Disk, result.name);
+      this.formSubmitted.emit({ type: 'disk' });
+    } catch (error) {
+      this.diskLoading = false;
 
-    //   const message = error instanceof Error ? error.message : 'Failed to open local file';
-    //   if (message.includes('aborted') || message.includes('The user aborted a request')) {
-    //     return;
-    //   }
+      const message = error instanceof Error ? error.message : 'Failed to open local file';
+      if (message.includes('aborted') || message.includes('The user aborted a request')) {
+        return;
+      }
 
-    //   this.diskError = message;
-    // }
+      this.diskError = message;
+    }
   }
 
   discoverBackend(): void {

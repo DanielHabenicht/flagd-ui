@@ -141,11 +141,8 @@ export class WasmFlagBackend implements FlagBackend {
   }
 
   async importSchema(collectionId: number, schema: string): Promise<void> {
+    console.log('Importing schema into WASM backend:', schema);
     this.wasm.importSchema(BigInt(collectionId), schema);
-    // WASM importSchema requires schema JSON; for the interface contract the
-    // caller would need to supply it. For now this is a no-op placeholder
-    // matching the REST behaviour where the server resolves the schema.
-    throw new Error('importSchema is not supported on the WASM backend');
   }
 
   // ── Collection Metadata ────────────────────────────────────────────────
