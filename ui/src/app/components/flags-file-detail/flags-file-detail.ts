@@ -171,7 +171,7 @@ export class FlagsFileDetailComponent implements OnInit {
       state: checked ? 'ENABLED' : 'DISABLED',
     };
 
-    this.ngxsStore.dispatch(new CreateFlag(this.currentCollectionId() as any, updatedFlag));
+    this.ngxsStore.dispatch(new UpdateFlag(this.currentCollectionId() as any, updatedFlag, flag.key));
 
     if (this.editingFlag()?.key === flag.key) {
       this.editingFlag.set(updatedFlag);
