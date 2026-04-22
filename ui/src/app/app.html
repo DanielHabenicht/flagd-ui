@@ -76,18 +76,6 @@
               }
             </div>
 
-            <div class="header-actions">
-              @if (canExportDatabase) {
-                <button
-                  mat-icon-button
-                  (click)="downloadDatabase()"
-                  title="Download SQLite database dump"
-                >
-                  <mat-icon>storage</mat-icon>
-                </button>
-              }
-            </div>
-
             @if (isOverviewComponentActive()) {
               <div class="header-actions">
                 <button mat-icon-button (click)="openSettingsPage()" title="Settings">

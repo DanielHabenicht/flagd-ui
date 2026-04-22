@@ -25,7 +25,6 @@ import { SetThemeMode, ThemeMode } from './state/ui-preferences.actions';
 import { UiPreferencesState } from './state/ui-preferences.state';
 import { FlagStoreState } from './state/flag-store.state';
 import { FLAG_BACKEND } from './services/flag-backend';
-import { ENVIRONMENT } from '../environments';
 
 type AppTheme = 'light' | 'dark';
 
@@ -145,8 +144,6 @@ export class App implements OnDestroy {
   });
   navOpen = signal(!this.isCompactLayout());
 
-  readonly canExportDatabase =
-    ENVIRONMENT === 'development' && typeof this.backend.exportDatabase === 'function';
   readonly showPlaygroundDrawer = computed(() => true);
 
   private readonly routerEventsSub: Subscription;
@@ -268,19 +265,6 @@ export class App implements OnDestroy {
       };
       reader.readAsText(file);
     }
-  }
-
-  async downloadDatabase(): Promise<void> {
-    if (!this.backend.exportDatabase) return;
-    const bytes = await this.backend.exportDatabase();
-    if (!bytes) return;
-    const blob = new Blob([new Uint8Array(bytes)], { type: 'application/x-sqlite3' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'flagd-ui.db';
-    a.click();
-    URL.revokeObjectURL(url);
   }
 
   openSettingsPage(): void {

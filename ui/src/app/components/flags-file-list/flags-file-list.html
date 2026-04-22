@@ -54,6 +54,23 @@
 
   <div class="sidebar-footer">
     <mat-divider></mat-divider>
+    @if (canExportDatabase) {
+      <div class="footer-actions debug-actions">
+        <button
+          mat-stroked-button
+          (click)="downloadDatabase()"
+          title="Download SQLite database dump"
+        >
+          <mat-icon>storage</mat-icon>
+          <span>Download DB</span>
+        </button>
+        <button mat-stroked-button (click)="purgeDatabase()" title="Purge database and reload">
+          <mat-icon>delete_forever</mat-icon>
+          <span>Purge DB</span>
+        </button>
+      </div>
+      <mat-divider></mat-divider>
+    }
     <div class="footer-actions">
       <div class="drop-hint">
         <mat-icon class="drop-hint-icon">upload_file</mat-icon>

@@ -81,6 +81,11 @@ export interface FlagBackend {
    */
   exportDatabase?(): Promise<Uint8Array | null>;
 
+  /**
+   * Optional: purge the persisted database and reload (WASM only).
+   */
+  purgeDatabase?(): Promise<void>;
+
   // Collections
   listCollections(): Promise<CollectionDto[]>;
   createCollection(name: string): Promise<CollectionDto>;

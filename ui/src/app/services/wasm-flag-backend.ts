@@ -45,6 +45,10 @@ export class WasmFlagBackend implements FlagBackend {
     return this.wasm.exportDatabaseBytes();
   }
 
+  async purgeDatabase(): Promise<void> {
+    await this.wasm.purgeDatabase();
+  }
+
   // ── Collections ────────────────────────────────────────────────────────
 
   async listCollections(): Promise<CollectionDto[]> {

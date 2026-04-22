@@ -198,6 +198,16 @@ a[mat-list-item].active-link .project-name {
   opacity: 0.5;
 }
 
+.debug-actions {
+  flex-direction: row;
+  gap: 8px;
+
+  button {
+    flex: 1;
+    font-size: 0.75rem;
+  }
+}
+
 .drop-hint code {
   font-family: var(--font-mono);
   font-size: 0.7rem;

@@ -104,6 +104,14 @@ export class WasmBackendService {
     return this.db().exportDatabase();
   }
 
+  async purgeDatabase(): Promise<void> {
+    await new Promise<void>((resolve, reject) => {
+      const req = indexedDB.deleteDatabase(IDB_NAME);
+      req.onsuccess = () => resolve();
+      req.onerror = () => reject(req.error);
+    });
+  }
+
   async saveDatabase(): Promise<void> {
     const bytes = this.db().exportDatabase();
     const db = await this.openIdb();

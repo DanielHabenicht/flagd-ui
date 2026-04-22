@@ -9,7 +9,8 @@ import { MatDialog } from '@angular/material/dialog';
 import { NewFlagsFileDialogComponent } from '../new-flags-file-dialog/new-flags-file-dialog';
 import { FlagStoreState } from '../../state/flag-store.state';
 import { DeleteCollection } from '../../state/flag-store.actions';
-import { CollectionDto } from '../../services/flag-backend';
+import { CollectionDto, FLAG_BACKEND } from '../../services/flag-backend';
+import { ENVIRONMENT } from '../../../environments';
 
 @Component({
   selector: 'app-flags-file-list',
@@ -28,8 +29,11 @@ import { CollectionDto } from '../../services/flag-backend';
 export class FlagsFileListComponent {
   private readonly ngxsStore = inject(Store);
   private readonly dialog = inject(MatDialog);
+  private readonly backend = inject(FLAG_BACKEND);
 
   readonly collections = this.ngxsStore.selectSignal(FlagStoreState.collections);
+  readonly canExportDatabase =
+    ENVIRONMENT === 'development' && typeof this.backend.exportDatabase === 'function';
 
   openNewFlagsFileDialog(): void {
     this.dialog.open(NewFlagsFileDialogComponent, {
@@ -50,5 +54,24 @@ export class FlagsFileListComponent {
     ) {
       this.ngxsStore.dispatch(new DeleteCollection(collection.id));
     }
+  }
+
+  async downloadDatabase(): Promise<void> {
+    if (!this.backend.exportDatabase) return;
+    const bytes = await this.backend.exportDatabase();
+    if (!bytes) return;
+    const blob = new Blob([new Uint8Array(bytes)], { type: 'application/x-sqlite3' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'flagd-ui.db';
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  async purgeDatabase(): Promise<void> {
+    if (!this.backend.purgeDatabase) return;
+    await this.backend.purgeDatabase();
+    window.location.reload();
   }
 }
