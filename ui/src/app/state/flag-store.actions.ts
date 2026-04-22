@@ -154,6 +154,23 @@ export class SaveDatabase {
 }
 
 // ============================================================================
+// Server actions
+// ============================================================================
+
+export class CreateServer {
+  static readonly type = '[FlagStore] Create Server';
+  constructor(
+    readonly name: string,
+    readonly url: string,
+  ) {}
+}
+
+export class SelectServer {
+  static readonly type = '[FlagStore] Select Server';
+  constructor(readonly uri: string | null) {}
+}
+
+// ============================================================================
 // Collection metadata actions
 // ============================================================================
 

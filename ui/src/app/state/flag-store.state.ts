@@ -31,11 +31,19 @@ import {
   ImportSchema,
   SetCollectionMetadata,
   SaveDatabase,
+  CreateServer,
+  SelectServer,
 } from './flag-store.actions';
 import { RouterNavigation } from '@ngxs/router-plugin';
 
 export interface FlagStoreStateModel {
-  collections: CollectionDto[];
+  /**
+   * Servers in the form <serverUri, serverName>
+   */
+  servers: Record<string, string>;
+  selectedServerUri: string | null;
+
+  serverCollections: Record<string, CollectionDto[]>;
   collectionsLoading: boolean;
 
   selectedCollectionId: string | null;
@@ -55,7 +63,11 @@ export interface FlagStoreStateModel {
 @State<FlagStoreStateModel>({
   name: 'flagStore',
   defaults: {
-    collections: [],
+    servers: {
+      local: 'Local',
+    },
+    selectedServerUri: 'local',
+    serverCollections: {},
     collectionsLoading: false,
     selectedCollectionId: null,
     flags: [],
@@ -107,8 +119,14 @@ export class FlagStoreState implements NgxsOnInit {
   // ============================================================================
 
   @Selector()
+  static selectedServerUri(state: FlagStoreStateModel): string | null {
+    return state.selectedServerUri;
+  }
+
+  @Selector()
   static collections(state: FlagStoreStateModel): CollectionDto[] {
-    return state.collections;
+    if (!state.selectedServerUri) return [];
+    return state.serverCollections[state.selectedServerUri] ?? [];
   }
 
   @Selector()
@@ -123,14 +141,16 @@ export class FlagStoreState implements NgxsOnInit {
 
   @Selector()
   static selectedCollection(state: FlagStoreStateModel): CollectionDto | undefined {
-    if (!state.selectedCollectionId) return undefined;
-    return state.collections.find((c) => c.id === state.selectedCollectionId);
+    if (!state.selectedCollectionId || !state.selectedServerUri) return undefined;
+    const collections = state.serverCollections[state.selectedServerUri] ?? [];
+    return collections.find((c) => c.id === state.selectedCollectionId);
   }
 
   @Selector()
   static selectedCollectionMetadata(state: FlagStoreStateModel): MetadataDto[] {
-    if (!state.selectedCollectionId) return [];
-    const collection = state.collections.find((c) => c.id === state.selectedCollectionId);
+    if (!state.selectedCollectionId || !state.selectedServerUri) return [];
+    const collections = state.serverCollections[state.selectedServerUri] ?? [];
+    const collection = collections.find((c) => c.id === state.selectedCollectionId);
     return collection ? collection.metadata : [];
   }
 
@@ -171,20 +191,89 @@ export class FlagStoreState implements NgxsOnInit {
   }
 
   @Selector()
+  static servers(state: FlagStoreStateModel): Record<string, string> {
+    return state.servers;
+  }
+
+  @Selector()
+  static serverEntries(
+    state: FlagStoreStateModel,
+  ): { name: string; uri: string; collections: CollectionDto[] }[] {
+    return Object.entries(state.servers).map(([uri, name]) => ({
+      name,
+      uri,
+      collections: state.serverCollections[uri] ?? [],
+    }));
+  }
+
+  @Selector()
   static error(state: FlagStoreStateModel): string | null {
     return state.error;
+  }
+
+  // ============================================================================
+  // SERVER ACTIONS
+  // ============================================================================
+
+  @Action(CreateServer)
+  createServer(ctx: StateContext<FlagStoreStateModel>, action: CreateServer): void {
+    const state = ctx.getState();
+    ctx.patchState({
+      servers: { ...state.servers, [action.url]: action.name },
+    });
+  }
+
+  @Action(SelectServer)
+  selectServer(ctx: StateContext<FlagStoreStateModel>, action: SelectServer): void {
+    ctx.patchState({
+      selectedServerUri: action.uri,
+      selectedCollectionId: null,
+      flags: [],
+      flagsLoading: false,
+      environments: [],
+      environmentsLoading: false,
+      timeWindows: [],
+      timeWindowsLoading: false,
+      error: null,
+    });
+
+    if (action.uri) {
+      ctx.dispatch(new LoadCollections());
+    }
   }
 
   // ============================================================================
   // COLLECTION ACTIONS
   // ============================================================================
 
+  private getServerCollections(state: FlagStoreStateModel): CollectionDto[] {
+    if (!state.selectedServerUri) return [];
+    return state.serverCollections[state.selectedServerUri] ?? [];
+  }
+
+  private patchServerCollections(
+    ctx: StateContext<FlagStoreStateModel>,
+    collections: CollectionDto[],
+  ): void {
+    const uri = ctx.getState().selectedServerUri;
+    if (!uri) return;
+    ctx.patchState({
+      serverCollections: { ...ctx.getState().serverCollections, [uri]: collections },
+    });
+  }
+
   @Action(LoadCollections)
   async loadCollections(ctx: StateContext<FlagStoreStateModel>): Promise<void> {
+    const state = ctx.getState();
+    const uri = state.selectedServerUri;
+    if (!uri) return;
     ctx.patchState({ collectionsLoading: true, error: null });
     try {
       const collections = await this.backend.listCollections();
-      ctx.patchState({ collections, collectionsLoading: false });
+      ctx.patchState({
+        serverCollections: { ...ctx.getState().serverCollections, [uri]: collections },
+        collectionsLoading: false,
+      });
     } catch (e) {
       ctx.patchState({
         collectionsLoading: false,
@@ -213,7 +302,7 @@ export class FlagStoreState implements NgxsOnInit {
     try {
       const collection = await this.backend.createCollection(action.name);
       const state = ctx.getState();
-      ctx.patchState({ collections: [...state.collections, collection] });
+      this.patchServerCollections(ctx, [...this.getServerCollections(state), collection]);
     } catch (e) {
       ctx.patchState({
         error: e instanceof Error ? e.message : 'Failed to create collection',
@@ -230,9 +319,10 @@ export class FlagStoreState implements NgxsOnInit {
     try {
       const updated = await this.backend.renameCollection(action.id, action.name);
       const state = ctx.getState();
-      ctx.patchState({
-        collections: state.collections.map((c) => (c.id === action.id ? updated : c)),
-      });
+      this.patchServerCollections(
+        ctx,
+        this.getServerCollections(state).map((c) => (c.id === action.id ? updated : c)),
+      );
     } catch (e) {
       ctx.patchState({
         error: e instanceof Error ? e.message : 'Failed to rename collection',
@@ -249,8 +339,9 @@ export class FlagStoreState implements NgxsOnInit {
     try {
       await this.backend.deleteCollection(action.id);
       const state = ctx.getState();
-      const collections = state.collections.filter((c) => c.id !== action.id);
-      const patch: Partial<FlagStoreStateModel> = { collections };
+      const collections = this.getServerCollections(state).filter((c) => c.id !== action.id);
+      this.patchServerCollections(ctx, collections);
+      const patch: Partial<FlagStoreStateModel> = {};
 
       if (state.selectedCollectionId === action.id) {
         patch.selectedCollectionId = null;
@@ -552,7 +643,7 @@ export class FlagStoreState implements NgxsOnInit {
     try {
       const collection = await this.backend.createCollection(action.newCollectionName);
       const state = ctx.getState();
-      ctx.patchState({ collections: [...state.collections, collection] });
+      this.patchServerCollections(ctx, [...this.getServerCollections(state), collection]);
 
       await this.backend.importSchema(collection.id, action.schema);
       // Reload all sub-resources after import
@@ -578,7 +669,8 @@ export class FlagStoreState implements NgxsOnInit {
     action: SetCollectionMetadata,
   ): Promise<void> {
     const state = ctx.getState();
-    const collection = state.collections.find((c) => c.id === action.collectionId);
+    const collections = this.getServerCollections(state);
+    const collection = collections.find((c) => c.id === action.collectionId);
     if (!collection) {
       ctx.patchState({ error: `Collection not found` });
       return;
@@ -591,11 +683,10 @@ export class FlagStoreState implements NgxsOnInit {
         metadata: action.metadata,
       };
 
-      ctx.patchState({
-        collections: state.collections.map((c) =>
-          c.id === action.collectionId ? updatedCollection : c,
-        ),
-      });
+      this.patchServerCollections(
+        ctx,
+        collections.map((c) => (c.id === action.collectionId ? updatedCollection : c)),
+      );
     } catch (e) {
       ctx.patchState({
         error: e instanceof Error ? e.message : 'Failed to update collection metadata',

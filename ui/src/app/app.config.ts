@@ -16,6 +16,7 @@ import { FlagStoreState } from './state/flag-store.state';
 import { UiPreferencesState } from './state/ui-preferences.state';
 import { PlaygroundPreferencesState } from './state/playground-preferences.state';
 import { provideApi } from './api-client';
+import { withNgxsReduxDevtoolsPlugin } from '@ngxs/devtools-plugin';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -31,10 +32,11 @@ export const appConfig: ApplicationConfig = {
     provideStore(
       [FlagStoreState, UiPreferencesState, PlaygroundPreferencesState],
       withNgxsStoragePlugin({
-        keys: [UiPreferencesState, PlaygroundPreferencesState],
+        keys: [UiPreferencesState, PlaygroundPreferencesState, 'flagStore.servers'],
       }),
       withNgxsRouterPlugin(),
     ),
+    withNgxsReduxDevtoolsPlugin(),
     provideAnimationsAsync(),
   ],
 };

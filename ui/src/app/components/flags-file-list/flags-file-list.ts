@@ -8,7 +8,7 @@ import { MatDividerModule } from '@angular/material/divider';
 import { MatDialog } from '@angular/material/dialog';
 import { NewFlagsFileDialogComponent } from '../new-flags-file-dialog/new-flags-file-dialog';
 import { FlagStoreState } from '../../state/flag-store.state';
-import { DeleteCollection } from '../../state/flag-store.actions';
+import { DeleteCollection, SelectServer } from '../../state/flag-store.actions';
 import { CollectionDto, FLAG_BACKEND } from '../../services/flag-backend';
 import { ENVIRONMENT } from '../../../environments';
 
@@ -32,6 +32,8 @@ export class FlagsFileListComponent {
   private readonly backend = inject(FLAG_BACKEND);
 
   readonly collections = this.ngxsStore.selectSignal(FlagStoreState.collections);
+  readonly serverEntries = this.ngxsStore.selectSignal(FlagStoreState.serverEntries);
+  readonly selectedServerUri = this.ngxsStore.selectSignal(FlagStoreState.selectedServerUri);
   readonly canExportDatabase =
     ENVIRONMENT === 'development' && typeof this.backend.exportDatabase === 'function';
 
@@ -43,7 +45,11 @@ export class FlagsFileListComponent {
   }
 
   getFlagsFileRoute(collection: CollectionDto): string[] {
-    return ['/', 'uri', collection.id.toString()];
+    return ['/', 'local', collection.id.toString()];
+  }
+
+  selectServer(uri: string): void {
+    this.ngxsStore.dispatch(new SelectServer(uri));
   }
 
   deleteCollection(event: Event, collection: CollectionDto): void {

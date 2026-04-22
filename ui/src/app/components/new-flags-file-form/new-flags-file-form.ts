@@ -10,9 +10,13 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { FileSystemAccess } from '../../services/file-system-access';
-import { stringifyFlagdSchema } from '../../models/flagd-schema.parser';
 import { RestFlagBackend } from '../../services/rest-flag-backend';
-import { CreateCollection, ImportSchema } from '../../state/flag-store.actions';
+import {
+  CreateCollection,
+  CreateServer,
+  ImportSchema,
+  SelectServer,
+} from '../../state/flag-store.actions';
 
 export interface NewFlagsFileFormResult {
   type: 'empty' | 'url' | 'disk' | 'backend';
@@ -100,7 +104,6 @@ export class NewFlagsFileFormComponent {
   backendUrl = '';
   backendLabel = '';
   backendLoading = false;
-  backendError = '';
   discoveredFiles: string[] = [];
 
   get actionLabel(): string {
@@ -113,7 +116,7 @@ export class NewFlagsFileFormComponent {
     if (this.selectedTabIndex === 2) {
       return 'Open';
     }
-    return this.discoveredFiles.length ? 'Create' : 'Discover';
+    return 'Connect';
   }
 
   get actionIcon(): string {
@@ -126,7 +129,7 @@ export class NewFlagsFileFormComponent {
     if (this.selectedTabIndex === 2) {
       return 'folder_open';
     }
-    return this.discoveredFiles.length ? 'cloud' : 'search';
+    return 'cloud';
   }
 
   get actionDisabled(): boolean {
@@ -159,11 +162,7 @@ export class NewFlagsFileFormComponent {
       void this.importFromDisk();
       return;
     }
-    if (this.discoveredFiles.length) {
-      this.addBackend();
-      return;
-    }
-    this.discoverBackend();
+    this.addBackend();
   }
 
   useSample(sampleUrl: string): void {
@@ -244,70 +243,20 @@ export class NewFlagsFileFormComponent {
   }
 
   discoverBackend(): void {
-    let url = this.backendUrl.trim();
-    if (!url) return;
-    if (!url.startsWith('http')) {
-      url = 'https://' + url;
-    }
-    url = url.replace(/\/+$/, '');
-
-    this.backendLoading = true;
-    this.backendError = '';
-    this.discoveredFiles = [];
-
-    // this.remoteApi.listCollections(url).subscribe({
-    //   next: (files) => {
-    //     queueMicrotask(() => {
-    //       this.discoveredFiles = files;
-    //       this.backendLoading = false;
-    //       if (files.length === 0) {
-    //         this.backendError = 'No flag files found on this backend';
-    //       }
-    //     });
-    //   },
-    //   error: () => {
-    //     queueMicrotask(() => {
-    //       this.backendError = 'Failed to connect to backend. Ensure CORS is enabled.';
-    //       this.backendLoading = false;
-    //     });
-    //   },
-    // });
+    // Discovery not yet implemented
   }
 
   addBackend(): void {
     let url = this.backendUrl.trim().replace(/\/+$/, '');
+    if (!url) return;
     if (!url.startsWith('http')) {
       url = 'https://' + url;
     }
-    // const label = this.backendLabel.trim() || url;
-    // this.store.dispatch(new AddBackend(label, url));
+    const label = this.backendLabel.trim() || url;
 
-    // const discoveredFiles = [...this.discoveredFiles];
-    // if (!discoveredFiles.length) {
-    //   this.formSubmitted.emit({ type: 'backend' });
-    //   return;
-    // }
-
-    // let remaining = discoveredFiles.length;
-    // for (const fileName of discoveredFiles) {
-    //   this.remoteApi.getFlagsFile(url, fileName).subscribe({
-    //     next: (content) => {
-    //       this.store.dispatch(
-    //         new AddFile('remote', url, fileName, JSON.stringify(content, null, 2)),
-    //       );
-    //       remaining -= 1;
-    //       if (remaining === 0) {
-    //         this.formSubmitted.emit({ type: 'backend' });
-    //       }
-    //     },
-    //     error: () => {
-    //       remaining -= 1;
-    //       if (remaining === 0) {
-    //         this.formSubmitted.emit({ type: 'backend' });
-    //       }
-    //     },
-    //   });
-    // }
+    this.store.dispatch(new CreateServer(label, url));
+    this.store.dispatch(new SelectServer(url));
+    this.formSubmitted.emit({ type: 'backend' });
   }
 
   private async navigateToFlagsFile(
