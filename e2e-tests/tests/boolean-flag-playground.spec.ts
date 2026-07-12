@@ -41,7 +41,7 @@ test('creates file and boolean flag, evaluates in playground, then switches valu
     await expect(createFileButton).toBeEnabled();
     await createFileButton.click();
 
-    await expect(page).toHaveURL(new RegExp(`/local/browser/${fileName}$`));
+    await expect(page).toHaveURL(/\/local\/[0-9a-f-]{36}$/i);
     await expect(page.getByRole('heading', { name: fileName })).toBeVisible();
 
     await page.getByRole('button', { name: 'Create your first flag' }).click();
@@ -72,12 +72,18 @@ test('creates file and boolean flag, evaluates in playground, then switches valu
     await globalSwitch.click();
     await expect(globalSwitch).toHaveAttribute('aria-checked', wasChecked ? 'false' : 'true');
     await expect(page.getByRole('cell', { name: flagKey })).toBeVisible();
-    await page.waitForTimeout(1600);
 
-    await playgroundDrawer.getByRole('button', { name: 'Evaluate' }).click();
-    const secondResult = await getEvaluationResult(playgroundDrawer);
-
-    expect(secondResult.value).not.toBe(firstResult.value);
+    // Re-evaluate until the toggled value propagates (autosave debounce + flag
+    // update + schema refresh are async), rather than relying on a fixed wait.
+    await expect
+      .poll(
+        async () => {
+          await playgroundDrawer.getByRole('button', { name: 'Evaluate' }).click();
+          return (await getEvaluationResult(playgroundDrawer)).value;
+        },
+        { timeout: 15_000 },
+      )
+      .not.toBe(firstResult.value);
   } finally {
     // await request
     //   .delete(`/api/flags/${encodeURIComponent(fileName)}`)

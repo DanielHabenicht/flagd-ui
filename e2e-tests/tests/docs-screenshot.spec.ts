@@ -71,7 +71,7 @@ test("captures docs screenshots for key workflows", async ({ page }) => {
   await mapLocalDialog.getByRole("tab", { name: "From Disk" }).click();
   await mapLocalDialog.getByRole("button", { name: "Open" }).click();
   await expect(
-    page.locator(".project-list").getByRole("link", {
+    page.locator(".sidebar").getByRole("link", {
       name: /customer-journey-overrides(\.flagd\.json)?/i,
     }),
   ).toBeVisible();

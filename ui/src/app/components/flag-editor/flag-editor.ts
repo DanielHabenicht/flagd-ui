@@ -662,7 +662,10 @@ export class FlagEditorComponent implements OnInit, OnChanges, OnDestroy {
       key,
       type: flagType,
       state: this.form.get('state')!.value as FlagState,
-      // value: currentValue,
+      booleanValue: flagType === 'boolean' ? (currentValue as boolean) : null,
+      stringValue: flagType === 'string' ? (currentValue as string) : null,
+      numberValue: flagType === 'number' ? (currentValue as number) : null,
+      objectValue: flagType === 'object' ? JSON.stringify(currentValue) : null,
       ...(Object.keys(perEnvDefs).length > 0 && { perEnvironmentDefinitions: perEnvDefs }),
       ...(globalTimeWindow && { globalTimeWindow }),
       ...(this.metadata() &&

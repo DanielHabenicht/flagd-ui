@@ -171,7 +171,9 @@ export class FlagsFileDetailComponent implements OnInit {
       state: checked ? 'ENABLED' : 'DISABLED',
     };
 
-    this.ngxsStore.dispatch(new UpdateFlag(this.currentCollectionId() as any, updatedFlag, flag.key));
+    this.ngxsStore.dispatch(
+      new UpdateFlag(this.currentCollectionId() as any, updatedFlag, flag.key),
+    );
 
     if (this.editingFlag()?.key === flag.key) {
       this.editingFlag.set(updatedFlag);
@@ -339,22 +341,13 @@ export class FlagsFileDetailComponent implements OnInit {
 
   private getFlagsFileRouteSegments(): string[] | null {
     const params = this.route.snapshot.paramMap;
-    const backendType = params.get('backendType');
-    const backendUri = params.get('uri');
-    const fileName = params.get('fileName');
+    const uri = params.get('uri');
+    const collectionId = params.get('collectionId');
 
-    if (backendType && backendUri && fileName) {
-      return ['/', backendType, backendUri, fileName];
+    if (uri && collectionId) {
+      return ['/', uri, collectionId];
     }
 
-    const name = params.get('name');
-    const backendId = params.get('backendId');
-    if (!name) return null;
-
-    if (backendId) {
-      return ['/flags-files', 'remote', backendId, name];
-    }
-
-    return ['/flags-files', 'local', name];
+    return null;
   }
 }

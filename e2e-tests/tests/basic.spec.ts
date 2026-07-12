@@ -79,7 +79,7 @@ test("creates a flags-file from the sidebar form", async ({ page }) => {
 
   await createFlagsFile(page, "new-project.flagd.json");
 
-  await expect(page).toHaveURL(/\/local\/browser\/new-project.flagd.json$/);
+  await expect(page).toHaveURL(/\/local\/[0-9a-f-]{36}$/i);
   await expect(
     page.getByRole("heading", { name: "new-project.flagd.json" }),
   ).toBeVisible();

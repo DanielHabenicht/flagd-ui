@@ -3,13 +3,7 @@ FROM mcr.microsoft.com/dotnet/sdk:10.0 AS backend-builder
 
 WORKDIR /app
 
-# ui/ must exist so the API's OpenApiGenerateDocumentsOnBuild target can emit
-# ui/openapi.json (see OpenFeatureManager.Api.csproj).
-RUN mkdir -p ui
-
-COPY src ./src
-COPY schema ./schema
-
+# ── Toolchain (kept before COPY src so source changes don't re-run these) ──
 # Bootsharp compiles the WASM project into an npm package at
 # src/OpenFeatureManager.Wasm/bin/bootsharp (consumed by the UI via a file:
 # dependency). browser-wasm publishing needs the wasm-tools workload; Debug
@@ -24,6 +18,13 @@ RUN apt-get update \
     && ln -sf /usr/bin/python3 /usr/bin/python \
     && npm install -g rollup \
     && rm -rf /var/lib/apt/lists/*
+
+# ui/ must exist so the API's OpenApiGenerateDocumentsOnBuild target can emit
+# ui/openapi.json (see OpenFeatureManager.Api.csproj).
+RUN mkdir -p ui
+
+COPY src ./src
+COPY schema ./schema
 
 RUN dotnet publish src/OpenFeatureManager.Wasm/OpenFeatureManager.Wasm.csproj -c Debug
 

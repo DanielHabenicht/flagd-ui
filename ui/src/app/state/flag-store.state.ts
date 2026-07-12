@@ -34,7 +34,7 @@ import {
   CreateServer,
   SelectServer,
 } from './flag-store.actions';
-import { RouterNavigation } from '@ngxs/router-plugin';
+import { Navigate, RouterNavigation } from '@ngxs/router-plugin';
 
 export interface FlagStoreStateModel {
   /**
@@ -57,6 +57,9 @@ export interface FlagStoreStateModel {
   timeWindows: TimeWindowDto[];
   timeWindowsLoading: boolean;
 
+  /** Exported flagd schema for the selected collection (used by the playground). */
+  selectedSchema: Record<string, unknown> | null;
+
   error: string | null;
 }
 
@@ -76,6 +79,7 @@ export interface FlagStoreStateModel {
     environmentsLoading: false,
     timeWindows: [],
     timeWindowsLoading: false,
+    selectedSchema: null,
     error: null,
   },
 })
@@ -137,6 +141,11 @@ export class FlagStoreState implements NgxsOnInit {
   @Selector()
   static selectedCollectionId(state: FlagStoreStateModel): string | null {
     return state.selectedCollectionId;
+  }
+
+  @Selector()
+  static selectedSchema(state: FlagStoreStateModel): Record<string, unknown> | null {
+    return state.selectedSchema;
   }
 
   @Selector()
@@ -303,6 +312,7 @@ export class FlagStoreState implements NgxsOnInit {
       const collection = await this.backend.createCollection(action.name);
       const state = ctx.getState();
       this.patchServerCollections(ctx, [...this.getServerCollections(state), collection]);
+      ctx.dispatch(new Navigate(['/', 'local', collection.id.toString()]));
     } catch (e) {
       ctx.patchState({
         error: e instanceof Error ? e.message : 'Failed to create collection',
@@ -373,6 +383,7 @@ export class FlagStoreState implements NgxsOnInit {
       environmentsLoading: false,
       timeWindows: [],
       timeWindowsLoading: false,
+      selectedSchema: null,
       error: null,
     });
 
@@ -395,6 +406,7 @@ export class FlagStoreState implements NgxsOnInit {
     try {
       const flags = await this.backend.getFlags(action.collectionId);
       ctx.patchState({ flags, flagsLoading: false });
+      ctx.dispatch(new ExportSchema(action.collectionId));
     } catch (e) {
       ctx.patchState({
         flagsLoading: false,
@@ -410,6 +422,7 @@ export class FlagStoreState implements NgxsOnInit {
       const created = await this.backend.createFlag(action.collectionId, action.flag);
       const state = ctx.getState();
       ctx.patchState({ flags: [...state.flags, created] });
+      ctx.dispatch(new ExportSchema(action.collectionId));
     } catch (e) {
       ctx.patchState({
         error: e instanceof Error ? e.message : 'Failed to create flag',
@@ -427,6 +440,7 @@ export class FlagStoreState implements NgxsOnInit {
       ctx.patchState({
         flags: state.flags.map((f) => (f.key === oldKey ? updated : f)),
       });
+      ctx.dispatch(new ExportSchema(action.collectionId));
     } catch (e) {
       ctx.patchState({
         error: e instanceof Error ? e.message : 'Failed to update flag',
@@ -443,6 +457,7 @@ export class FlagStoreState implements NgxsOnInit {
       ctx.patchState({
         flags: state.flags.filter((f) => f.key !== action.flagKey),
       });
+      ctx.dispatch(new ExportSchema(action.collectionId));
     } catch (e) {
       ctx.patchState({
         error: e instanceof Error ? e.message : 'Failed to delete flag',
@@ -628,7 +643,11 @@ export class FlagStoreState implements NgxsOnInit {
   ): Promise<Record<string, unknown> | null> {
     ctx.patchState({ error: null });
     try {
-      return await this.backend.exportSchema(action.collectionId);
+      const schema = await this.backend.exportSchema(action.collectionId);
+      if (ctx.getState().selectedCollectionId === action.collectionId) {
+        ctx.patchState({ selectedSchema: schema });
+      }
+      return schema;
     } catch (e) {
       ctx.patchState({
         error: e instanceof Error ? e.message : 'Failed to export schema',
@@ -652,6 +671,7 @@ export class FlagStoreState implements NgxsOnInit {
         new LoadEnvironments(collection.id),
         new LoadTimeWindows(collection.id),
       ]);
+      ctx.dispatch(new Navigate(['/', 'local', collection.id.toString()]));
     } catch (e) {
       ctx.patchState({
         error: e instanceof Error ? e.message : 'Failed to import schema',

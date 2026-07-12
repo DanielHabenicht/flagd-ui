@@ -17,11 +17,11 @@ SchemaValidator? validator = null;
 if (schemaPath != null && File.Exists(schemaPath))
     validator = SchemaValidator.CreateAsync(Path.GetFullPath(schemaPath)).GetAwaiter().GetResult();
 
-builder.Services.AddDbContext<FlagdDbContext>(options =>
-    options.UseSqlite(connectionString));
-
-builder.Services.AddScoped<FlagdService>(sp =>
-    new FlagdService(() => sp.GetRequiredService<FlagdDbContext>()));
+// FlagdService creates and disposes a fresh DbContext per operation
+// (`using var db = _contextFactory()`), so the factory must return a new
+// context each call rather than a shared scoped instance.
+builder.Services.AddScoped<FlagdService>(_ =>
+    new FlagdService(() => new FlagdDbContext(connectionString)));
 
 builder.Services.AddScoped<FlagdSchemaService>(sp =>
     new FlagdSchemaService(sp.GetRequiredService<FlagdService>(), validator));
@@ -31,9 +31,8 @@ builder.Services.AddOpenApi();
 var app = builder.Build();
 
 // Ensure database is created on startup
-using (var scope = app.Services.CreateScope())
+using (var db = new FlagdDbContext(connectionString))
 {
-    var db = scope.ServiceProvider.GetRequiredService<FlagdDbContext>();
     db.Database.EnsureCreated();
 }
 
