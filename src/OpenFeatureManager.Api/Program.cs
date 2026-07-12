@@ -19,7 +19,8 @@ if (schemaPath != null && File.Exists(schemaPath))
 
 // FlagdService creates and disposes a fresh DbContext per operation
 // (`using var db = _contextFactory()`), so the factory must return a new
-// context each call rather than a shared scoped instance.
+// context each call rather than a shared scoped instance. The context still
+// uses SQLite — FlagdDbContext.OnConfiguring calls UseSqlite(connectionString).
 builder.Services.AddScoped<FlagdService>(_ =>
     new FlagdService(() => new FlagdDbContext(connectionString)));
 

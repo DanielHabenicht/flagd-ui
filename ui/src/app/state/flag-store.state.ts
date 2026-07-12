@@ -406,7 +406,6 @@ export class FlagStoreState implements NgxsOnInit {
     try {
       const flags = await this.backend.getFlags(action.collectionId);
       ctx.patchState({ flags, flagsLoading: false });
-      ctx.dispatch(new ExportSchema(action.collectionId));
     } catch (e) {
       ctx.patchState({
         flagsLoading: false,
@@ -422,7 +421,6 @@ export class FlagStoreState implements NgxsOnInit {
       const created = await this.backend.createFlag(action.collectionId, action.flag);
       const state = ctx.getState();
       ctx.patchState({ flags: [...state.flags, created] });
-      ctx.dispatch(new ExportSchema(action.collectionId));
     } catch (e) {
       ctx.patchState({
         error: e instanceof Error ? e.message : 'Failed to create flag',
@@ -440,7 +438,6 @@ export class FlagStoreState implements NgxsOnInit {
       ctx.patchState({
         flags: state.flags.map((f) => (f.key === oldKey ? updated : f)),
       });
-      ctx.dispatch(new ExportSchema(action.collectionId));
     } catch (e) {
       ctx.patchState({
         error: e instanceof Error ? e.message : 'Failed to update flag',
@@ -457,7 +454,6 @@ export class FlagStoreState implements NgxsOnInit {
       ctx.patchState({
         flags: state.flags.filter((f) => f.key !== action.flagKey),
       });
-      ctx.dispatch(new ExportSchema(action.collectionId));
     } catch (e) {
       ctx.patchState({
         error: e instanceof Error ? e.message : 'Failed to delete flag',
