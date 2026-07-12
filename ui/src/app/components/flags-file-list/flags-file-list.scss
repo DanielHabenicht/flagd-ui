@@ -19,6 +19,25 @@
   align-items: center;
   gap: 6px;
   padding: 10px 12px 2px 16px;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background 120ms ease-in-out;
+
+  &:hover {
+    background: var(--color-surface);
+  }
+}
+
+.group-header-active {
+  background: var(--color-surface);
+
+  .group-label {
+    color: var(--color-primary);
+  }
+
+  .group-icon {
+    color: var(--color-primary);
+  }
 }
 
 .group-header .group-label {
@@ -196,6 +215,16 @@ a[mat-list-item].active-link .project-name {
   width: 20px;
   height: 20px;
   opacity: 0.5;
+}
+
+.debug-actions {
+  flex-direction: row;
+  gap: 8px;
+
+  button {
+    flex: 1;
+    font-size: 0.75rem;
+  }
 }
 
 .drop-hint code {

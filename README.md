@@ -19,3 +19,24 @@ This project provides a user-friendly web interface for the OpenFeature flagd se
 ## UI
 
 ![flagd-ui editing a flag](https://raw.githubusercontent.com/DanielHabenicht/flagd-ui/main/docs/assets/images/ui-editing-flag.png)
+
+## Development
+
+```bash
+cd src
+dotnet publish
+dotnet run --project OpenFeatureManager.Api
+# http://localhost:5000/scalar/
+
+cd ui
+npm install
+npm start
+# http://localhost:4200
+```
+
+To build and run the full stack (API + UI) in a single container:
+
+```bash
+docker compose up --build
+# http://localhost:3000
+```

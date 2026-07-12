@@ -18,11 +18,7 @@
       </p>
       <mat-form-field appearance="outline" class="full-width">
         <mat-label>File URL</mat-label>
-        <input
-          matInput
-          [(ngModel)]="fileUrl"
-          placeholder="https://example.com/flags.flagd.json"
-        />
+        <input matInput [(ngModel)]="fileUrl" placeholder="https://example.com/flags.flagd.json" />
       </mat-form-field>
       <div class="sample-links">
         <span class="sample-links-label">Examples from flagd samples:</span>
@@ -82,18 +78,6 @@
         <mat-label>Label (optional)</mat-label>
         <input matInput [(ngModel)]="backendLabel" placeholder="Production" />
       </mat-form-field>
-      <div class="loading-message" [hidden]="!backendLoading">Discovering backend files…</div>
-      <div class="error-message" [hidden]="!backendError">{{ backendError }}</div>
-      <div class="discovered" [hidden]="!discoveredFiles.length">
-        <span class="discovered-label"
-          >Discovered {{ discoveredFiles.length }} flag file(s):</span
-        >
-        <ul>
-          @for (f of discoveredFiles; track f) {
-            <li>{{ f }}</li>
-          }
-        </ul>
-      </div>
     </div>
   </mat-tab>
 </mat-tab-group>

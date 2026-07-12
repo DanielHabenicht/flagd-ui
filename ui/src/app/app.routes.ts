@@ -6,8 +6,8 @@ import { FlagsFileSettingsPageComponent } from './components/flags-file-settings
 
 export const routes: Routes = [
   { path: '', component: WelcomeComponent },
-  { path: ':backendType/:uri/:fileName', component: FlagsFileDetailComponent },
-  { path: ':backendType/:uri/:fileName/settings', component: FlagsFileSettingsPageComponent },
-  { path: ':backendType/:uri/:fileName/edit/new', component: FlagsFileEditPageComponent },
-  { path: ':backendType/:uri/:fileName/edit/:flagKey', component: FlagsFileEditPageComponent },
+  { path: ':uri/:collectionId', component: FlagsFileDetailComponent },
+  { path: ':uri/:collectionId/settings', component: FlagsFileSettingsPageComponent },
+  { path: ':uri/:collectionId/edit/new', component: FlagsFileEditPageComponent },
+  { path: ':uri/:collectionId/edit/:flagKey', component: FlagsFileEditPageComponent },
 ];

@@ -7,11 +7,11 @@
     </button>
   </div>
 
-  @if (!rows.length) {
+  @if (!metadataCurrent.length) {
     <p class="metadata-empty">No metadata entries.</p>
   }
 
-  @for (row of rows; track $index) {
+  @for (row of metadataCurrent; track $index) {
     <div class="metadata-row">
       <mat-form-field appearance="outline" class="metadata-key-field">
         <mat-label>Key</mat-label>
@@ -23,7 +23,7 @@
         />
       </mat-form-field>
 
-      <mat-form-field appearance="outline" class="metadata-type-field">
+      <!-- <mat-form-field appearance="outline" class="metadata-type-field">
         <mat-label>Type</mat-label>
         <mat-select [value]="row.type" (selectionChange)="onTypeChange($index, $event.value)">
           <mat-option value="string">string</mat-option>
@@ -65,7 +65,7 @@
             <mat-option value="false">false</mat-option>
           </mat-select>
         </mat-form-field>
-      }
+      } -->
 
       <button
         mat-icon-button

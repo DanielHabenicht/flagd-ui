@@ -3,8 +3,10 @@ import { Store } from '@ngxs/store';
 import { MetadataMap } from '../../models/flag.models';
 import { MetadataEditorComponent } from '../metadata-editor/metadata-editor';
 import { EnvironmentManagerComponent } from '../environment-manager/environment-manager';
-import { CurrentFlagStoreState } from '../../state/current-flag-store.state';
-import { SetMetadata } from '../../state/current-flag-store.actions';
+import { FlagStoreState } from '../../state/flag-store.state';
+import { MetadataDto } from '../../services/flag-backend';
+// import { CurrentFlagStoreState } from '../../state/current-flag-store.state';
+// import { SetMetadata } from '../../state/current-flag-store.actions';
 
 @Component({
   selector: 'app-flags-file-settings-page',
@@ -17,18 +19,19 @@ export class FlagsFileSettingsPageComponent {
   private readonly ngxsStore = inject(Store);
 
   // Selectors for template access
-  readonly currentMetadata = this.ngxsStore.selectSignal(CurrentFlagStoreState.metadata);
-  readonly flags = this.ngxsStore.selectSignal(CurrentFlagStoreState.flags);
-  readonly environments = this.ngxsStore.selectSignal(CurrentFlagStoreState.environments);
+  readonly currentMetadata = this.ngxsStore.selectSignal(FlagStoreState.selectedCollectionMetadata);
+  readonly flags = this.ngxsStore.selectSignal(FlagStoreState.flags);
+  readonly environments = this.ngxsStore.selectSignal(FlagStoreState.environments);
 
-  readonly projectMetadataDraft = signal<MetadataMap | undefined>(undefined);
+  readonly projectMetadataDraft = signal<MetadataDto[]>([]);
 
   private readonly syncProjectMetadataDraft = effect(() => {
-    this.projectMetadataDraft.set(this.currentMetadata() as MetadataMap | undefined);
+    this.projectMetadataDraft.set(this.currentMetadata());
   });
 
-  onProjectMetadataChange(metadata: MetadataMap | undefined): void {
+  onProjectMetadataChange(metadata: MetadataDto[]): void {
     this.projectMetadataDraft.set(metadata);
-    this.ngxsStore.dispatch(new SetMetadata(metadata ?? {}));
+    // TODO:
+    // this.ngxsStore.dispatch(new SetMetadata(metadata ?? {}));
   }
 }

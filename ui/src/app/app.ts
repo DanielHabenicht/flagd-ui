@@ -23,9 +23,8 @@ import { PlaygroundDrawerComponent } from './components/playground-drawer/playgr
 import { GlobalLoadingService } from './services/global-loading.service';
 import { SetThemeMode, ThemeMode } from './state/ui-preferences.actions';
 import { UiPreferencesState } from './state/ui-preferences.state';
-import { CurrentFlagStoreState } from './state/current-flag-store.state';
-import { AddFile } from './state/flag-file-store.actions';
-import { FlagFileStore } from './state/flag-file-store.state';
+import { FlagStoreState } from './state/flag-store.state';
+import { SaveDatabase } from './state/flag-store.actions';
 
 type AppTheme = 'light' | 'dark';
 
@@ -54,10 +53,10 @@ export class App implements OnDestroy {
   readonly themeMode = this.ngxsStore.selectSignal(UiPreferencesState.themeMode);
 
   // FlagStore selectors
-  readonly currentFlagsFileName = this.ngxsStore.selectSignal(CurrentFlagStoreState.fileName);
-  readonly currentFlagsBackendType = this.ngxsStore.selectSignal(CurrentFlagStoreState.backendType);
-  readonly currentFlagsBackendUri = this.ngxsStore.selectSignal(CurrentFlagStoreState.backendUri);
-  readonly backendsMap = this.ngxsStore.selectSignal(FlagFileStore.backendsMap);
+  readonly selectedCollection = this.ngxsStore.selectSignal(FlagStoreState.selectedCollection);
+  readonly selectedServerUri = this.ngxsStore.selectSignal(FlagStoreState.selectedServerUri);
+  readonly selectedCollectionId = this.ngxsStore.selectSignal(FlagStoreState.selectedCollectionId);
+  // readonly backendsMap = this.ngxsStore.selectSignal(FlagFileStore.backendsMap);
   readonly prefersDark = signal(this.systemPrefersDark());
   readonly theme = computed<AppTheme>(() => {
     const mode = this.themeMode();
@@ -75,7 +74,7 @@ export class App implements OnDestroy {
     const path = this.currentUrl().split('?')[0];
     return path === '/' || path === '';
   });
-  readonly displayedFlagsFileName = computed(() => this.currentFlagsFileName() || '');
+  readonly displayedCollectionName = computed(() => this.selectedCollection()?.name || '');
   readonly showFlagsContextHeader = computed(() => !this.isRootRoute());
   readonly showPageHeader = computed(() => !this.isRootRoute());
   readonly isOverviewComponentActive = computed(
@@ -116,31 +115,14 @@ export class App implements OnDestroy {
 
     return null;
   });
-  readonly sourceBreadcrumb = computed(() => {
-    const backendType = this.currentFlagsBackendType();
-    const backendUri = this.currentFlagsBackendUri();
-    if (!backendType || !backendUri) return null;
-
-    const backend = this.backendsMap()?.[backendType]?.[backendUri];
-    if (backendType === 'local') {
-      return (
-        backend?.label ?? (backendUri === 'disk' ? 'Local Files · Disk' : 'Local Files · Browser')
-      );
-    }
-
-    return backend?.label ?? backendUri;
-  });
-  readonly sourceBreadcrumbRoute = computed(() => ['/']);
-  readonly flagsFileDetailRoute = computed(() => {
-    const backendType = this.currentFlagsBackendType();
-    const backendUri = this.currentFlagsBackendUri();
-    const fileName = this.currentFlagsFileName();
-
-    if (backendType && backendUri && fileName) {
-      return ['/', backendType, backendUri, fileName];
-    }
-
-    return null;
+  readonly sourceBreadcrumb = computed(() => 'Overview');
+  // Link the collection-name crumb back to its detail view, but only when we are
+  // on a sub-page (edit/settings); on the detail view itself it is the current page.
+  readonly flagsFileDetailRoute = computed<string[] | null>(() => {
+    if (this.isOverviewComponentActive()) return null;
+    const uri = this.selectedServerUri();
+    const collectionId = this.selectedCollectionId();
+    return uri && collectionId ? ['/', uri, collectionId] : null;
   });
   navOpen = signal(!this.isCompactLayout());
 
@@ -210,9 +192,33 @@ export class App implements OnDestroy {
     this.navOpen.set(!compact);
   }
 
+  @HostListener('window:beforeunload', ['$event'])
+  beforeUnloadHandler(event: any) {
+    this.ngxsStore.dispatch(new SaveDatabase());
+  }
+
+  // @HostListener('mouseout')
+  // async onMouseLeave() {
+  //   await this.backend.saveState?.();
+  //   // debugger;
+  // }
+
   toggleNavigation(): void {
     if (!this.isCompactLayout()) return;
     this.navOpen.set(!this.navOpen());
+  }
+
+  /**
+   * The "Overview" breadcrumb is the flags-file list. On mobile that lives in the
+   * nav drawer, so clicking it toggles the drawer (like the burger); on wider
+   * layouts the drawer is always visible, so navigate to the root instead.
+   */
+  onOverviewClick(): void {
+    if (this.isCompactLayout()) {
+      this.toggleNavigation();
+      return;
+    }
+    void this.router.navigate(['/']);
   }
 
   onNavigationStateChange(opened: boolean): void {
@@ -244,9 +250,9 @@ export class App implements OnDestroy {
       reader.onload = () => {
         try {
           if (!file.name) throw new Error('File must have a name');
-          this.ngxsStore.dispatch(
-            new AddFile('local', 'browser', file.name, reader.result as string),
-          );
+          // this.ngxsStore.dispatch(
+          //   new AddFile('local', 'browser', file.name, reader.result as string),
+          // );
         } catch {
           console.error(`Failed to parse ${file.name}`);
         }

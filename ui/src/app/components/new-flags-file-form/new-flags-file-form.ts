@@ -9,12 +9,8 @@ import { MatInputModule } from '@angular/material/input';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
-import { RemoteApi } from '../../services/remote-api';
 import { FileSystemAccess } from '../../services/file-system-access';
-import { AddBackend, AddFile } from '../../state/flag-file-store.actions';
-import { LocalBackendUris } from '../../state/flag-file-store.state';
-import { FlagdSchemaAbstraction } from '../../models/abstraction';
-import { stringifyFlagdSchema } from '../../models/flagd-schema.parser';
+import { CreateCollection, CreateServer, ImportSchema } from '../../state/flag-store.actions';
 
 export interface NewFlagsFileFormResult {
   type: 'empty' | 'url' | 'disk' | 'backend';
@@ -41,7 +37,6 @@ export class NewFlagsFileFormComponent {
   private readonly store = inject(Store);
   private readonly http = inject(HttpClient);
   private readonly router = inject(Router);
-  private readonly remoteApi = inject(RemoteApi);
   private readonly fileSystemAccess = inject(FileSystemAccess);
 
   // Empty flags-file tab
@@ -102,7 +97,6 @@ export class NewFlagsFileFormComponent {
   backendUrl = '';
   backendLabel = '';
   backendLoading = false;
-  backendError = '';
   discoveredFiles: string[] = [];
 
   get actionLabel(): string {
@@ -115,7 +109,7 @@ export class NewFlagsFileFormComponent {
     if (this.selectedTabIndex === 2) {
       return 'Open';
     }
-    return this.discoveredFiles.length ? 'Create' : 'Discover';
+    return 'Connect';
   }
 
   get actionIcon(): string {
@@ -128,7 +122,7 @@ export class NewFlagsFileFormComponent {
     if (this.selectedTabIndex === 2) {
       return 'folder_open';
     }
-    return this.discoveredFiles.length ? 'cloud' : 'search';
+    return 'cloud';
   }
 
   get actionDisabled(): boolean {
@@ -161,11 +155,7 @@ export class NewFlagsFileFormComponent {
       void this.importFromDisk();
       return;
     }
-    if (this.discoveredFiles.length) {
-      this.addBackend();
-      return;
-    }
-    this.discoverBackend();
+    this.addBackend();
   }
 
   useSample(sampleUrl: string): void {
@@ -175,15 +165,8 @@ export class NewFlagsFileFormComponent {
   createEmptyFlagsFile(): void {
     const name = this.flagsFileName.trim();
     if (!name) return;
-    this.store.dispatch(
-      new AddFile(
-        'local',
-        LocalBackendUris.Browser,
-        name,
-        stringifyFlagdSchema(FlagdSchemaAbstraction.empty().exportSchema()),
-      ),
-    );
-    void this.navigateToFlagsFile('local', LocalBackendUris.Browser, name);
+    this.store.dispatch(new CreateCollection(name));
+    // void this.navigateToFlagsFile('local', .Browser, name);
     this.formSubmitted.emit({ type: 'empty' });
   }
 
@@ -203,9 +186,12 @@ export class NewFlagsFileFormComponent {
           name = name.replace(/\.flagd\.json$/, '').replace(/\.json$/, '');
           if (!name) name = 'imported';
 
-          this.store.dispatch(new AddFile('local', LocalBackendUris.Browser, name, text));
-          void this.navigateToFlagsFile('local', LocalBackendUris.Browser, name);
+          this.store.dispatch(new ImportSchema(name, text));
+          // this.router.navigate(['/', "uri", backendUri, fileName]);
+
+          // void this.navigateToFlagsFile('local', LocalBackendUris.Browser, name);
           this.formSubmitted.emit({ type: 'url' });
+          this.urlLoading = false;
         } catch {
           this.urlError = 'Failed to parse JSON file';
           this.urlLoading = false;
@@ -234,15 +220,8 @@ export class NewFlagsFileFormComponent {
         return;
       }
 
-      this.store.dispatch(
-        new AddFile(
-          'local',
-          LocalBackendUris.Disk,
-          result.name,
-          JSON.stringify(result.content, null, 2),
-        ),
-      );
-      void this.navigateToFlagsFile('local', LocalBackendUris.Disk, result.name);
+      this.store.dispatch(new ImportSchema(result.name, result.content));
+      // void this.navigateToFlagsFile('local', LocalBackendUris.Disk, result.name);
       this.formSubmitted.emit({ type: 'disk' });
     } catch (error) {
       this.diskLoading = false;
@@ -257,70 +236,20 @@ export class NewFlagsFileFormComponent {
   }
 
   discoverBackend(): void {
-    let url = this.backendUrl.trim();
-    if (!url) return;
-    if (!url.startsWith('http')) {
-      url = 'https://' + url;
-    }
-    url = url.replace(/\/+$/, '');
-
-    this.backendLoading = true;
-    this.backendError = '';
-    this.discoveredFiles = [];
-
-    this.remoteApi.listFlagsFiles(url).subscribe({
-      next: (files) => {
-        queueMicrotask(() => {
-          this.discoveredFiles = files;
-          this.backendLoading = false;
-          if (files.length === 0) {
-            this.backendError = 'No flag files found on this backend';
-          }
-        });
-      },
-      error: () => {
-        queueMicrotask(() => {
-          this.backendError = 'Failed to connect to backend. Ensure CORS is enabled.';
-          this.backendLoading = false;
-        });
-      },
-    });
+    // Discovery not yet implemented
   }
 
   addBackend(): void {
     let url = this.backendUrl.trim().replace(/\/+$/, '');
+    if (!url) return;
     if (!url.startsWith('http')) {
       url = 'https://' + url;
     }
     const label = this.backendLabel.trim() || url;
-    this.store.dispatch(new AddBackend(label, url));
 
-    const discoveredFiles = [...this.discoveredFiles];
-    if (!discoveredFiles.length) {
-      this.formSubmitted.emit({ type: 'backend' });
-      return;
-    }
-
-    let remaining = discoveredFiles.length;
-    for (const fileName of discoveredFiles) {
-      this.remoteApi.getFlagsFile(url, fileName).subscribe({
-        next: (content) => {
-          this.store.dispatch(
-            new AddFile('remote', url, fileName, JSON.stringify(content, null, 2)),
-          );
-          remaining -= 1;
-          if (remaining === 0) {
-            this.formSubmitted.emit({ type: 'backend' });
-          }
-        },
-        error: () => {
-          remaining -= 1;
-          if (remaining === 0) {
-            this.formSubmitted.emit({ type: 'backend' });
-          }
-        },
-      });
-    }
+    // CreateServer registers the remote and selects it.
+    this.store.dispatch(new CreateServer(label, url));
+    this.formSubmitted.emit({ type: 'backend' });
   }
 
   private async navigateToFlagsFile(

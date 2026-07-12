@@ -37,22 +37,22 @@ export interface ValueDefinition<T> {
   timeWindow?: TimeWindow;
 }
 
-interface BaseFlagProps<TValue, TType extends string> {
-  key: string;
-  type: TType;
-  state: FlagState;
-  metadata?: Record<string, string | number | boolean>;
-  value: TValue | null;
-  perEnvironmentDefinitions?: Record<string, ValueDefinition<TValue>>;
-  globalTimeWindow?: TimeWindowValue<TValue>;
-}
+// interface BaseFlagProps<TValue, TType extends string> {
+//   key: string;
+//   type: TType;
+//   state: FlagState;
+//   metadata?: Record<string, string | number | boolean>;
+//   value: TValue | null;
+//   perEnvironmentDefinitions?: Record<string, ValueDefinition<TValue>>;
+//   globalTimeWindow?: TimeWindowValue<TValue>;
+// }
 
-export type BooleanFlag = BaseFlagProps<boolean, 'boolean'>;
-export type StringFlag = BaseFlagProps<string, 'string'>;
-export type NumberFlag = BaseFlagProps<number, 'number'>;
-export type ObjectFlag = BaseFlagProps<object, 'object'>;
+// export type BooleanFlag = BaseFlagProps<boolean, 'boolean'>;
+// export type StringFlag = BaseFlagProps<string, 'string'>;
+// export type NumberFlag = BaseFlagProps<number, 'number'>;
+// export type ObjectFlag = BaseFlagProps<object, 'object'>;
 
-/**
- * Union type representing any flag
- */
-export type DisplayFlag = BooleanFlag | StringFlag | NumberFlag | ObjectFlag;
+// /**
+//  * Union type representing any flag
+//  */
+// export type DisplayFlag = BooleanFlag | StringFlag | NumberFlag | ObjectFlag;

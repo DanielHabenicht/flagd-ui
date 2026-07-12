@@ -24,24 +24,54 @@ if (fs.existsSync(sourceFile)) {
   console.warn(`⚠ Warning: ${sourceFile} not found.`);
 }
 
-// Check if openapi.json exists
-const openapiPath = path.join(uiRoot, 'openapi.json');
-if (!fs.existsSync(openapiPath)) {
-  console.warn(`⚠ Warning: openapi.json not found. This is expected if the Rust backend hasn't been built yet.`);
-  console.warn(`⚠ Run 'cargo build' in the root directory to generate the OpenAPI spec, then run 'npm install' again in the ui directory.`);
-  process.exit(0);
+// Generate the client from the OpenAPI spec if it is present. When it is not
+// (e.g. the Docker build generates the client in a dedicated stage), generation
+// is skipped and only the post-generation patches below are applied to the
+// already-generated client.
+const openapiFile = 'OpenFeatureManager.Api.json';
+const openapiPath = path.join(uiRoot, openapiFile);
+if (fs.existsSync(openapiPath)) {
+  console.log(`✓ Working directory: ${uiRoot}`);
+
+  // Run Docker command with absolute path
+  // Use --user to avoid file permission issues on Linux/macOS
+  const userFlag =
+    process.platform === 'win32' ? '' : ` --user ${process.getuid()}:${process.getgid()}`;
+  const dockerCmd = `docker run --rm${userFlag} -v "${uiRoot}/${openapiFile}:/local/openapi.json" -v "${uiRoot}/src/app/api-client:/local/src/app/api-client" openapitools/openapi-generator-cli:v7.21.0 generate -i /local/openapi.json -g typescript-angular -o /local/src/app/api-client`;
+
+  const result = spawnSync(dockerCmd, {
+    shell: true,
+    stdio: 'inherit',
+  });
+
+  if (result.status !== 0) {
+    process.exit(result.status);
+  }
+} else {
+  console.warn(`⚠ ${openapiFile} not found; skipping client generation and only applying patches.`);
+  console.warn(
+    `⚠ To regenerate, run 'dotnet build' in the src directory, then re-run this script.`,
+  );
 }
 
-// Get absolute path for Docker volume mount
-const cwd = uiRoot;
-console.log(`✓ Working directory: ${cwd}`);
+// Post-generation patches for known openapi-generator bugs
+const patches = [
+  {
+    file: path.join(targetDir, 'model', 'flagEntryDto.ts'),
+    find: "import { Null } from './null';",
+    replace: "import { PerEnvironmentDefinitionDto } from './perEnvironmentDefinitionDto';",
+    description: 'Fix incorrect Null import for PerEnvironmentDefinitionDto',
+  },
+];
 
-// Run Docker command with absolute path
-const dockerCmd = `docker run --rm -v "${cwd}:/local" openapitools/openapi-generator-cli:v7.19.0 generate -i /local/openapi.json -g typescript-angular -o /local/src/app/api-client`;
+for (const patch of patches) {
+  if (!fs.existsSync(patch.file)) continue;
+  let content = fs.readFileSync(patch.file, 'utf8');
+  if (content.includes(patch.find)) {
+    content = content.replace(patch.find, patch.replace);
+    fs.writeFileSync(patch.file, content, 'utf8');
+    console.log(`✓ Patched ${path.relative(uiRoot, patch.file)}: ${patch.description}`);
+  }
+}
 
-const result = spawnSync(dockerCmd, {
-  shell: true,
-  stdio: 'inherit'
-});
-
-process.exit(result.status);
+process.exit(0);

@@ -28,10 +28,10 @@
           <p class="empty-message">No environments match the current filter.</p>
         } @else {
           <div class="environment-items">
-            @for (item of filteredEnvironments(); track item.env.displayName) {
+            @for (item of filteredEnvironments(); track item.env.name) {
               <div class="environment-item">
                 <div class="environment-info">
-                  <strong>{{ item.env.displayName }}</strong>
+                  <strong>{{ item.env.name }}</strong>
                   <span class="aliases">Aliases: {{ item.env.aliases.join(', ') }}</span>
                 </div>
                 <div class="environment-actions">

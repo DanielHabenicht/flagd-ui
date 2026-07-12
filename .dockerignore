@@ -7,4 +7,11 @@ ui/dist
 ui/coverage
 ui/test-results
 ui/playwright-report
+ui/public
 **/*.log
+
+# Generated / local build artifacts (produced inside the image instead)
+**/bin
+**/obj
+ui/OpenFeatureManager.Api.json
+ui/src/app/api-client

@@ -1,52 +1,34 @@
 <div class="project-list">
   <div class="project-content">
-    @if (hasFiles()) {
-      @for (group of fileGroups(); track group.backendType + group.backendUri) {
-        <div class="group-header">
-          <mat-icon class="group-icon">{{ group.icon }}</mat-icon>
-          <span class="group-label">{{ group.label }}</span>
-          @if (group.canSync) {
-            <button
-              mat-icon-button
-              class="btn-sync-backend"
-              (click)="syncBackend($event, group.backendType, group.backendUri)"
-              title="Sync backend"
-            >
-              <mat-icon>sync</mat-icon>
-            </button>
-          }
-          @if (group.canRemove) {
-            <button
-              mat-icon-button
-              class="btn-remove-backend"
-              (click)="removeBackend($event, group.backendType, group.backendUri, group.label)"
-              title="Remove backend"
-            >
-              <mat-icon>close</mat-icon>
-            </button>
-          }
-        </div>
+    @for (server of serverEntries(); track server.uri) {
+      <div
+        class="group-header"
+        [class.group-header-active]="selectedServerUri() === server.uri"
+        (click)="selectServer(server.uri)"
+        (keydown.enter)="selectServer(server.uri)"
+        tabindex="0"
+        role="button"
+      >
+        <mat-icon class="group-icon">dns</mat-icon>
+        <span class="group-label">{{ server.name }}</span>
+      </div>
+      @if (selectedServerUri() === server.uri) {
         <mat-nav-list class="group-list">
-          @for (entry of group.entries; track entry.name + entry.backendUri + entry.backendType) {
+          @for (entry of server.collections; track entry.id) {
             <a
               mat-list-item
-              [routerLink]="getFlagsFileRoute(entry)"
+              [routerLink]="getFlagsFileRoute(server.uri, entry)"
               queryParamsHandling="merge"
               routerLinkActive="active-link"
               [routerLinkActiveOptions]="{ exact: false }"
             >
               <span matListItemTitle class="project-title-row">
-                @if (entry.isDirty) {
-                  <mat-icon class="unsynced-indicator" title="Unsynced changes"
-                    >sync_problem</mat-icon
-                  >
-                }
                 <span class="project-name">{{ entry.name }}</span>
               </span>
               <button
                 mat-icon-button
                 matListItemMeta
-                (click)="deleteFlagsFile($event, entry)"
+                (click)="deleteCollection($event, entry)"
                 title="Delete"
                 class="btn-delete"
               >
@@ -54,17 +36,36 @@
               </button>
             </a>
           }
+          @if (server.collections.length === 0) {
+            <div class="empty-state">No collections yet</div>
+          }
         </mat-nav-list>
       }
-    } @else {
-      <div class="empty-state">
-        <span>No flag files yet</span>
-      </div>
+    }
+    @if (serverEntries().length === 0) {
+      <div class="empty-state">No servers configured</div>
     }
   </div>
 
   <div class="sidebar-footer">
     <mat-divider></mat-divider>
+    @if (canExportDatabase) {
+      <div class="footer-actions debug-actions">
+        <button
+          mat-stroked-button
+          (click)="downloadDatabase()"
+          title="Download SQLite database dump"
+        >
+          <mat-icon>storage</mat-icon>
+          <span>Download DB</span>
+        </button>
+        <button mat-stroked-button (click)="purgeDatabase()" title="Purge database and reload">
+          <mat-icon>delete_forever</mat-icon>
+          <span>Purge DB</span>
+        </button>
+      </div>
+      <mat-divider></mat-divider>
+    }
     <div class="footer-actions">
       <div class="drop-hint">
         <mat-icon class="drop-hint-icon">upload_file</mat-icon>

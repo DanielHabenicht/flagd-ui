@@ -11,13 +11,16 @@ Cargo.lock
 .env
 .env.local
 
+bin
+obj
+
 public/*
 !public/.gitkeep
 
 flags/*
 !flags/demo.flagd.json
 
-ui/openapi.json
+ui/OpenFeatureManager.Api.json
 
 # Zensical build output
 site/
@@ -35,3 +38,8 @@ services/azurite/azurite-store/
 services/azurite/azurite-logs/
 services/azurite/certs/*
 !services/azurite/certs/.gitkeep
+
+# sqlite
+*.db
+*.db-shm
+*.db-wal

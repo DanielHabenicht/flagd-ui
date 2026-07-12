@@ -18,6 +18,7 @@
         "build": {
           "builder": "@angular/build:application",
           "options": {
+            "externalDependencies": ["fs/promises", "process", "module"],
             "outputPath": {
               "base": "../public",
               "browser": ""
@@ -79,7 +80,8 @@
               "buildTarget": "ui:build:production"
             },
             "development": {
-              "buildTarget": "ui:build:development"
+              "buildTarget": "ui:build:development",
+              "prebundle": { "exclude": ["bootsharp"] }
             }
           },
           "defaultConfiguration": "development"

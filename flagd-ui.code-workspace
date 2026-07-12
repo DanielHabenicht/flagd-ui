@@ -1,24 +1,40 @@
 {
   "folders": [
     {
-      "path": "."
-    }
+      "name": "Backend",
+      "path": "src",
+    },
+    {
+      "name": "Frontend",
+      "path": "ui",
+    },
+    {
+      "name": "Docs",
+      "path": "docs",
+    },
+    {
+      "name": "E2E Tests",
+      "path": "e2e-tests",
+    },
+    {
+      "path": ".",
+    },
   ],
   "settings": {
     "editor.formatOnSave": true,
     "editor.defaultFormatter": "esbenp.prettier-vscode",
     "[html]": {
-      "editor.defaultFormatter": "esbenp.prettier-vscode"
+      "editor.defaultFormatter": "esbenp.prettier-vscode",
     },
     "[typescript]": {
-      "editor.defaultFormatter": "esbenp.prettier-vscode"
+      "editor.defaultFormatter": "esbenp.prettier-vscode",
     },
     "[scss]": {
-      "editor.defaultFormatter": "esbenp.prettier-vscode"
+      "editor.defaultFormatter": "esbenp.prettier-vscode",
     },
     "[json]": {
-      "editor.defaultFormatter": "esbenp.prettier-vscode"
-    }
+      "editor.defaultFormatter": "esbenp.prettier-vscode",
+    },
   },
   "extensions": {
     "recommendations": [
@@ -30,7 +46,7 @@
       "vitest.explorer",
       "dbaeumer.vscode-eslint",
       "rust-lang.rust-analyzer",
-      "tamasfe.even-better-toml"
-    ]
-  }
+      "tamasfe.even-better-toml",
+    ],
+  },
 }

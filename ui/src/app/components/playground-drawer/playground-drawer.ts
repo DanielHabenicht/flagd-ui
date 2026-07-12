@@ -27,7 +27,8 @@ import {
   TogglePlaygroundDrawer,
 } from '../../state/playground-preferences.actions';
 import { PlaygroundPreferencesState } from '../../state/playground-preferences.state';
-import { CurrentFlagStoreState } from '../../state/current-flag-store.state';
+import { FlagStoreState } from '../../state/flag-store.state';
+import { ExportSchema } from '../../state/flag-store.actions';
 import { Subscription } from 'rxjs';
 
 const LOCAL_EVALUATOR_ID = '__local__';
@@ -62,7 +63,11 @@ export class PlaygroundDrawerComponent implements OnInit, OnDestroy {
   private readonly dialog = inject(MatDialog);
   private readonly ngxsStore = inject(Store);
   private readonly evaluator = inject(PlaygroundEvaluatorService);
-  private readonly schemaState = this.ngxsStore.selectSignal(CurrentFlagStoreState.schema);
+  private readonly schemaState = this.ngxsStore.selectSignal(FlagStoreState.selectedSchema);
+  private readonly selectedCollectionId = this.ngxsStore.selectSignal(
+    FlagStoreState.selectedCollectionId,
+  );
+  private readonly storeFlags = this.ngxsStore.selectSignal(FlagStoreState.flags);
 
   readonly open = this.ngxsStore.selectSignal(PlaygroundPreferencesState.drawerOpen);
   readonly animate = signal(false);
@@ -108,6 +113,17 @@ export class PlaygroundDrawerComponent implements OnInit, OnDestroy {
   private resizeStartHeight = DEFAULT_DRAWER_HEIGHT;
   private autoEvaluateTimeoutId: ReturnType<typeof setTimeout> | null = null;
   private routeParamsSub: Subscription | null = null;
+
+  // Refresh the exported schema (source for the flag list and local evaluation)
+  // whenever the selected collection or its flags change, so the store doesn't
+  // have to dispatch ExportSchema from every flag mutation.
+  private readonly refreshSchema = effect(() => {
+    const collectionId = this.selectedCollectionId();
+    this.storeFlags(); // track flag changes for the selected collection
+    if (collectionId) {
+      this.ngxsStore.dispatch(new ExportSchema(collectionId));
+    }
+  });
 
   private readonly syncSelectedFromInput = effect(() => {
     const current = this.localSelectedFlagKey();

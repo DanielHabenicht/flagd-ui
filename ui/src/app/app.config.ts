@@ -6,14 +6,14 @@ import { provideNativeDateAdapter } from '@angular/material/core';
 import { provideStore } from '@ngxs/store';
 import { withNgxsStoragePlugin } from '@ngxs/storage-plugin';
 import { withNgxsRouterPlugin } from '@ngxs/router-plugin';
-import { provideApi } from './api-client/provide-api';
 import { DEFAULT_BACKEND_ROOT } from '../environments';
 import { routes } from './app.routes';
 import { globalLoadingInterceptor } from './interceptors/global-loading.interceptor';
-import { FlagFileStore } from './state/flag-file-store.state';
-import { CurrentFlagStoreState } from './state/current-flag-store.state';
+import { FlagStoreState } from './state/flag-store.state';
 import { UiPreferencesState } from './state/ui-preferences.state';
 import { PlaygroundPreferencesState } from './state/playground-preferences.state';
+import { provideApi } from './api-client';
+import { withNgxsReduxDevtoolsPlugin } from '@ngxs/devtools-plugin';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -23,12 +23,13 @@ export const appConfig: ApplicationConfig = {
     provideNativeDateAdapter(),
     provideApi({ basePath: DEFAULT_BACKEND_ROOT ?? '' }),
     provideStore(
-      [FlagFileStore, CurrentFlagStoreState, UiPreferencesState, PlaygroundPreferencesState],
+      [FlagStoreState, UiPreferencesState, PlaygroundPreferencesState],
       withNgxsStoragePlugin({
-        keys: [UiPreferencesState, PlaygroundPreferencesState, FlagFileStore],
+        keys: [UiPreferencesState, PlaygroundPreferencesState, 'flagStore.servers'],
       }),
       withNgxsRouterPlugin(),
     ),
+    withNgxsReduxDevtoolsPlugin(),
     provideAnimationsAsync(),
   ],
 };

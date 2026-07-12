@@ -52,9 +52,16 @@
           <div class="flags-context-header">
             <div class="flags-title-row">
               @if (sourceBreadcrumb()) {
-                <span class="source-breadcrumb">
+                <a
+                  class="source-breadcrumb breadcrumb-link"
+                  (click)="onOverviewClick()"
+                  (keydown.enter)="onOverviewClick()"
+                  (keydown.space)="onOverviewClick(); $event.preventDefault()"
+                  tabindex="0"
+                  role="button"
+                >
                   {{ sourceBreadcrumb() }}
-                </span>
+                </a>
                 <span class="source-separator" aria-hidden="true">›</span>
               }
               @if (flagsFileDetailRoute()) {
@@ -64,11 +71,11 @@
                     [routerLink]="flagsFileDetailRoute()"
                     queryParamsHandling="preserve"
                   >
-                    {{ displayedFlagsFileName() }}
+                    {{ displayedCollectionName() }}
                   </a>
                 </h2>
               } @else {
-                <h2>{{ displayedFlagsFileName() }}</h2>
+                <h2>{{ displayedCollectionName() }}</h2>
               }
               @if (detailBreadcrumb()) {
                 <span class="source-separator" aria-hidden="true">›</span>
