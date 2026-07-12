@@ -54,6 +54,8 @@ export class App implements OnDestroy {
 
   // FlagStore selectors
   readonly selectedCollection = this.ngxsStore.selectSignal(FlagStoreState.selectedCollection);
+  readonly selectedServerUri = this.ngxsStore.selectSignal(FlagStoreState.selectedServerUri);
+  readonly selectedCollectionId = this.ngxsStore.selectSignal(FlagStoreState.selectedCollectionId);
   // readonly backendsMap = this.ngxsStore.selectSignal(FlagFileStore.backendsMap);
   readonly prefersDark = signal(this.systemPrefersDark());
   readonly theme = computed<AppTheme>(() => {
@@ -113,33 +115,14 @@ export class App implements OnDestroy {
 
     return null;
   });
-  readonly sourceBreadcrumb = computed(() => {
-    return 'Breadcrumb';
-    // const backendType = this.currentFlagsBackendType();
-    // const backendUri = this.currentFlagsBackendUri();
-    // if (!backendType || !backendUri) return null;
-
-    // const backend = this.backendsMap()?.[backendType]?.[backendUri];
-    // if (backendType === 'local') {
-    //   return (
-    //     backend?.label ?? (backendUri === 'disk' ? 'Local Files · Disk' : 'Local Files · Browser')
-    //   );
-    // }
-
-    // return backend?.label ?? backendUri;
-  });
-  readonly sourceBreadcrumbRoute = computed(() => ['/']);
-  readonly flagsFileDetailRoute = computed(() => {
-    return null;
-    // const backendType = this.currentFlagsBackendType();
-    // const backendUri = this.currentFlagsBackendUri();
-    // const fileName = this.currentCollection();
-
-    // if (backendType && backendUri && fileName) {
-    //   return ['/', backendType, backendUri, fileName];
-    // }
-
-    // return null;
+  readonly sourceBreadcrumb = computed(() => 'Overview');
+  // Link the collection-name crumb back to its detail view, but only when we are
+  // on a sub-page (edit/settings); on the detail view itself it is the current page.
+  readonly flagsFileDetailRoute = computed<string[] | null>(() => {
+    if (this.isOverviewComponentActive()) return null;
+    const uri = this.selectedServerUri();
+    const collectionId = this.selectedCollectionId();
+    return uri && collectionId ? ['/', uri, collectionId] : null;
   });
   navOpen = signal(!this.isCompactLayout());
 
@@ -223,6 +206,19 @@ export class App implements OnDestroy {
   toggleNavigation(): void {
     if (!this.isCompactLayout()) return;
     this.navOpen.set(!this.navOpen());
+  }
+
+  /**
+   * The "Overview" breadcrumb is the flags-file list. On mobile that lives in the
+   * nav drawer, so clicking it toggles the drawer (like the burger); on wider
+   * layouts the drawer is always visible, so navigate to the root instead.
+   */
+  onOverviewClick(): void {
+    if (this.isCompactLayout()) {
+      this.toggleNavigation();
+      return;
+    }
+    void this.router.navigate(['/']);
   }
 
   onNavigationStateChange(opened: boolean): void {
