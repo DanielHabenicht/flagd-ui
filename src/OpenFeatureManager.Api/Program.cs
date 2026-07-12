@@ -37,6 +37,10 @@ using (var scope = app.Services.CreateScope())
     db.Database.EnsureCreated();
 }
 
+// Serve the built Angular UI from wwwroot (production/container mode).
+app.UseDefaultFiles();
+app.UseStaticFiles();
+
 app.MapOpenApi();
 app.MapScalarApiReference();
 
@@ -143,6 +147,9 @@ app.MapPost("/dummy", async (Guid id, HttpRequest request) =>
 {
     return TypedResults.Ok(new PerEnvironmentDefinitionDto(BooleanValue: true));
 }).WithName("dummy").WithTags("schema");
+
+// SPA fallback: any non-API, non-file route serves the Angular entrypoint.
+app.MapFallbackToFile("index.html");
 
 app.Run();
 

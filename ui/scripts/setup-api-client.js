@@ -24,36 +24,34 @@ if (fs.existsSync(sourceFile)) {
   console.warn(`⚠ Warning: ${sourceFile} not found.`);
 }
 
-// Check if OpenFeatureManager.Api.json exists
+// Generate the client from the OpenAPI spec if it is present. When it is not
+// (e.g. the Docker build generates the client in a dedicated stage), generation
+// is skipped and only the post-generation patches below are applied to the
+// already-generated client.
 const openapiFile = 'OpenFeatureManager.Api.json';
 const openapiPath = path.join(uiRoot, openapiFile);
-if (!fs.existsSync(openapiPath)) {
+if (fs.existsSync(openapiPath)) {
+  console.log(`✓ Working directory: ${uiRoot}`);
+
+  // Run Docker command with absolute path
+  // Use --user to avoid file permission issues on Linux/macOS
+  const userFlag =
+    process.platform === 'win32' ? '' : ` --user ${process.getuid()}:${process.getgid()}`;
+  const dockerCmd = `docker run --rm${userFlag} -v "${uiRoot}/${openapiFile}:/local/openapi.json" -v "${uiRoot}/src/app/api-client:/local/src/app/api-client" openapitools/openapi-generator-cli:v7.21.0 generate -i /local/openapi.json -g typescript-angular -o /local/src/app/api-client`;
+
+  const result = spawnSync(dockerCmd, {
+    shell: true,
+    stdio: 'inherit',
+  });
+
+  if (result.status !== 0) {
+    process.exit(result.status);
+  }
+} else {
+  console.warn(`⚠ ${openapiFile} not found; skipping client generation and only applying patches.`);
   console.warn(
-    `⚠ Warning: ${openapiFile} not found. This is expected if the API project hasn't been built yet.`,
+    `⚠ To regenerate, run 'dotnet build' in the src directory, then re-run this script.`,
   );
-  console.warn(
-    `⚠ Run 'dotnet build' in the src directory to generate the OpenAPI spec, then run 'npm install' again in the ui directory.`,
-  );
-  process.exit(0);
-}
-
-// Get absolute path for Docker volume mount
-const cwd = uiRoot;
-console.log(`✓ Working directory: ${cwd}`);
-
-// Run Docker command with absolute path
-// Use --user to avoid file permission issues on Linux/macOS
-const userFlag =
-  process.platform === 'win32' ? '' : ` --user ${process.getuid()}:${process.getgid()}`;
-const dockerCmd = `docker run --rm${userFlag} -v "${cwd}/${openapiFile}:/local/openapi.json" -v "${cwd}/src/app/api-client:/local/src/app/api-client" openapitools/openapi-generator-cli:v7.21.0 generate -i /local/openapi.json -g typescript-angular -o /local/src/app/api-client`;
-
-const result = spawnSync(dockerCmd, {
-  shell: true,
-  stdio: 'inherit',
-});
-
-if (result.status !== 0) {
-  process.exit(result.status);
 }
 
 // Post-generation patches for known openapi-generator bugs

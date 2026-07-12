@@ -29,7 +29,14 @@ dotnet run --project OpenFeatureManager.Api
 # http://localhost:5000/scalar/
 
 cd ui
-np install
+npm install
 npm start
 # http://localhost:4200
+```
+
+To build and run the full stack (API + UI) in a single container:
+
+```bash
+docker compose up --build
+# http://localhost:3000
 ```
