@@ -10,13 +10,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { FileSystemAccess } from '../../services/file-system-access';
-import { RestFlagBackend } from '../../services/rest-flag-backend';
-import {
-  CreateCollection,
-  CreateServer,
-  ImportSchema,
-  SelectServer,
-} from '../../state/flag-store.actions';
+import { CreateCollection, CreateServer, ImportSchema } from '../../state/flag-store.actions';
 
 export interface NewFlagsFileFormResult {
   type: 'empty' | 'url' | 'disk' | 'backend';
@@ -43,7 +37,6 @@ export class NewFlagsFileFormComponent {
   private readonly store = inject(Store);
   private readonly http = inject(HttpClient);
   private readonly router = inject(Router);
-  private readonly remoteApi = inject(RestFlagBackend);
   private readonly fileSystemAccess = inject(FileSystemAccess);
 
   // Empty flags-file tab
@@ -254,8 +247,8 @@ export class NewFlagsFileFormComponent {
     }
     const label = this.backendLabel.trim() || url;
 
+    // CreateServer registers the remote and selects it.
     this.store.dispatch(new CreateServer(label, url));
-    this.store.dispatch(new SelectServer(url));
     this.formSubmitted.emit({ type: 'backend' });
   }
 

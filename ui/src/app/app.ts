@@ -24,7 +24,7 @@ import { GlobalLoadingService } from './services/global-loading.service';
 import { SetThemeMode, ThemeMode } from './state/ui-preferences.actions';
 import { UiPreferencesState } from './state/ui-preferences.state';
 import { FlagStoreState } from './state/flag-store.state';
-import { FLAG_BACKEND } from './services/flag-backend';
+import { SaveDatabase } from './state/flag-store.actions';
 
 type AppTheme = 'light' | 'dark';
 
@@ -48,7 +48,6 @@ type AppTheme = 'light' | 'dark';
 export class App implements OnDestroy {
   private readonly ngxsStore = inject(Store);
   private readonly router = inject(Router);
-  private readonly backend = inject(FLAG_BACKEND);
   private readonly navigationCollapseWidth = 1280;
   readonly globalLoading = inject(GlobalLoadingService);
   readonly themeMode = this.ngxsStore.selectSignal(UiPreferencesState.themeMode);
@@ -211,9 +210,8 @@ export class App implements OnDestroy {
   }
 
   @HostListener('window:beforeunload', ['$event'])
-  async beforeUnloadHandler(event: any) {
-    await this.backend.saveState?.();
-    // debugger;
+  beforeUnloadHandler(event: any) {
+    this.ngxsStore.dispatch(new SaveDatabase());
   }
 
   // @HostListener('mouseout')

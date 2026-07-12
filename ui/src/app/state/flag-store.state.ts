@@ -1,14 +1,18 @@
 import { HostListener, inject, Injectable } from '@angular/core';
 import { Action, createSelector, NgxsOnInit, Selector, State, StateContext } from '@ngxs/store';
 import {
+  BackendServer,
   CollectionDto,
   EnvironmentDto,
-  FLAG_BACKEND,
   FlagBackend,
   FlagDto,
+  IN_BROWSER_URI,
   MetadataDto,
+  THIS_SERVER_URI,
   TimeWindowDto,
 } from '../services/flag-backend';
+import { RestBackendFactory } from '../services/rest-backend-factory';
+import { WasmFlagBackend } from '../services/wasm-flag-backend';
 import {
   LoadCollections,
   CreateCollection,
@@ -38,9 +42,11 @@ import { Navigate, RouterNavigation } from '@ngxs/router-plugin';
 
 export interface FlagStoreStateModel {
   /**
-   * Servers in the form <serverUri, serverName>
+   * Available backends keyed by route-safe uri (in-browser wasm, this server,
+   * and any user-added remotes). Persisted; the auto-detected in-browser/this
+   * server entry is refreshed on startup.
    */
-  servers: Record<string, string>;
+  servers: Record<string, BackendServer>;
   selectedServerUri: string | null;
 
   serverCollections: Record<string, CollectionDto[]>;
@@ -66,10 +72,8 @@ export interface FlagStoreStateModel {
 @State<FlagStoreStateModel>({
   name: 'flagStore',
   defaults: {
-    servers: {
-      local: 'Local',
-    },
-    selectedServerUri: 'local',
+    servers: {},
+    selectedServerUri: null,
     serverCollections: {},
     collectionsLoading: false,
     selectedCollectionId: null,
@@ -85,13 +89,85 @@ export interface FlagStoreStateModel {
 })
 @Injectable()
 export class FlagStoreState implements NgxsOnInit {
-  private readonly backend: FlagBackend = inject(FLAG_BACKEND);
+  private readonly restFactory = inject(RestBackendFactory);
+  private readonly wasm = inject(WasmFlagBackend);
+  private wasmBooted = false;
+
+  /**
+   * Resolve the backend for an operation from the selected server uri, per call
+   * (no global "active backend"). Each rest server gets its own base-URL-bound
+   * client, so different servers can be talked to concurrently.
+   */
+  private backend(ctx: StateContext<FlagStoreStateModel>): FlagBackend {
+    const state = ctx.getState();
+    const server = state.selectedServerUri ? state.servers[state.selectedServerUri] : undefined;
+    if (server?.kind === 'wasm') return this.wasm;
+    return this.restFactory.forBaseUrl(server?.baseUrl || window.location.origin);
+  }
+
+  /** A persisted, well-formed user-added remote (guards against stale formats). */
+  private isRemoteServer(entry: unknown): entry is BackendServer {
+    const s = entry as BackendServer | null;
+    return (
+      !!s &&
+      typeof s === 'object' &&
+      typeof s.uri === 'string' &&
+      s.uri.startsWith('remote-') &&
+      s.kind === 'rest' &&
+      typeof s.baseUrl === 'string' &&
+      s.baseUrl.length > 0
+    );
+  }
 
   async ngxsOnInit(ctx: StateContext<FlagStoreStateModel>): Promise<void> {
-    if (this.backend.init) {
-      await this.backend.init();
+    // Keep only well-formed user-added remotes from persisted state (this drops
+    // the auto-detected entry and anything left by older persisted formats); the
+    // current backend is re-detected below.
+    const servers: Record<string, BackendServer> = {};
+    for (const entry of Object.values(ctx.getState().servers ?? {})) {
+      if (this.isRemoteServer(entry)) {
+        servers[entry.uri] = entry;
+      }
     }
-    ctx.dispatch(new LoadCollections());
+
+    // Prefer the server the app is served from; only fall back to the in-browser
+    // wasm backend (which is more expensive to boot) when no server is reachable.
+    if (await this.isSameOriginServerAvailable()) {
+      servers[THIS_SERVER_URI] = {
+        uri: THIS_SERVER_URI,
+        name: 'This Server',
+        kind: 'rest',
+        baseUrl: window.location.origin,
+      };
+    } else {
+      servers[IN_BROWSER_URI] = {
+        uri: IN_BROWSER_URI,
+        name: 'In Browser',
+        kind: 'wasm',
+        baseUrl: '',
+      };
+    }
+
+    ctx.patchState({ servers });
+
+    const defaultUri = servers[THIS_SERVER_URI]
+      ? THIS_SERVER_URI
+      : servers[IN_BROWSER_URI]
+        ? IN_BROWSER_URI
+        : (Object.keys(servers)[0] ?? null);
+
+    if (defaultUri) {
+      ctx.dispatch(new SelectServer(defaultUri));
+    }
+  }
+
+  private async isSameOriginServerAvailable(): Promise<boolean> {
+    try {
+      const res = await fetch('/api/collections', { method: 'GET' });
+      return res.ok;
+    } catch {
+      return false;
+    }
   }
 
   @Action(RouterNavigation)
@@ -101,8 +177,18 @@ export class FlagStoreState implements NgxsOnInit {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const routerState = action.routerState as any;
     const params = this.collectRouteParams(routerState?.root);
-    // const backendUri = params['uri'] as string | undefined;
+    const serverUri = params['uri'] as string | undefined;
     const collectionId = params['collectionId'] as string | undefined;
+
+    const state = ctx.getState();
+    // Switch backends when navigating to a collection under a different server
+    // (e.g. a bookmarked URL), then select the collection once it is active.
+    if (serverUri && serverUri !== state.selectedServerUri && state.servers[serverUri]) {
+      ctx.dispatch(new SelectServer(serverUri)).subscribe(() => {
+        if (collectionId) ctx.dispatch(new SelectCollection(collectionId));
+      });
+      return;
+    }
 
     if (collectionId) {
       ctx.dispatch(new SelectCollection(collectionId));
@@ -200,7 +286,7 @@ export class FlagStoreState implements NgxsOnInit {
   }
 
   @Selector()
-  static servers(state: FlagStoreStateModel): Record<string, string> {
+  static servers(state: FlagStoreStateModel): Record<string, BackendServer> {
     return state.servers;
   }
 
@@ -208,10 +294,10 @@ export class FlagStoreState implements NgxsOnInit {
   static serverEntries(
     state: FlagStoreStateModel,
   ): { name: string; uri: string; collections: CollectionDto[] }[] {
-    return Object.entries(state.servers).map(([uri, name]) => ({
-      name,
-      uri,
-      collections: state.serverCollections[uri] ?? [],
+    return Object.values(state.servers).map((server) => ({
+      name: server.name,
+      uri: server.uri,
+      collections: state.serverCollections[server.uri] ?? [],
     }));
   }
 
@@ -227,13 +313,37 @@ export class FlagStoreState implements NgxsOnInit {
   @Action(CreateServer)
   createServer(ctx: StateContext<FlagStoreStateModel>, action: CreateServer): void {
     const state = ctx.getState();
-    ctx.patchState({
-      servers: { ...state.servers, [action.url]: action.name },
-    });
+    const baseUrl = action.url;
+
+    // Reuse an existing remote entry for the same URL instead of duplicating it.
+    const existing = Object.values(state.servers).find(
+      (s) => s.kind === 'rest' && s.baseUrl === baseUrl && s.uri !== THIS_SERVER_URI,
+    );
+    const server: BackendServer = existing
+      ? { ...existing, name: action.name }
+      : {
+          uri: `remote-${crypto.randomUUID()}`,
+          name: action.name,
+          kind: 'rest',
+          baseUrl,
+        };
+
+    ctx.patchState({ servers: { ...state.servers, [server.uri]: server } });
+
+    ctx.dispatch(new SelectServer(server.uri));
   }
 
   @Action(SelectServer)
-  selectServer(ctx: StateContext<FlagStoreStateModel>, action: SelectServer): void {
+  async selectServer(ctx: StateContext<FlagStoreStateModel>, action: SelectServer): Promise<void> {
+    const server = action.uri ? ctx.getState().servers[action.uri] : undefined;
+
+    // The in-browser wasm engine needs a one-time boot; rest servers are
+    // resolved per request in backend(), so nothing global is set here.
+    if (server?.kind === 'wasm' && !this.wasmBooted) {
+      await this.wasm.init?.();
+      this.wasmBooted = true;
+    }
+
     ctx.patchState({
       selectedServerUri: action.uri,
       selectedCollectionId: null,
@@ -243,10 +353,11 @@ export class FlagStoreState implements NgxsOnInit {
       environmentsLoading: false,
       timeWindows: [],
       timeWindowsLoading: false,
+      selectedSchema: null,
       error: null,
     });
 
-    if (action.uri) {
+    if (server) {
       ctx.dispatch(new LoadCollections());
     }
   }
@@ -278,7 +389,7 @@ export class FlagStoreState implements NgxsOnInit {
     if (!uri) return;
     ctx.patchState({ collectionsLoading: true, error: null });
     try {
-      const collections = await this.backend.listCollections();
+      const collections = await this.backend(ctx).listCollections();
       ctx.patchState({
         serverCollections: { ...ctx.getState().serverCollections, [uri]: collections },
         collectionsLoading: false,
@@ -293,9 +404,10 @@ export class FlagStoreState implements NgxsOnInit {
 
   @Action(SaveDatabase)
   async saveDatabase(ctx: StateContext<FlagStoreStateModel>, action: SaveDatabase): Promise<void> {
-    if (this.backend.saveState) {
+    const backend = this.backend(ctx);
+    if (backend.saveState) {
       try {
-        await this.backend.saveState();
+        await backend.saveState();
       } catch (e) {
         ctx.patchState({ error: e instanceof Error ? e.message : 'Failed to save database' });
       }
@@ -309,10 +421,13 @@ export class FlagStoreState implements NgxsOnInit {
   ): Promise<void> {
     ctx.patchState({ error: null });
     try {
-      const collection = await this.backend.createCollection(action.name);
+      const collection = await this.backend(ctx).createCollection(action.name);
       const state = ctx.getState();
       this.patchServerCollections(ctx, [...this.getServerCollections(state), collection]);
-      ctx.dispatch(new Navigate(['/', 'local', collection.id.toString()]));
+      const targetUri = ctx.getState().selectedServerUri;
+      if (targetUri) {
+        ctx.dispatch(new Navigate(['/', targetUri, collection.id.toString()]));
+      }
     } catch (e) {
       ctx.patchState({
         error: e instanceof Error ? e.message : 'Failed to create collection',
@@ -327,7 +442,7 @@ export class FlagStoreState implements NgxsOnInit {
   ): Promise<void> {
     ctx.patchState({ error: null });
     try {
-      const updated = await this.backend.renameCollection(action.id, action.name);
+      const updated = await this.backend(ctx).renameCollection(action.id, action.name);
       const state = ctx.getState();
       this.patchServerCollections(
         ctx,
@@ -347,7 +462,7 @@ export class FlagStoreState implements NgxsOnInit {
   ): Promise<void> {
     ctx.patchState({ error: null });
     try {
-      await this.backend.deleteCollection(action.id);
+      await this.backend(ctx).deleteCollection(action.id);
       const state = ctx.getState();
       const collections = this.getServerCollections(state).filter((c) => c.id !== action.id);
       this.patchServerCollections(ctx, collections);
@@ -404,7 +519,7 @@ export class FlagStoreState implements NgxsOnInit {
   async loadFlags(ctx: StateContext<FlagStoreStateModel>, action: LoadFlags): Promise<void> {
     ctx.patchState({ flagsLoading: true, error: null });
     try {
-      const flags = await this.backend.getFlags(action.collectionId);
+      const flags = await this.backend(ctx).getFlags(action.collectionId);
       ctx.patchState({ flags, flagsLoading: false });
     } catch (e) {
       ctx.patchState({
@@ -418,7 +533,7 @@ export class FlagStoreState implements NgxsOnInit {
   async createFlag(ctx: StateContext<FlagStoreStateModel>, action: CreateFlag): Promise<void> {
     ctx.patchState({ error: null });
     try {
-      const created = await this.backend.createFlag(action.collectionId, action.flag);
+      const created = await this.backend(ctx).createFlag(action.collectionId, action.flag);
       const state = ctx.getState();
       ctx.patchState({ flags: [...state.flags, created] });
     } catch (e) {
@@ -432,7 +547,7 @@ export class FlagStoreState implements NgxsOnInit {
   async updateFlag(ctx: StateContext<FlagStoreStateModel>, action: UpdateFlag): Promise<void> {
     ctx.patchState({ error: null });
     try {
-      const updated = await this.backend.updateFlag(action.collectionId, action.flag);
+      const updated = await this.backend(ctx).updateFlag(action.collectionId, action.flag);
       const state = ctx.getState();
       const oldKey = action.flag.previousKey ?? action.flag.key;
       ctx.patchState({
@@ -449,7 +564,7 @@ export class FlagStoreState implements NgxsOnInit {
   async deleteFlag(ctx: StateContext<FlagStoreStateModel>, action: DeleteFlag): Promise<void> {
     ctx.patchState({ error: null });
     try {
-      await this.backend.deleteFlag(action.collectionId, action.flagKey);
+      await this.backend(ctx).deleteFlag(action.collectionId, action.flagKey);
       const state = ctx.getState();
       ctx.patchState({
         flags: state.flags.filter((f) => f.key !== action.flagKey),
@@ -472,7 +587,7 @@ export class FlagStoreState implements NgxsOnInit {
   ): Promise<void> {
     ctx.patchState({ environmentsLoading: true, error: null });
     try {
-      const environments = await this.backend.getEnvironments(action.collectionId);
+      const environments = await this.backend(ctx).getEnvironments(action.collectionId);
       ctx.patchState({ environments, environmentsLoading: false });
     } catch (e) {
       ctx.patchState({
@@ -491,7 +606,7 @@ export class FlagStoreState implements NgxsOnInit {
     try {
       const state = ctx.getState();
       if (!state.selectedCollectionId) return;
-      const created = await this.backend.createEnvironment(
+      const created = await this.backend(ctx).createEnvironment(
         state.selectedCollectionId,
         action.environment,
       );
@@ -512,7 +627,7 @@ export class FlagStoreState implements NgxsOnInit {
     try {
       const state = ctx.getState();
       if (!state.selectedCollectionId) return;
-      const updated = await this.backend.updateEnvironment(
+      const updated = await this.backend(ctx).updateEnvironment(
         state.selectedCollectionId,
         action.environment,
       );
@@ -537,7 +652,7 @@ export class FlagStoreState implements NgxsOnInit {
     try {
       const state = ctx.getState();
       if (!state.selectedCollectionId) return;
-      await this.backend.deleteEnvironment(state.selectedCollectionId, action.name);
+      await this.backend(ctx).deleteEnvironment(state.selectedCollectionId, action.name);
       ctx.patchState({
         environments: state.environments.filter((e) => e.name !== action.name),
       });
@@ -559,7 +674,7 @@ export class FlagStoreState implements NgxsOnInit {
   ): Promise<void> {
     ctx.patchState({ timeWindowsLoading: true, error: null });
     try {
-      const timeWindows = await this.backend.getTimeWindows(action.collectionId);
+      const timeWindows = await this.backend(ctx).getTimeWindows(action.collectionId);
       ctx.patchState({ timeWindows, timeWindowsLoading: false });
     } catch (e) {
       ctx.patchState({
@@ -576,7 +691,10 @@ export class FlagStoreState implements NgxsOnInit {
   ): Promise<void> {
     ctx.patchState({ error: null });
     try {
-      const created = await this.backend.createTimeWindow(action.collectionId, action.timeWindow);
+      const created = await this.backend(ctx).createTimeWindow(
+        action.collectionId,
+        action.timeWindow,
+      );
       const state = ctx.getState();
       ctx.patchState({ timeWindows: [...state.timeWindows, created] });
     } catch (e) {
@@ -593,7 +711,7 @@ export class FlagStoreState implements NgxsOnInit {
   ): Promise<void> {
     ctx.patchState({ error: null });
     try {
-      const updated = await this.backend.updateTimeWindow(
+      const updated = await this.backend(ctx).updateTimeWindow(
         action.collectionId,
         action.timeWindowId,
         action.timeWindow,
@@ -616,7 +734,7 @@ export class FlagStoreState implements NgxsOnInit {
   ): Promise<void> {
     ctx.patchState({ error: null });
     try {
-      await this.backend.deleteTimeWindow(action.collectionId, action.timeWindowId);
+      await this.backend(ctx).deleteTimeWindow(action.collectionId, action.timeWindowId);
       const state = ctx.getState();
       ctx.patchState({
         timeWindows: state.timeWindows.filter((tw) => tw.id !== action.timeWindowId),
@@ -639,7 +757,7 @@ export class FlagStoreState implements NgxsOnInit {
   ): Promise<Record<string, unknown> | null> {
     ctx.patchState({ error: null });
     try {
-      const schema = await this.backend.exportSchema(action.collectionId);
+      const schema = await this.backend(ctx).exportSchema(action.collectionId);
       if (ctx.getState().selectedCollectionId === action.collectionId) {
         ctx.patchState({ selectedSchema: schema });
       }
@@ -656,18 +774,21 @@ export class FlagStoreState implements NgxsOnInit {
   async importSchema(ctx: StateContext<FlagStoreStateModel>, action: ImportSchema): Promise<void> {
     ctx.patchState({ error: null });
     try {
-      const collection = await this.backend.createCollection(action.newCollectionName);
+      const collection = await this.backend(ctx).createCollection(action.newCollectionName);
       const state = ctx.getState();
       this.patchServerCollections(ctx, [...this.getServerCollections(state), collection]);
 
-      await this.backend.importSchema(collection.id, action.schema);
+      await this.backend(ctx).importSchema(collection.id, action.schema);
       // Reload all sub-resources after import
       ctx.dispatch([
         new LoadFlags(collection.id),
         new LoadEnvironments(collection.id),
         new LoadTimeWindows(collection.id),
       ]);
-      ctx.dispatch(new Navigate(['/', 'local', collection.id.toString()]));
+      const targetUri = ctx.getState().selectedServerUri;
+      if (targetUri) {
+        ctx.dispatch(new Navigate(['/', targetUri, collection.id.toString()]));
+      }
     } catch (e) {
       ctx.patchState({
         error: e instanceof Error ? e.message : 'Failed to import schema',
@@ -693,7 +814,7 @@ export class FlagStoreState implements NgxsOnInit {
     }
 
     try {
-      await this.backend.updateCollectionMetadata(action.collectionId, action.metadata);
+      await this.backend(ctx).updateCollectionMetadata(action.collectionId, action.metadata);
       const updatedCollection: CollectionDto = {
         ...collection,
         metadata: action.metadata,

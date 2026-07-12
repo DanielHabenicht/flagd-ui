@@ -17,7 +17,7 @@
           @for (entry of server.collections; track entry.id) {
             <a
               mat-list-item
-              [routerLink]="getFlagsFileRoute(entry)"
+              [routerLink]="getFlagsFileRoute(server.uri, entry)"
               queryParamsHandling="merge"
               routerLinkActive="active-link"
               [routerLinkActiveOptions]="{ exact: false }"

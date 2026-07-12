@@ -41,7 +41,7 @@ test('creates file and boolean flag, evaluates in playground, then switches valu
     await expect(createFileButton).toBeEnabled();
     await createFileButton.click();
 
-    await expect(page).toHaveURL(/\/local\/[0-9a-f-]{36}$/i);
+    await expect(page).toHaveURL(/\/[^/]+\/[0-9a-f-]{36}$/i);
     await expect(page.getByRole('heading', { name: fileName })).toBeVisible();
 
     await page.getByRole('button', { name: 'Create your first flag' }).click();

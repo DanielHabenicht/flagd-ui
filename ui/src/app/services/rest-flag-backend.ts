@@ -1,4 +1,3 @@
-import { inject, Injectable } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { CollectionsService } from '../api-client/api/collections.service';
 import { FlagsService } from '../api-client/api/flags.service';
@@ -24,14 +23,19 @@ import {
 
 /**
  * FlagBackend implementation that delegates to the generated REST API client.
+ *
+ * Each instance targets one base URL (via its own service instances), so several
+ * can be used concurrently against different servers. Build them with
+ * {@link RestBackendFactory}.
  */
-@Injectable({ providedIn: 'root' })
 export class RestFlagBackend implements FlagBackend {
-  private readonly collections = inject(CollectionsService);
-  private readonly flags = inject(FlagsService);
-  private readonly environments = inject(EnvironmentsService);
-  private readonly timeWindows = inject(TimewindowsService);
-  private readonly schema = inject(SchemaService);
+  constructor(
+    private readonly collections: CollectionsService,
+    private readonly flags: FlagsService,
+    private readonly environments: EnvironmentsService,
+    private readonly timeWindows: TimewindowsService,
+    private readonly schema: SchemaService,
+  ) {}
 
   // ── Collections ────────────────────────────────────────────────────────
 

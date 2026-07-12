@@ -1,5 +1,3 @@
-import { InjectionToken } from '@angular/core';
-
 // ============================================================================
 // Canonical DTO types used across both backends
 // ============================================================================
@@ -122,4 +120,17 @@ export interface FlagBackend {
   updateCollectionMetadata(collectionId: string, metadata: MetadataDto[]): Promise<void>;
 }
 
-export const FLAG_BACKEND = new InjectionToken<FlagBackend>('FlagBackend');
+export type BackendKind = 'wasm' | 'rest';
+
+/** A selectable backend shown in the sidebar. */
+export interface BackendServer {
+  /** Route-safe key used as the `:uri` segment. */
+  uri: string;
+  name: string;
+  kind: BackendKind;
+  /** REST base URL (this server's origin or a remote URL); unused for wasm. */
+  baseUrl: string;
+}
+
+export const IN_BROWSER_URI = 'browser';
+export const THIS_SERVER_URI = 'server';

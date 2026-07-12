@@ -37,7 +37,8 @@ export class MetadataEditorComponent implements OnChanges {
   metadataCurrent: MetadataDto[] = [];
 
   ngOnChanges(): void {
-    this.metadataCurrent = this.metadata ? JSON.parse(JSON.stringify(this.metadata)) : undefined;
+    const metadata = this.metadata();
+    this.metadataCurrent = metadata ? metadata.map((entry) => ({ ...entry })) : [];
   }
 
   addRow(): void {

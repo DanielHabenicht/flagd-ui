@@ -9,7 +9,8 @@ import { MatDialog } from '@angular/material/dialog';
 import { NewFlagsFileDialogComponent } from '../new-flags-file-dialog/new-flags-file-dialog';
 import { FlagStoreState } from '../../state/flag-store.state';
 import { DeleteCollection, SelectServer } from '../../state/flag-store.actions';
-import { CollectionDto, FLAG_BACKEND } from '../../services/flag-backend';
+import { CollectionDto } from '../../services/flag-backend';
+import { WasmFlagBackend } from '../../services/wasm-flag-backend';
 import { ENVIRONMENT } from '../../../environments';
 
 @Component({
@@ -29,7 +30,8 @@ import { ENVIRONMENT } from '../../../environments';
 export class FlagsFileListComponent {
   private readonly ngxsStore = inject(Store);
   private readonly dialog = inject(MatDialog);
-  private readonly backend = inject(FLAG_BACKEND);
+  // DB export/purge are in-browser (wasm) debug tools only.
+  private readonly backend = inject(WasmFlagBackend);
 
   readonly collections = this.ngxsStore.selectSignal(FlagStoreState.collections);
   readonly serverEntries = this.ngxsStore.selectSignal(FlagStoreState.serverEntries);
@@ -44,8 +46,8 @@ export class FlagsFileListComponent {
     });
   }
 
-  getFlagsFileRoute(collection: CollectionDto): string[] {
-    return ['/', 'local', collection.id.toString()];
+  getFlagsFileRoute(serverUri: string, collection: CollectionDto): string[] {
+    return ['/', serverUri, collection.id.toString()];
   }
 
   selectServer(uri: string): void {

@@ -22,7 +22,12 @@ export class FlagsFileEditPageComponent implements OnInit {
 
   readonly flagEntries = this.ngxsStore.selectSignal(FlagStoreState.flags);
 
-  editingFlag = signal<FlagDto | null>(null);
+  /** The flag being edited, resolved from the route key and the loaded flags. */
+  readonly editingFlag = computed<FlagDto | null>(() => {
+    const key = this.routeFlagKey();
+    if (!key || key === 'new') return null;
+    return this.flagEntries().find((flag) => flag.key === key) ?? null;
+  });
   readonly editingDisplayFlag = computed(() => this.editingFlag());
   readonly selectedFlagKey = computed(() => {
     const editingKey = this.editingFlag()?.key;
@@ -79,22 +84,8 @@ export class FlagsFileEditPageComponent implements OnInit {
 
   private getFlagsFileRouteSegments(): string[] | null {
     const params = this.route.snapshot.paramMap;
-    const backendType = params.get('backendType');
-    const backendUri = params.get('uri');
-    const fileName = params.get('fileName');
-
-    if (backendType && backendUri && fileName) {
-      return ['/', backendType, backendUri, fileName];
-    }
-
-    const name = params.get('name');
-    const backendId = params.get('backendId');
-    if (!name) return null;
-
-    if (backendId) {
-      return ['/flags-files', 'remote', backendId, name];
-    }
-
-    return ['/flags-files', 'local', name];
+    const uri = params.get('uri');
+    const collectionId = params.get('collectionId');
+    return uri && collectionId ? ['/', uri, collectionId] : null;
   }
 }

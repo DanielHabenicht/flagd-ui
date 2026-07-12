@@ -29,6 +29,22 @@ builder.Services.AddScoped<FlagdSchemaService>(sp =>
 
 builder.Services.AddOpenApi();
 
+// CORS is off by default. To let this instance be used as a remote backend by a
+// flagd-ui served from another origin, set Cors:AllowedOrigins (use "*" for any).
+var corsOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
+if (corsOrigins.Length > 0)
+{
+    builder.Services.AddCors(options =>
+        options.AddDefaultPolicy(policy =>
+        {
+            if (corsOrigins.Contains("*"))
+                policy.AllowAnyOrigin();
+            else
+                policy.WithOrigins(corsOrigins);
+            policy.AllowAnyHeader().AllowAnyMethod();
+        }));
+}
+
 var app = builder.Build();
 
 // Ensure database is created on startup
@@ -36,6 +52,9 @@ using (var db = new FlagdDbContext(connectionString))
 {
     db.Database.EnsureCreated();
 }
+
+if (corsOrigins.Length > 0)
+    app.UseCors();
 
 // Serve the built Angular UI from wwwroot (production/container mode).
 app.UseDefaultFiles();
